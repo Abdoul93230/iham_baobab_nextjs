@@ -29,8 +29,9 @@ import { useAppSelector, useAppDispatch } from "@/redux/hooks";
 import { logout, selectAcces, selectIsAuthenticated } from "@/redux/userSlice";
 import axios from "axios";
 import { io, Socket } from "socket.io-client";
-import SearchBar from "../SearchBar";
+import SearchBar from "../SearchBarNew";
 import { fetchUserLikes } from "@/redux/likesSlice";
+import HeaderMobile from "./HeaderMobile";
 
 interface HomeHeaderProps {
   paniernbr: number;
@@ -549,51 +550,63 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ paniernbr, chg }) => {
             </span>
 
             {isMenuOpen && (
-              <div className="absolute md:right-4 lg:right-8 mt-2 flex space-x-1 md:space-x-3 p-1 bg-white border border-gray-200 rounded-full shadow-xl transition-all duration-500 ease-out">
+              <div className="absolute top-full left-0 mt-2 flex space-x-1 p-1 bg-white border border-gray-200 rounded-full shadow-xl transition-all duration-500 ease-out z-40">
                 {/* Menu Button - Hidden on larger screens */}
                 <button
-                  onClick={() => setIsMobileMenuOpen(true)}
-                  className="sm:hidden bg-green-900 w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center text-white shadow-lg transform transition-transform duration-300 hover:scale-125 hover:shadow-2xl"
+                  onClick={() => {
+                    setIsMobileMenuOpen(true);
+                    setIsMenuOpen(false); // Fermer les 4 icônes
+                  }}
+                  className="sm:hidden bg-green-900 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transform transition-transform duration-300 hover:scale-125 hover:shadow-2xl"
                 >
-                  <Menu className="w-6 h-6 md:w-8 md:h-8" />
+                  <Menu className="w-5 h-5" />
                 </button>
 
                 {/* Wishlist Button */}
-                <button className="bg-red-500 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-lg transform transition-transform duration-300 hover:scale-125 hover:shadow-2xl">
+                <button className="bg-red-500 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transform transition-transform duration-300 hover:scale-125 hover:shadow-2xl">
                   <div
                     className="relative text-amber-800 hover:text-amber-900"
                     aria-label="Wishlist"
-                    onClick={() => router.push("/Like produit")}
+                    onClick={() => {
+                      router.push("/Like produit");
+                      setIsMenuOpen(false);
+                    }}
                   >
-                    <Heart className="h-5 w-5 md:h-6 md:w-6" />
-                    <span className="absolute -top-1 -right-1 bg-emerald-500 rounded-full w-3 h-3 md:w-4 md:h-4 text-[10px] md:text-xs text-white flex items-center justify-center">
+                    <Heart className="h-4 w-4" />
+                    <span className="absolute -top-1 -right-1 bg-emerald-500 rounded-full w-3 h-3 text-[8px] text-white flex items-center justify-center">
                       {likedProducts?.length}
                     </span>
                   </div>
                 </button>
 
                 {/* Shopping Cart Button */}
-                <button className="bg-blue-500 w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center text-white shadow-lg transform transition-transform duration-300 hover:scale-125 hover:shadow-2xl">
-                  <div onClick={() => router.push("/Panier")} className="relative">
-                    <div className="bg-emerald-600 rounded-full z-10 w-4 h-4 md:w-5 md:h-5 flex items-center justify-center text-white text-[10px] md:text-xs font-bold absolute -top-2 -right-2">
+                <button className="bg-blue-500 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transform transition-transform duration-300 hover:scale-125 hover:shadow-2xl">
+                  <div onClick={() => {
+                    router.push("/Panier");
+                    setIsMenuOpen(false);
+                  }} className="relative">
+                    <div className="bg-emerald-600 rounded-full z-10 w-3 h-3 flex items-center justify-center text-white text-[8px] font-bold absolute -top-1 -right-1">
                       {paniernbr ? paniernbr : 0}
                     </div>
                     <ShoppingCart
-                      className="h-5 w-5 md:h-6 md:w-6 text-amber-800 hover:text-amber-900 cursor-pointer transition-transform transform hover:scale-110"
+                      className="h-4 w-4 text-amber-800 hover:text-amber-900 cursor-pointer transition-transform transform hover:scale-110"
                       aria-label="Panier"
                     />
                   </div>
                 </button>
 
                 {/* Message Button */}
-                <button className="bg-green-500 w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center text-white shadow-lg transform transition-transform duration-300 hover:scale-125 hover:shadow-2xl">
+                <button className="bg-green-500 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transform transition-transform duration-300 hover:scale-125 hover:shadow-2xl">
                   <div
                     className="relative text-amber-800 hover:text-amber-900"
                     aria-label="Messages"
-                    onClick={() => router.push("/Messagerie")}
+                    onClick={() => {
+                      router.push("/Messagerie");
+                      setIsMenuOpen(false);
+                    }}
                   >
-                    <MessageCircle className="h-5 w-5 md:h-6 md:w-6" />
-                    <span className="absolute -top-1 -right-1 bg-red-500 rounded-full w-3 h-3 md:w-4 md:h-4 text-[10px] md:text-xs text-white flex items-center justify-center">
+                    <MessageCircle className="h-4 w-4" />
+                    <span className="absolute -top-1 -right-1 bg-red-500 rounded-full w-3 h-3 text-[8px] text-white flex items-center justify-center">
                       {nbr}
                     </span>
                   </div>
@@ -734,12 +747,11 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ paniernbr, chg }) => {
 
       {/* Mobile menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden">
-          {/* Mobile menu content - simplified for now */}
-          <div className="bg-white border-t border-gray-200 py-4">
-            <p className="text-center text-gray-600">Menu mobile à implémenter</p>
-          </div>
-        </div>
+        <HeaderMobile 
+          setIsMobileMenuOpen={setIsMobileMenuOpen}
+          nbr={nbr}
+          paniernbr={paniernbr}
+        />
       )}
     </div>
   );

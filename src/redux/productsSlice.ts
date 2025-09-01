@@ -4,10 +4,19 @@ import axios from "axios";
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 
 // Types basés sur votre structure existante
+interface Variant {
+  color: string;
+  imageUrl: string;
+  sizes?: string[];
+  stock?: number;
+}
+
 interface Product {
   _id: string;
   name: string;
   prix: number;
+  prixPromo?: number;
+  prixf?: number;
   image1?: string;
   image2?: string;
   image3?: string;
@@ -21,6 +30,14 @@ interface Product {
   couleurs?: string[];
   quantite?: number;
   prixLivraison?: number;
+  variants?: Variant[];
+  shipping?: {
+    weight?: number;
+  };
+  Clefournisseur?: {
+    _id: string;
+    name?: string;
+  };
 }
 
 interface Category {
@@ -33,6 +50,7 @@ interface Type {
   _id: string;
   name: string;
   categoryId?: string;
+  clefCategories?: string;
 }
 
 // Interface qui correspond exactement à votre structure originale

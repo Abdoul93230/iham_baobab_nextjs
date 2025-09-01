@@ -137,7 +137,7 @@ const ProduitPage: React.FC<ProduitPageProps> = ({ name, products }) => {
           return (
             <div
               key={product._id}
-              onClick={() => router.push(`/ProduitDétail/${product._id}`)}
+              onClick={() => router.push(`/ProduitDetail/${product._id}`)}
               className="bg-white rounded-lg shadow-md hover:shadow-xl group overflow-hidden transition-all duration-300 hover:-translate-y-1 cursor-pointer"
             >
               <div className="relative">

@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Search, X, Camera } from "lucide-react";
+import { Search, X, Camera, History, Filter, ChevronDown } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useSelector } from "react-redux";
+import { debounce } from "lodash";
 
 interface SearchBarProps {
   onSearch?: (query: string) => void;
@@ -12,12 +15,23 @@ const SearchBar: React.FC<SearchBarProps> = ({
   onSearch, 
   placeholder = "Rechercher des produits..." 
 }) => {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showResults, setShowResults] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(-1);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    category: "",
+    minPrice: "",
+    maxPrice: "",
+  });
+
+  const searchRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+
+  const allProducts = useSelector((state: any) => state.products.data || []);
+  const categories = useSelector((state: any) => state.products.categories || []);
 
   useEffect(() => {
     // Charger l'historique de recherche depuis localStorage

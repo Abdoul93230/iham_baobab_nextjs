@@ -8,7 +8,7 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 import { shuffle } from "lodash";
-import ProduitPage from "../produit/ProduitPage";
+import ProduitPage from "../ProduitDetail/ProduitPage";
 import SliderPage from "../slider/SliderPage";
 import { useAppSelector } from "@/redux/hooks";
 import { ShoppingCart } from "lucide-react";
@@ -199,7 +199,7 @@ const HomeMain: React.FC<HomeMainProps> = ({ isOpen }) => {
 
                       <div
                         onClick={() =>
-                          router.push(`/ProduitDétail/${product._id}`)
+                          router.push(`/ProduitDetail/${product._id}`)
                         }
                         className="absolute inset-0 bg-gradient-to-b from-transparent to-[#30A08B] opacity-30 group-hover:scale-105 transition-transform duration-300"
                       ></div>
@@ -214,7 +214,7 @@ const HomeMain: React.FC<HomeMainProps> = ({ isOpen }) => {
                       </p>
                       <button
                         onClick={() =>
-                          router.push(`/ProduitDétail/${product._id}`)
+                          router.push(`/ProduitDetail/${product._id}`)
                         }
                         className="mt-2 flex justify-around items-center w-full bg-[#30A08B] text-white py-2 rounded-full hover:bg-opacity-90 transition transition-colors duration-200 text-sm md:text-base shadow-md hover:shadow-lg"
                       >
