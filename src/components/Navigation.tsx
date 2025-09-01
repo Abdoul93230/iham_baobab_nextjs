@@ -117,7 +117,7 @@ const Navigation: React.FC = () => {
                   href="/auth/register"
                   className="bg-[#30A08B] text-white px-4 py-2 rounded-lg hover:bg-[#B2905F] transition-colors"
                 >
-                  S'inscrire
+                  S&apos;inscrire
                 </Link>
               </>
             )}
@@ -233,7 +233,7 @@ const Navigation: React.FC = () => {
                     className="block mx-3 my-2 bg-[#30A08B] text-white px-4 py-2 rounded-lg hover:bg-[#B2905F] transition-colors text-center"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    S'inscrire
+                    S&apos;inscrire
                   </Link>
                 </>
               )}

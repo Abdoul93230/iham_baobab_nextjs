@@ -343,7 +343,7 @@ const Register: React.FC<RegisterProps> = ({ onSuccess }) => {
                 </div>
               </div>
               <p className="mt-1 text-xs text-gray-500">
-                * Au moins l'email ou le téléphone est requis. Exemple: {selectedCountryCode.code}90123456 sera envoyé au serveur
+                * Au moins l&apos;email ou le téléphone est requis. Exemple: {selectedCountryCode.code}90123456 sera envoyé au serveur
               </p>
             </div>
 
@@ -446,9 +446,9 @@ const Register: React.FC<RegisterProps> = ({ onSuccess }) => {
                   required
                 />
                 <label htmlFor="acceptTerms" className="ml-2 block text-sm text-gray-900">
-                  J'accepte les{" "}
+                  J&apos;accepte les{" "}
                   <Link href="/terms" className="text-[#30A08B] hover:text-[#B2905F] underline">
-                    conditions d'utilisation
+                    conditions d&apos;utilisation
                   </Link>{" "}
                   et la{" "}
                   <Link href="/privacy" className="text-[#30A08B] hover:text-[#B2905F] underline">

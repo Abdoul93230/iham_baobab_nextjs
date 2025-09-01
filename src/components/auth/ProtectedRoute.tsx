@@ -21,7 +21,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const router = useRouter();
   const dispatch = useAppDispatch();
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
-  const user = useAppSelector(selectUser);
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
@@ -65,7 +64,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#30A08B] mx-auto mb-4"></div>
-          <p className="text-gray-600">Vérification de l'authentification...</p>
+          <p className="text-gray-600">Vérification de l&apos;authentification...</p>
         </div>
       </div>
     );

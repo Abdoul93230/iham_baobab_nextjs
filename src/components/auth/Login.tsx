@@ -9,7 +9,7 @@ import { Mail, Phone, Lock, Eye, EyeOff, ChevronDown } from "lucide-react";
 import { FaGoogle, FaFacebook } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
 import { loginUser, selectUserLoading, selectUserError, clearError } from "@/redux/userSlice";
-import { AppDispatch, RootState } from "@/redux/store";
+import { AppDispatch } from "@/redux/store";
 import Alert from "@/components/Alert";
 
 // Liste des indicatifs pays
@@ -434,7 +434,7 @@ const Login: React.FC<LoginProps> = ({ onSuccess }) => {
           {/* Lien d'inscription */}
           <div className="text-center">
             <p className="text-sm text-gray-600">
-              Vous n'avez pas de compte ?{" "}
+              Vous n&apos;avez pas de compte ?{" "}
               <Link
                 href="/auth/register"
                 className="font-medium text-[#30A08B] hover:text-[#B2905F] transition-colors"

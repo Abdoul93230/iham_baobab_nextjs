@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { useAppDispatch } from "@/redux/hooks";
-import { RootState } from "@/redux/store";
 import { 
   getProducts, 
   getCategories, 
@@ -23,7 +22,6 @@ export default function Home() {
   
   // Redux selectors
   const panierCount = useSelector(selectPanierCount);
-  const { acces } = useSelector((state: RootState) => state.user);
   const [loading, setLoading] = useState(true);
 
   // Chargement des données au démarrage (comme dans le projet React)

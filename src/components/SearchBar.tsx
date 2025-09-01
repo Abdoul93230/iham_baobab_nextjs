@@ -183,7 +183,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
                 className="w-full text-left flex items-center text-gray-700 hover:bg-gray-50 p-2 rounded"
               >
                 <Search className="h-4 w-4 mr-3 text-emerald-600" />
-                Rechercher "{searchQuery}"
+                Rechercher &quot;{searchQuery}&quot;
               </button>
             </div>
           )}

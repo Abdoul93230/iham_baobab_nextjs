@@ -12,7 +12,6 @@ import Alert from "@/components/Alert";
 
 const ForgotPassword: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const router = useRouter();
   
   const isLoading = useSelector(selectUserLoading);
   const error = useSelector(selectUserError);
@@ -130,7 +129,7 @@ const ForgotPassword: React.FC = () => {
                       <ul className="list-disc pl-5 space-y-1">
                         <li>Vérifiez votre boîte de réception</li>
                         <li>Regardez aussi dans les spams/courriers indésirables</li>
-                        <li>Cliquez sur le lien dans l'email reçu</li>
+                        <li>Cliquez sur le lien dans l&apos;email reçu</li>
                         <li>Suivez les instructions pour créer un nouveau mot de passe</li>
                       </ul>
                     </div>
@@ -144,7 +143,7 @@ const ForgotPassword: React.FC = () => {
                 onClick={handleResend}
                 className="w-full flex justify-center py-3 px-4 border border-[#30A08B] rounded-lg shadow-sm text-sm font-medium text-[#30A08B] bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#30A08B] transition-colors"
               >
-                Renvoyer l'email
+                Renvoyer l&apos;email
               </button>
 
               <Link
@@ -219,7 +218,7 @@ const ForgotPassword: React.FC = () => {
                 />
               </div>
               <p className="mt-2 text-xs text-gray-500">
-                Entrez l'adresse email associée à votre compte
+                Entrez l&apos;adresse email associée à votre compte
               </p>
             </div>
 
@@ -258,10 +257,10 @@ const ForgotPassword: React.FC = () => {
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
             <div className="text-center">
               <h4 className="text-sm font-medium text-gray-900 mb-2">
-                Besoin d'aide ?
+                Besoin d&apos;aide ?
               </h4>
               <p className="text-xs text-gray-600">
-                Si vous ne recevez pas l'email dans les 5 minutes, vérifiez vos spams ou{" "}
+                Si vous ne recevez pas l&apos;email dans les 5 minutes, vérifiez vos spams ou{" "}
                 <Link href="/contact" className="text-[#30A08B] hover:text-[#B2905F] underline">
                   contactez notre support
                 </Link>

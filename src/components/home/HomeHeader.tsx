@@ -4,21 +4,12 @@ import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
-  Sparkles,
-  Trash2,
   Menu,
   User,
   ChevronDown,
   ChevronRight,
   Home,
-  Smartphone,
-  UtensilsCrossed,
-  Plug,
-  MoreHorizontal,
-  ChevronUp,
   ShoppingCart,
-  Camera,
-  Search,
   Heart,
   Bell,
   Globe,
@@ -26,11 +17,9 @@ import {
   Gift,
   Phone,
   X,
-  FolderIcon,
   Package,
   LogOut,
   HelpCircle,
-  CreditCard,
   Shield,
   Info,
   MessageCircle,
@@ -59,7 +48,6 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ paniernbr, chg }) => {
   const dispatch = useAppDispatch();
   const categories = useAppSelector((state) => state.products.categories) as Category[];
   const acces = useAppSelector(selectAcces);
-  const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const currentUser = useAppSelector((state) => state.user.user);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);

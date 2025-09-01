@@ -292,7 +292,7 @@ const PanierPage: React.FC = () => {
                 {group.totalQuantity} article{group.totalQuantity > 1 ? "s" : ""} • {group.totalPrice} F CFA
               </p>
               <p className="text-sm text-[#30A08B]">
-                Frais d'expédition: {group.shippingCost} F CFA
+                Frais d&apos;expédition: {group.shippingCost} F CFA
               </p>
             </div>
           </div>
@@ -378,7 +378,7 @@ const PanierPage: React.FC = () => {
     return (
       <div className="pt-4">
         <h3 className="text-sm font-semibold text-[#30A08B] mb-2">
-          Mode d'expédition
+          Mode d&apos;expédition
         </h3>
         <div className="space-y-2 bg-gray-50 p-3 rounded-md">
           {shippingInfo.map((info, index) => (
@@ -463,7 +463,7 @@ const PanierPage: React.FC = () => {
                     </div>
                   )}
                   <div className="flex justify-between text-sm text-gray-600">
-                    <span>Frais d'expédition total</span>
+                    <span>Frais d&apos;expédition total</span>
                     <span>{calculerTotalFraisExpedition()} F CFA</span>
                   </div>
                   <div className="pt-2 border-t">
@@ -522,7 +522,7 @@ const PanierPage: React.FC = () => {
                         )}
                       </div>
                       <span className="text-sm text-gray-700">
-                        S'abonner à la newsletter
+                        S&apos;abonner à la newsletter
                       </span>
                     </div>
                     <button

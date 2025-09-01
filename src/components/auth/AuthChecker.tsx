@@ -11,7 +11,6 @@ interface AuthCheckerProps {
 
 export default function AuthChecker({ children }: AuthCheckerProps) {
   const dispatch = useAppDispatch();
-  const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {

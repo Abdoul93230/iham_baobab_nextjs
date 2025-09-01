@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { NextSeo } from "next-seo";
 import Head from "next/head";
 import useAuth from "@/hooks/useAuth";
+import Link from "next/dist/client/link";
 
 // Configuration SEO statique adaptée à votre situation
 // Configuration SEO statique adaptée à votre situation
@@ -71,7 +72,7 @@ const profileSEOConfig = {
 export default function ProfilePage() {
   const [paniernbr, setPaniernbr] = useState(0);
   const [isClient, setIsClient] = useState(false);
-  const { user, isAuthenticated, loading } = useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
     setIsClient(true);
@@ -212,13 +213,13 @@ export default function ProfilePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <ol className="flex items-center space-x-2 text-sm">
               <li>
-                <a 
+                <Link 
                   href="/" 
                   className="text-gray-600 hover:text-[#30A08B] transition-colors duration-200"
                   aria-label="Retour à l'accueil"
                 >
                   Accueil
-                </a>
+                </Link>
               </li>
               <li className="flex items-center">
                 <svg 

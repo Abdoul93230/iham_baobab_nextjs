@@ -62,7 +62,7 @@ export default function CategoryPage() {
                 onClick={() => router.push("/")}
                 className="w-full sm:w-auto bg-[#30A08B] text-white px-6 py-3 rounded-lg hover:bg-[#2a907d] transition-colors"
               >
-                Retour à l'accueil
+                Retour à l&apos;accueil
               </button>
               <button
                 onClick={() => router.push("/dashboard")}
