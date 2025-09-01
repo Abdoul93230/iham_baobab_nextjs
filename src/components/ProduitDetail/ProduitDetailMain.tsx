@@ -36,6 +36,7 @@ import { shuffle } from "lodash";
 import Alert from "./Alert";
 import AppPromo from "./AppPromo";
 import { fetchUserLikes, toggleLike } from "@/redux/likesSlice";
+import { setProducts } from "@/redux/productsSlice";
 
 // Fonction utilitaire pour combiner les classes CSS
 function cn(...classes: (string | undefined | boolean)[]): string {
@@ -45,9 +46,10 @@ function cn(...classes: (string | undefined | boolean)[]): string {
 interface ProduitDetailMainProps {
   panierchg?: () => void;
   productId: string;
+  serverData?: any; // Type pour les données serveur
 }
 
-function ProduitDetailMain({ panierchg, productId }: ProduitDetailMainProps) {
+function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMainProps) {
   const router = useRouter();
   const swiperRef = useRef(null);
   const [isZoomed, setIsZoomed] = useState(false);
@@ -131,6 +133,44 @@ function ProduitDetailMain({ panierchg, productId }: ProduitDetailMainProps) {
   const DATA_Categories = useAppSelector((state) => state.products.categories);
   const likedProducts = useAppSelector((state) => state.likes.likedProducts);
   
+  // État local pour les données immédiates (hydratation SSR)
+  const [immediateProducts, setImmediateProducts] = useState<any[]>([]);
+  const [immediateProduct, setImmediateProduct] = useState<any>(null);
+  const [immediateTypes, setImmediateTypes] = useState<any[]>([]);
+  const [immediateCategories, setImmediateCategories] = useState<any[]>([]);
+  
+  // Hydratation immédiate avec les données serveur
+  useEffect(() => {
+    if (serverData) {
+      // Utiliser immédiatement les données serveur pour un affichage instantané
+      if (serverData.product) {
+        setImmediateProduct(serverData.product);
+      }
+      
+      const allProductsData = [
+        ...(serverData.product ? [serverData.product] : []),
+        ...serverData.similarProducts,
+        ...serverData.allProducts
+      ];
+      
+      setImmediateProducts(allProductsData);
+      
+      // Ajouter types et catégories si disponibles
+      if (serverData.type) {
+        setImmediateTypes([serverData.type]);
+      }
+      if (serverData.category) {
+        setImmediateCategories([serverData.category]);
+      }
+    }
+  }, [serverData]);
+  
+  // Utiliser les données immédiates si disponibles, sinon fallback sur Redux
+  const effectiveProducts = immediateProducts.length > 0 ? immediateProducts : DATA_Products;
+  const effectiveProduct = immediateProduct || effectiveProducts.find((p: any) => p._id === productId);
+  const effectiveTypes = immediateTypes.length > 0 ? immediateTypes : DATA_Types;
+  const effectiveCategories = immediateCategories.length > 0 ? immediateCategories : DATA_Categories;
+  
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
   const [notificationType, setNotificationType] = useState<"success" | "error">("success");
@@ -169,7 +209,8 @@ function ProduitDetailMain({ panierchg, productId }: ProduitDetailMainProps) {
     }
   };
 
-  const produit = DATA_Products.find((item: any) => item._id === productId);
+  // Utiliser effectiveProduct au lieu de rechercher dans DATA_Products
+  const produit = effectiveProduct;
   const [selectedVariant, setSelectedVariant] = useState(produit?.variants?.[0]);
 
   const handleMouseEnter = () => {
@@ -243,9 +284,9 @@ function ProduitDetailMain({ panierchg, productId }: ProduitDetailMainProps) {
   }, [productId, produit]);
 
   const images = [
-    DATA_Products.find((item: any) => item._id === productId)?.image1,
-    DATA_Products.find((item: any) => item._id === productId)?.image2,
-    DATA_Products.find((item: any) => item._id === productId)?.image3,
+    produit?.image1,
+    produit?.image2,
+    produit?.image3,
   ].filter((image: string | undefined): image is string => image !== undefined && image.startsWith("http"));
 
   // Récupérer toutes les images disponibles
