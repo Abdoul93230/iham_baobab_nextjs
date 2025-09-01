@@ -176,7 +176,7 @@ const PanierPage: React.FC = () => {
     setRond(true);
     try {
       const response = await fetch(
-        `https://secoure.onrender.com/api/validatePromoCode`,
+        `https://secoure.onrender.com/getCodePromoByHashedCode`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

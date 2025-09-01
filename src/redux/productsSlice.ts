@@ -98,7 +98,7 @@ export const getProducts_Pubs = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get(`${BackendUrl}/productPubget`);
-      return response.data;
+      return response.data?.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || "Error fetching product pubs");
     }

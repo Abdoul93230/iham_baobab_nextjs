@@ -4,6 +4,7 @@ import "./globals.css";
 import { ReduxProvider } from "@/redux/provider";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import AuthChecker from "@/components/auth/AuthChecker";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -31,7 +32,9 @@ export default function RootLayout({
     <html lang="fr">
       <body className={`${inter.variable} font-sans antialiased`}>
         <ReduxProvider>
-          {children}
+          <AuthChecker>
+            {children}
+          </AuthChecker>
           <ToastContainer
             position="top-right"
             autoClose={5000}

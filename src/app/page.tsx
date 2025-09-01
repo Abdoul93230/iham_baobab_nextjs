@@ -70,7 +70,6 @@ export default function Home() {
     <div className="min-h-screen">
       <HomeHeader 
         paniernbr={panierCount}
-        acces={acces}
         chg={toggleMenu}
       />
       <HomeMain isOpen={isMenuOpen} />

@@ -8,7 +8,7 @@ export const fetchUserLikes = createAsyncThunk(
     const response = await axios.get(
       `${process.env.NEXT_PUBLIC_Backend_Url}/likes/user/${userId}`
     );
-    return response.data;
+    return response.data?.data;
   }
 );
 

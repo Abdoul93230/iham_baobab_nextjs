@@ -36,14 +36,15 @@ import {
   MessageCircle,
 } from "lucide-react";
 import Image from "next/image";
-import { useAppSelector } from "@/redux/hooks";
+import { useAppSelector, useAppDispatch } from "@/redux/hooks";
+import { logout, selectAcces, selectIsAuthenticated } from "@/redux/userSlice";
 import axios from "axios";
 import { io, Socket } from "socket.io-client";
 import SearchBar from "../SearchBar";
+import { fetchUserLikes } from "@/redux/likesSlice";
 
 interface HomeHeaderProps {
   paniernbr: number;
-  acces: string;
   chg: () => void;
 }
 
@@ -53,35 +54,44 @@ interface Category {
   image: string;
 }
 
-const HomeHeader: React.FC<HomeHeaderProps> = ({ paniernbr, acces, chg }) => {
+const HomeHeader: React.FC<HomeHeaderProps> = ({ paniernbr, chg }) => {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const categories = useAppSelector((state) => state.products.categories) as Category[];
+  const acces = useAppSelector(selectAcces);
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
+  const currentUser = useAppSelector((state) => state.user.user);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [produits, setProduits] = useState(0);
   const [nbr, setNbr] = useState(0);
-  const [likedProducts, setLikedProducts] = useState<Set<string>>(new Set());
-
+  // const [likedProducts, setLikedProducts] = useState<Set<string>>(new Set());
+  const { likedProducts, loading: likesLoading, error: likesError } = useAppSelector((state) => state.likes);
   const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
   const [socket, setSocket] = useState<Socket | null>(null);
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    // Initialiser le socket et l'utilisateur côté client
-    if (typeof window !== "undefined") {
+    // Utiliser l'utilisateur Redux si disponible, sinon localStorage
+    if (currentUser) {
+      setUser(currentUser);
+    } else if (typeof window !== "undefined") {
       const userData = JSON.parse(localStorage.getItem("userEcomme") || "null");
-      setUser(userData);
+      setUser(userData?.user || userData);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    // Initialiser le socket côté client
+    if (typeof window !== "undefined" && BackendUrl) {
+      const socketInstance = io(BackendUrl);
+      setSocket(socketInstance);
       
-      if (BackendUrl) {
-        const socketInstance = io(BackendUrl);
-        setSocket(socketInstance);
-        
-        return () => {
-          socketInstance.disconnect();
-        };
-      }
+      return () => {
+        socketInstance.disconnect();
+      };
     }
   }, [BackendUrl]);
 
@@ -89,21 +99,11 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ paniernbr, acces, chg }) => {
 
   useEffect(() => {
     if (userId) {
-      fetchUserLikes();
+      dispatch(fetchUserLikes(userId));
     }
-  }, [userId]);
+  }, [userId, dispatch]);
 
-  const fetchUserLikes = async () => {
-    try {
-      if (BackendUrl) {
-        const response = await axios.get(`${BackendUrl}/likes/user/${userId}`);
-                const likedIds = new Set(response.data.map((like: any) => like.produit._id as string));
-        setLikedProducts(likedIds);
-      }
-    } catch (error) {
-      console.error("Erreur lors du chargement des likes:", error);
-    }
-  };
+
 
   useEffect(() => {
     if (user) {
@@ -215,29 +215,75 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ paniernbr, acces, chg }) => {
             {
               icon: User,
               label: "Se connecter",
-              onClick: () => router.push("/Connexion"),
+              onClick: () => {
+                setActiveDropdown(null);
+                setIsMobileMenuOpen(false);
+                router.push("/auth/login");
+              },
+            },
+            {
+              icon: Plus,
+              label: "S'inscrire",
+              onClick: () => {
+                setActiveDropdown(null);
+                setIsMobileMenuOpen(false);
+                router.push("/auth/register");
+              },
             },
           ]
         : []),
       {
         icon: Home,
         label: "Mon compte",
-        onClick: () => router.push("/Compte?fromProfile=true"),
+        onClick: () => {
+          setActiveDropdown(null);
+          setIsMobileMenuOpen(false);
+          if (acces === "oui") {
+            router.push("/profile");
+          } else {
+            // Rediriger vers la connexion avec le paramètre de retour
+            router.push("/auth/login?returnUrl=/profile");
+          }
+        },
       },
       {
         icon: Package,
         label: "Mes commandes",
-        onClick: () => router.push("/Commande"),
+        onClick: () => {
+          setActiveDropdown(null);
+          setIsMobileMenuOpen(false);
+          if (acces === "oui") {
+            router.push("/dashboard");
+          } else {
+            router.push("/auth/login?returnUrl=/dashboard");
+          }
+        },
       },
       {
         icon: Heart,
         label: "Inviter des amis",
-        onClick: () => router.push("/Inviter les amis"),
+        onClick: () => {
+          setActiveDropdown(null);
+          setIsMobileMenuOpen(false);
+          if (acces === "oui") {
+            router.push("/dashboard");
+          } else {
+            router.push("/auth/login?returnUrl=/dashboard");
+          }
+        },
       },
       {
-        icon: Home,
-        label: "Mon adresses",
-        onClick: () => router.push("/Livraison"),
+        icon: Truck,
+        label: "Mes adresses",
+        onClick: () => {
+          setActiveDropdown(null);
+          setIsMobileMenuOpen(false);
+          if (acces === "oui") {
+            router.push("/profile");
+          } else {
+            router.push("/auth/login?returnUrl=/profile");
+          }
+        },
       },
       ...(acces === "oui"
         ? [
@@ -245,11 +291,29 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ paniernbr, acces, chg }) => {
               icon: LogOut,
               label: "Se déconnecter",
               onClick: () => {
-                localStorage.removeItem("userEcomme");
+                // Utiliser Redux pour la déconnexion
+                dispatch(logout());
+                
+                // Supprimer les données supplémentaires du localStorage
                 localStorage.removeItem("orderTotal");
                 localStorage.removeItem("pendingOrder");
-                router.push("/Home");
-                window.location.reload();
+                localStorage.removeItem("cartItems");
+                localStorage.removeItem("userToken");
+                
+                // Mettre à jour l'état de connexion
+                chg();
+                
+                // Fermer les dropdowns
+                setActiveDropdown(null);
+                setIsMobileMenuOpen(false);
+                
+                // Rediriger vers la page d'accueil
+                router.push("/");
+                
+                // Recharger la page pour s'assurer que tous les états sont réinitialisés
+                setTimeout(() => {
+                  window.location.reload();
+                }, 100);
               },
             },
           ]
@@ -260,22 +324,38 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ paniernbr, acces, chg }) => {
       {
         icon: HelpCircle,
         label: "Centre d'aide",
-        onClick: () => router.push("/Service"),
+        onClick: () => {
+          setActiveDropdown(null);
+          setIsMobileMenuOpen(false);
+          router.push("/dashboard");
+        },
       },
       {
         icon: Truck,
         label: "Adresse de livraison",
-        onClick: () => router.push("/Livraison"),
+        onClick: () => {
+          setActiveDropdown(null);
+          setIsMobileMenuOpen(false);
+          router.push("/profile");
+        },
       },
       {
         icon: Bell,
         label: "Paramètre de notification",
-        onClick: () => router.push("/Paramètre de notification"),
+        onClick: () => {
+          setActiveDropdown(null);
+          setIsMobileMenuOpen(false);
+          router.push("/dashboard");
+        },
       },
       {
         icon: Shield,
         label: "Avis de confidentialité",
-        onClick: () => router.push("/Avis de confidentialité"),
+        onClick: () => {
+          setActiveDropdown(null);
+          setIsMobileMenuOpen(false);
+          router.push("/dashboard");
+        },
       },
       {
         icon: HelpCircle,
@@ -309,6 +389,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ paniernbr, acces, chg }) => {
         return (
           <div className="absolute z-30 left-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden backdrop-blur-sm backdrop-saturate-150 transition-all duration-300">
             <div className="py-2">
+              
               {categories?.map((category, index) => {
                 if (category.name === "all") {
                   return null;
@@ -341,7 +422,11 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ paniernbr, acces, chg }) => {
 
             <div className="bg-gradient-to-b from-[#30A08B]/5 to-[#30A08B]/10 px-4 py-3">
               <button
-                onClick={() => router.push("/Voir-plus")}
+                onClick={() => {
+                  setActiveDropdown(null);
+                  setIsMobileMenuOpen(false);
+                  router.push("/dashboard");
+                }}
                 className="w-full text-center text-sm font-medium text-[#30A08B] hover:text-[#2a907d] transition-colors"
               >
                 Découvrir toutes les catégories
@@ -494,7 +579,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ paniernbr, acces, chg }) => {
                   >
                     <Heart className="h-5 w-5 md:h-6 md:w-6" />
                     <span className="absolute -top-1 -right-1 bg-emerald-500 rounded-full w-3 h-3 md:w-4 md:h-4 text-[10px] md:text-xs text-white flex items-center justify-center">
-                      {likedProducts?.size}
+                      {likedProducts?.length}
                     </span>
                   </div>
                 </button>
@@ -611,7 +696,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ paniernbr, acces, chg }) => {
             >
               <Heart className="h-6 w-6" />
               <span className="absolute -top-1 -right-1 bg-emerald-500 rounded-full w-4 h-4 text-xs text-white flex items-center justify-center">
-                {likedProducts?.size}
+                {likedProducts?.length}
               </span>
             </button>
 

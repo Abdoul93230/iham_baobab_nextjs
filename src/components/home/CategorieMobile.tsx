@@ -30,79 +30,76 @@ const CategorieMobile: React.FC = () => {
     }
   };
 
-  const colors = ["#30A08B", "#B2905F", "#B17236"];
-
   return (
-    <div className="md:hidden mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-[#30A08B]">Catégories</h2>
-        <div className="flex space-x-2">
-          <button
-            onClick={scrollLeft}
-            className="p-2 rounded-full bg-[#30A08B] text-white hover:bg-opacity-80 transition-colors"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <button
-            onClick={scrollRight}
-            className="p-2 rounded-full bg-[#30A08B] text-white hover:bg-opacity-80 transition-colors"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      </div>
+    <div className="w-full bg-gradient-to-b from-gray-50 to-white rounded-lg py-4 shadow-sm">
+      <div className="relative">
+        {/* Navigation buttons */}
+        <button
+          onClick={scrollLeft}
+          className="absolute left-1 top-1/2 -translate-y-1/2 bg-[#30A08B] rounded-full p-1.5 shadow-lg hover:shadow-xl transition-all duration-300 z-10 text-white hover:bg-[#B2905F]"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <button
+          onClick={scrollRight}
+          className="absolute right-1 top-1/2 -translate-y-1/2 bg-[#30A08B] rounded-full p-1.5 shadow-lg hover:shadow-xl transition-all duration-300 z-10 text-white hover:bg-[#B2905F]"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
 
-      <div
-        ref={categoriesRef}
-        className="flex overflow-x-auto space-x-4 pb-4 scrollbar-hide"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => setIsHovering(false)}
-      >
+        {/* Categories container */}
+        <div
+          ref={categoriesRef}
+          className="overflow-x-auto scrollbar-hide scroll-smooth custom-scrollbar"
+          onMouseEnter={() => setIsHovering(true)}
+          onMouseLeave={() => setIsHovering(false)}
+        >
+          <div className="flex space-x-4 px-8">
+            {DATA_Categories?.filter(category => category.name !== "all").map((category) => (
+              <div
+                key={category._id}
+                onClick={() => router.push(`/Categorie/${category.name}`)}
+                className="flex justify-between items-center border rounded-lg space-x-5 p-2 transition-transform duration-300 ease-out active:scale-95 cursor-pointer"
+              >
+                <div className="rounded w-[80px] h-[50px] mb-2 transform transition-all duration-300 hover:shadow-md hover:scale-105 group relative overflow-hidden">
+                  <Image
+                    src={category.image}
+                    alt={category.name}
+                    width={80}
+                    height={50}
+                    className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full" />
+                </div>
+
+                <span className="text-xs text-nowrap font-medium text-gray-700 text-center group-hover:text-gray-900 transition-colors duration-300">
+                  {category.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+        
         <style jsx>{`
-          div::-webkit-scrollbar {
-            display: none;
+          .custom-scrollbar::-webkit-scrollbar {
+            display: none; /* Pour les navigateurs WebKit (Chrome, Safari) */
+          }
+
+          .custom-scrollbar {
+            -ms-overflow-style: none; /* Pour Internet Explorer et Edge */
+            scrollbar-width: none; /* Pour Firefox */
           }
         `}</style>
-        
-        {DATA_Categories.filter(cat => cat.name !== "all").map((category, index) => (
-          <div
-            key={category._id}
-            onClick={() => router.push(`/Categorie/${category.name}`)}
-            className="flex-shrink-0 w-20 cursor-pointer group"
-          >
-            <div
-              className="w-16 h-16 rounded-full flex items-center justify-center mb-2 mx-auto transition-transform duration-200 group-hover:scale-110 shadow-lg"
-              style={{ backgroundColor: colors[index % colors.length] }}
-            >
-              <Image
-                src={category.image}
-                alt={category.name}
-                width={32}
-                height={32}
-                className="object-contain filter brightness-0 invert"
-              />
-            </div>
-            <p className="text-xs text-center font-medium text-gray-700 leading-tight">
-              {category.name.length > 12 
-                ? `${category.name.slice(0, 12)}...` 
-                : category.name
-              }
-            </p>
-          </div>
-        ))}
-        
+      </div>
+
+      {/* Optional scroll indicator */}
+      <div className="flex justify-center mt-2 space-x-1">
         <div
-          onClick={() => router.push("/Voir-plus")}
-          className="flex-shrink-0 w-20 cursor-pointer group"
-        >
-          <div className="w-16 h-16 rounded-full flex items-center justify-center mb-2 mx-auto transition-transform duration-200 group-hover:scale-110 shadow-lg bg-gray-300">
-            <span className="text-2xl">➡️</span>
-          </div>
-          <p className="text-xs text-center font-medium text-gray-700 leading-tight">
-            Voir plus
-          </p>
-        </div>
+          className={`h-1 w-12 rounded-full transition-opacity duration-300 ${
+            isHovering ? "opacity-100" : "opacity-0"
+          }`}
+          style={{ background: "linear-gradient(to right, #30A08B, #B2905F)" }}
+        />
       </div>
     </div>
   );
