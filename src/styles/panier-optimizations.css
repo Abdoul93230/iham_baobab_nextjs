@@ -1,0 +1,187 @@
+/* Optimisations CSS pour les performances du panier */
+
+/* Amélioration des animations et transitions */
+.panier-card-transition {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, opacity;
+}
+
+.panier-card-transition:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Optimisation des images */
+.panier-product-image {
+  transition: opacity 0.2s ease-in-out;
+  object-fit: cover;
+  will-change: opacity;
+}
+
+.panier-product-image:not([src]) {
+  opacity: 0;
+}
+
+.panier-product-image[src] {
+  opacity: 1;
+}
+
+/* Loading skeleton optimisé */
+.panier-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Optimisation des scroll pour mobile */
+.panier-scroll-container {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+}
+
+/* Amélioration des performances des grilles */
+.panier-grid {
+  contain: layout style paint;
+}
+
+/* Optimisation des boutons */
+.panier-button {
+  transform: translateZ(0); /* Force GPU acceleration */
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+
+.panier-button:active {
+  transform: translateY(1px) translateZ(0);
+}
+
+/* Optimisation des modals et overlays */
+.panier-modal {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Réduction du layout shift */
+.panier-image-container {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Optimisation des focus states pour l'accessibilité */
+.panier-focus-ring:focus-visible {
+  outline: 2px solid #30A08B;
+  outline-offset: 2px;
+}
+
+/* Amélioration de la performance des animations */
+@media (prefers-reduced-motion: reduce) {
+  .panier-card-transition,
+  .panier-product-image,
+  .panier-button {
+    transition: none;
+  }
+  
+  .panier-skeleton {
+    animation: none;
+  }
+}
+
+/* Optimisation pour les écrans haute densité */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .panier-product-image {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+}
+
+/* Performance pour les longues listes */
+.panier-virtual-list {
+  contain: strict;
+  height: 100%;
+  overflow: auto;
+}
+
+.panier-virtual-list-item {
+  contain: layout style paint;
+}
+
+/* Optimisation des tooltips */
+.panier-tooltip {
+  pointer-events: none;
+  transform: translateZ(0);
+  will-change: opacity, transform;
+}
+
+/* Amélioration du contraste et de l'accessibilité */
+.panier-high-contrast {
+  filter: contrast(1.2);
+}
+
+/* Optimisation des bordures pour éviter le reflow */
+.panier-border-box {
+  box-sizing: border-box;
+}
+
+/* Optimisation des flex layouts */
+.panier-flex-no-shrink {
+  flex-shrink: 0;
+}
+
+/* Font display optimization doit être dans @font-face */
+/* @font-display sera utilisé dans les déclarations @font-face spécifiques */
+
+/* Optimisation des z-index pour éviter les problèmes de layer */
+.panier-z-base { z-index: 1; }
+.panier-z-elevated { z-index: 10; }
+.panier-z-overlay { z-index: 20; }
+.panier-z-modal { z-index: 30; }
+.panier-z-toast { z-index: 40; }
+.panier-z-tooltip { z-index: 50; }
+
+/* Optimisation pour les dark mode */
+@media (prefers-color-scheme: dark) {
+  .panier-card-transition {
+    background-color: #1f2937;
+    color: #f9fafb;
+  }
+  
+  .panier-skeleton {
+    background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+  }
+}
+
+/* Optimisation des impressions */
+@media print {
+  .panier-card-transition,
+  .panier-button,
+  .panier-modal {
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+  
+  .panier-skeleton {
+    display: none;
+  }
+}
+
+/* Préfixe pour compatibilité navigateur */
+.panier-transform {
+  -webkit-transform: translateZ(0);
+  -moz-transform: translateZ(0);
+  -ms-transform: translateZ(0);
+  -o-transform: translateZ(0);
+  transform: translateZ(0);
+}

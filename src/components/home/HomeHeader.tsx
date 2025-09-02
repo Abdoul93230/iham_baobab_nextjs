@@ -538,7 +538,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ paniernbr, chg }) => {
 
             <span
               className="text-2xl w-24 h-16 font-extrabold text-amber-900 tracking-widest cursor-pointer"
-              onClick={() => router.push("/Home")}
+              onClick={() => router.push("/")}
             >
               <Image
                 src="/LogoText.png"

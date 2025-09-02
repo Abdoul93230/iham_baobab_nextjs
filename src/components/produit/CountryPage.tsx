@@ -72,11 +72,16 @@ const CountryPage: React.FC<CountryPageProps> = ({
 
   return (
     <div
-      className="fixed z-50 inset-0 w-full h-full bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
       onClick={handleBackgroundClick}
     >
-      <div className="relative w-full max-w-lg transform transition-all animate-slideUp">
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm"></div>
+      
+      {/* Modal Content Container */}
+      <div className="relative z-10 w-full max-w-lg transform transition-all animate-slideUp">
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden"
+             onClick={(e) => e.stopPropagation()}>
           <div className="bg-gradient-to-r from-[#30A08B] to-[#B2905F] p-6">
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-3">

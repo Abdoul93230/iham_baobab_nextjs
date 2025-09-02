@@ -51,11 +51,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
   return (
     <div className="group relative border-none shadow-lg hover:shadow-xl transition-all duration-300 bg-white rounded-xl overflow-hidden">
       {/* Promo Badge */}
-      {product.prixPromo && product.prixPromo > 0 && (
+      {product.prixPromo && product.prixPromo > 0 ? (
         <div className="absolute z-10 right-3 top-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-xs font-bold px-2 py-1 rounded">
           -{calculateDiscount(product.prix, product.prixPromo)}%
+          
         </div>
-      )}
+      ) : null}
 
       {/* Image Section */}
       <div
@@ -97,7 +98,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
               className="bg-white hover:bg-emerald-50 w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
-                // Add cart logic here
+                onProductClick(product._id);
               }}
             >
               <ShoppingCart className="w-5 h-5 text-emerald-600" />
@@ -187,7 +188,7 @@ const SliderPage: React.FC<SliderPageProps> = ({ products, name }) => {
   };
 
   const handleProductClick = (productId: string) => {
-    router.push(`/ProduitDétail/${productId}`);
+    router.push(`/ProduitDetail/${productId}`);
   };
 
   if (!products || products.length === 0) {

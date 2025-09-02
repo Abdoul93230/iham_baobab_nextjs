@@ -139,14 +139,17 @@ const ProduitSimilaires: React.FC<ProduitSimilairesProps> = ({
                 {produit.name}
               </h3>
               <div className="mt-2 flex justify-between items-center">
+                {produit.prixPromo && produit.prixPromo > 0 ?(
                 <p className="text-sm font-semibold text-emerald-600">
-                  {produit.prix?.toLocaleString()} FCFA
-                </p>
-                {produit.prixPromo && produit.prixPromo > 0 && (
+                  {produit.prixPromo?.toLocaleString()} FCFA
+                </p>):null}
+                {produit.prix && (produit.prixPromo && produit.prixPromo>0)&& produit.prix > 0 ? (
                   <p className="text-xs text-gray-500 line-through">
-                    {produit.prixPromo?.toLocaleString()} FCFA
+                    {produit.prix?.toLocaleString()} FCFA
                   </p>
-                )}
+                ) :produit.prix &&produit.prix > 0 ?(<p className="text-sm font-semibold text-emerald-600">
+                    {produit.prix?.toLocaleString()} FCFA
+                  </p>) : null}
               </div>
             </div>
           </div>

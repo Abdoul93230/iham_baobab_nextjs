@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { CountrySelect } from "react-country-state-city";
+import "react-country-state-city/dist/react-country-state-city.css";
 import { X, MapPin, ChevronDown } from "lucide-react";
 
 interface CountryPageProps {
@@ -10,39 +12,14 @@ interface CountryPageProps {
   setPays: (pays: string) => void;
 }
 
-interface Country {
-  id: number;
-  name: string;
-}
-
-const CountryPage: React.FC<CountryPageProps> = ({
+export default function CountryPage({
   isOpen,
   setIsCountryOpen,
   onClose,
   setPays,
-}) => {
+}: CountryPageProps) {
   const [countryId, setCountryId] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
-
-  // Liste des pays d'Afrique de l'Ouest
-  const countries: Country[] = [
-    { id: 1, name: "Bénin" },
-    { id: 2, name: "Burkina Faso" },
-    { id: 3, name: "Cap-Vert" },
-    { id: 4, name: "Côte d'Ivoire" },
-    { id: 5, name: "Gambie" },
-    { id: 6, name: "Ghana" },
-    { id: 7, name: "Guinée" },
-    { id: 8, name: "Guinée-Bissau" },
-    { id: 9, name: "Liberia" },
-    { id: 10, name: "Mali" },
-    { id: 11, name: "Niger" },
-    { id: 12, name: "Nigeria" },
-    { id: 13, name: "Sénégal" },
-    { id: 14, name: "Sierra Leone" },
-    { id: 15, name: "Togo" },
-  ];
 
   const handleSubmit = () => {
     setIsLoading(true);
@@ -58,12 +35,11 @@ const CountryPage: React.FC<CountryPageProps> = ({
     }
   };
 
-  const handleCountryChange = (country: Country) => {
-    console.log(country);
-    setPays(country.name);
-    setCountryId(country.id);
-    setSelectedCountry(country);
-    if (country.id !== 0) {
+  const handleCountryChange = (e: any) => {
+    console.log(e);
+    setPays(e.name);
+    setCountryId(e.id);
+    if (e.id !== 0) {
       onClose();
     }
   };
@@ -99,24 +75,12 @@ const CountryPage: React.FC<CountryPageProps> = ({
               <label className="block text-[#B17236] font-medium">
                 Pays
                 <div className="mt-1 relative">
-                  <select
+                  <CountrySelect
                     value={countryId}
-                    onChange={(e) => {
-                      const selectedId = parseInt(e.target.value);
-                      const country = countries.find(c => c.id === selectedId);
-                      if (country) {
-                        handleCountryChange(country);
-                      }
-                    }}
+                    onChange={handleCountryChange}
+                    placeHolder="Sélectionnez votre pays"
                     className="w-full px-4 py-3 border-2 border-[#30A08B]/20 rounded-lg focus:border-[#30A08B] focus:ring-2 focus:ring-[#30A08B]/20 outline-none transition-all duration-200 appearance-none bg-white"
-                  >
-                    <option value={0}>Sélectionnez votre pays</option>
-                    {countries.map((country) => (
-                      <option key={country.id} value={country.id}>
-                        {country.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                   <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#B2905F] pointer-events-none" />
                 </div>
               </label>
@@ -182,6 +146,4 @@ const CountryPage: React.FC<CountryPageProps> = ({
       </div>
     </div>
   );
-};
-
-export default CountryPage;
+}

@@ -4,14 +4,14 @@ import axios from "axios";
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 
 // Types basés sur votre structure existante
-interface Variant {
+export interface Variant {
   color: string;
   imageUrl: string;
   sizes?: string[];
   stock?: number;
 }
 
-interface Product {
+export interface Product {
   _id: string;
   name: string;
   prix: number;

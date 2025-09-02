@@ -5,6 +5,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'XOF',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount).replace('XOF', 'XOF');
+}
+
 // Générer un ID unique
 export const generateUniqueID = (): string => {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);

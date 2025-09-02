@@ -107,7 +107,7 @@ const HeaderMobile: React.FC<HeaderMobileProps> = ({
         "/invite",
         "/profile/addresses",
         "/suggestion",
-        "/Home",
+        "/",
       ],
     },
     {

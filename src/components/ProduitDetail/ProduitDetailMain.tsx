@@ -36,7 +36,7 @@ import { shuffle } from "lodash";
 import Alert from "./Alert";
 import AppPromo from "./AppPromo";
 import { fetchUserLikes, toggleLike } from "@/redux/likesSlice";
-import { setProducts } from "@/redux/productsSlice";
+import { setProducts, Product, Variant } from "@/redux/productsSlice";
 
 // Fonction utilitaire pour combiner les classes CSS
 function cn(...classes: (string | undefined | boolean)[]): string {
@@ -66,7 +66,6 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
   const [rating, setRating] = useState(0);
-  const [isOpenCountry, setIsOpenCountry] = useState(false);
   const [Allcommente, setAllCommente] = useState([]);
   const [categorie, setCategorie] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
@@ -703,8 +702,110 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
   };
 
   const addToCart2 = () => {
-    addToCart();
-    router.push("/Panier");
+    if (!produit) return;
+    
+    if (!westAfricanCountries.includes(pays?.toLowerCase())) {
+      handleWarning(`ce Produit ne peut etre expedier au ${pays}`);
+      return;
+    }
+    
+    // Vérification des variantes de couleur
+    if (produit?.variants && produit.variants.length >= 2 && !selectedVariant) {
+      handleWarning(
+        `Veuillez choisir un modèle parmi les ${produit.variants.length}`
+      );
+      return;
+    }
+
+    // Vérification des tailles
+    const hasMultipleSizes1 = produit?.variants?.some(
+      (variant: Variant) => variant.sizes && variant.sizes.length >= 1
+    );
+    const hasMultipleSizes = produit?.variants?.some(
+      (variant: Variant) => variant.sizes && variant.sizes.length >= 2
+    );
+
+    if (hasMultipleSizes1 && !selectedSize) {
+      handleWarning(`Veuillez selectionner la taille disponible`);
+      return;
+    } else if (hasMultipleSizes && !selectedSize) {
+      handleWarning(`Veuillez choisir une taille parmi les disponibles`);
+      return;
+    }
+
+    // NOUVELLE VALIDATION DU STOCK
+    const availableStock = getAvailableStock();
+    if (availableStock <= 0) {
+      handleWarning("Ce produit est en rupture de stock");
+      return;
+    }
+
+    // Vérifier le stock existant dans le panier
+    const existingProducts = JSON.parse(localStorage.getItem("panier") || "[]");
+    const existingProduct = existingProducts.find((p: any) => {
+      if (!produit.variants || produit.variants.length === 0) {
+        return p?._id === produit?._id;
+      }
+      return (
+        p?._id === produit?._id &&
+        p.colors[0] === selectedVariant?.color &&
+        p.sizes[0] === selectedSize
+      );
+    });
+
+    const currentCartQuantity = existingProduct ? existingProduct.quantity : 0;
+    const totalRequestedQuantity = currentCartQuantity + quantity;
+
+    if (totalRequestedQuantity > availableStock) {
+      handleWarning(
+        `Stock insuffisant. Disponible: ${availableStock}, Dans le panier: ${currentCartQuantity}`
+      );
+      return;
+    }
+
+    // Vérifier si le produit existe déjà dans le panier
+    const existingProductIndex = existingProducts.findIndex((p: any) => {
+      if (!produit.variants || produit.variants.length === 0) {
+        return p?._id === produit?._id;
+      }
+      return (
+        p?._id === produit?._id &&
+        p.colors[0] === selectedVariant?.color &&
+        p.sizes[0] === selectedSize
+      );
+    });
+
+    if (existingProductIndex !== -1) {
+      // Produit existant : incrémenter la quantité
+      const updatedProducts = existingProducts.map((p: any, index: number) =>
+        index === existingProductIndex ? { ...p, quantity: p.quantity + quantity } : p
+      );
+
+      localStorage.setItem("panier", JSON.stringify(updatedProducts));
+      handleSuccess(`${quantity} produit(s) ajouté(s) au panier !`);
+    } else {
+      // Nouveau produit à ajouter
+      const newProduct = {
+        ...produit,
+        colors: selectedVariant ? [selectedVariant.color] : [],
+        sizes: selectedSize ? [selectedSize] : [],
+        quantity: quantity,
+        _id: produit?._id,
+        imageUrl: selectedVariant ? selectedVariant.imageUrl : produit?.image1,
+        price:
+          discountedPrice && discountedPrice > 0
+            ? discountedPrice
+            : originalPrice,
+        prixPromo: discountedPrice,
+      };
+
+      const updatedProducts = [...existingProducts, newProduct];
+      localStorage.setItem("panier", JSON.stringify(updatedProducts));
+      handleSuccess("Produit ajouté au panier !");
+    }
+
+    // Rediriger vers le panier
+    router.push("/panier");
   };
 
   // Gestion du zoom avec la molette de souris
@@ -1020,18 +1121,22 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
                   <div className="flex space-x-2 p-2">
                     {produit?.variants.map((variant: any, index: number) => (
                       <div
-                        className={`w-[70px] h-[70px] rounded-md overflow-hidden transition-all duration-200 
+                        className={`w-[70px] h-[70px] rounded-md overflow-hidden transition-all duration-200 cursor-pointer hover:shadow-lg
                       ${selectedVariant?.color === variant?.color
-                            ? "border-2 border-solid border-[#30A08B]"
-                            : "border border-gray-300"
+                            ? "border-2 border-solid border-[#30A08B] shadow-md scale-105"
+                            : "border border-gray-300 hover:border-[#30A08B] hover:scale-105"
                           }`}
                         key={index}
+                        onClick={() => handleVariantChange(variant)}
                       >
                         <img
-                          className="w-full h-full object-cover cursor-pointer"
+                          className={`w-full h-full object-cover transition-all duration-200 ${
+                            selectedVariant?.color === variant?.color 
+                              ? "brightness-105" 
+                              : "hover:brightness-110"
+                          }`}
                           src={variant.imageUrl}
                           alt={`Image ${variant.color}`}
-                          onClick={() => handleVariantChange(variant)}
                         />
                       </div>
                     ))}
@@ -1053,14 +1158,16 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
                     {selectedVariant?.sizes?.map((size: string, index: number) => (
                       <div
                         key={index}
-                        className={`w-24 h-[46px] flex items-center justify-center cursor-pointer rounded-md transition-all duration-200 
+                        className={`w-24 h-[46px] flex items-center justify-center cursor-pointer rounded-md transition-all duration-200 hover:shadow-md
                       ${selectedSize === size
-                            ? "border-2 border-[#30A08B]"
-                            : "border border-gray-300"
+                            ? "border-2 border-[#30A08B] bg-[#30A08B]/5 shadow-sm"
+                            : "border border-gray-300 hover:border-[#30A08B] hover:bg-[#30A08B]/5"
                           }`}
                         onClick={() => setSelectedSize(size)}
                       >
-                        <p className="text-sm font-bold">{`${size}`}</p>
+                        <p className={`text-sm font-bold ${selectedSize === size ? "text-[#30A08B]" : "text-gray-700"}`}>
+                          {`${size}`}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -1197,16 +1304,13 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
                 <MapPin className="w-5 h-5 mr-1" />
                 <span>{pays?.toLocaleUpperCase()}</span>
               </div>
-              {isCountryOpen && (
-                <div className="fixed inset-0 p-3 z-10 flex items-center justify-center bg-black bg-opacity-50">
-                  <CountryPage
-                    isOpen={isOpenCountry}
-                    setIsCountryOpen={setIsCountryOpen}
-                    onClose={() => setIsCountryOpen(false)}
-                    setPays={setPays}
-                  />
-                </div>
-              )}
+              
+              <CountryPage
+                isOpen={isCountryOpen}
+                setIsCountryOpen={setIsCountryOpen}
+                onClose={() => setIsCountryOpen(false)}
+                setPays={setPays}
+              />
             </div>
 
             {!westAfricanCountries.includes(pays?.toLowerCase()) ? (
@@ -1236,6 +1340,108 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
                 privée et assurons la sécurité de vos données personnelles.
               </p>
             </div>
+
+            {/* Section Informations Boutique */}
+            {produit?.Clefournisseur && (
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
+                <h3 className="font-semibold mb-3 flex items-center text-[#30A08B]">
+                  <Store className="w-5 h-5 mr-2" />
+                  Informations sur la boutique
+                </h3>
+                
+                <div className="flex items-start space-x-4">
+                  {/* Logo de la boutique */}
+                  {produit.Clefournisseur.logo && (
+                    <div className="flex-shrink-0">
+                      <img
+                        src={produit.Clefournisseur.logo}
+                        alt={`Logo ${produit.Clefournisseur.storeName || produit.Clefournisseur.name}`}
+                        className="w-12 h-12 rounded-full object-cover border-2 border-[#30A08B]"
+                      />
+                    </div>
+                  )}
+                  
+                  <div className="flex-1">
+                    {/* Nom de la boutique */}
+                    <h4 className="font-semibold text-lg text-gray-800">
+                      {produit.Clefournisseur.storeName || produit.Clefournisseur.name}
+                    </h4>
+                    
+                    {/* Description */}
+                    {produit.Clefournisseur.storeDescription && (
+                      <p className="text-sm text-gray-600 mb-2 overflow-hidden" style={{
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical'
+                      }}>
+                        {produit.Clefournisseur.storeDescription}
+                      </p>
+                    )}
+                    
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      {/* Localisation */}
+                      <div className="flex items-center text-gray-600">
+                        <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
+                        <span className="truncate">
+                          {produit.Clefournisseur.city}, {produit.Clefournisseur.region}
+                        </span>
+                      </div>
+                      
+                      {/* Note de la boutique */}
+                      {produit.Clefournisseur.rating && (
+                        <div className="flex items-center text-gray-600">
+                          <FaStar className="w-4 h-4 mr-1 text-yellow-400" />
+                          <span>
+                            {produit.Clefournisseur.rating}/5 
+                            {produit.Clefournisseur.reviewsCount && (
+                              <span className="text-xs ml-1">
+                                ({produit.Clefournisseur.reviewsCount} avis)
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Horaires d'ouverture */}
+                      {produit.Clefournisseur.openingHours && (
+                        <div className="flex items-start text-gray-600 col-span-2">
+                          <span className="text-xs mr-1">📅</span>
+                          <span className="text-xs">
+                            {produit.Clefournisseur.openingHours}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Type de boutique */}
+                      {produit.Clefournisseur.storeType && (
+                        <div className="flex items-center text-gray-600">
+                          <span className="text-xs bg-[#30A08B] text-white px-2 py-1 rounded-full">
+                            {produit.Clefournisseur.storeType}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Followers */}
+                      {produit.Clefournisseur.followersCount && (
+                        <div className="flex items-center text-gray-600">
+                          <span className="text-xs">👥 {produit.Clefournisseur.followersCount} followers</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Badge de validation */}
+                    {produit.Clefournisseur.isvalid && (
+                      <div className="mt-2">
+                        <span className="inline-flex items-center px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                          <ShieldCheck className="w-3 h-3 mr-1" />
+                          Boutique vérifiée
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Quantité</h3>
