@@ -88,8 +88,8 @@ const PanierPage: React.FC = () => {
   const router = useRouter();
   const dispatch = useDispatch();
   
-  // Utiliser Redux pour les articles du panier au lieu de l'état local
-  const articles = useSelector(selectPanierArticles);
+  // Utiliser localStorage directement au lieu de Redux pour éviter les conflits
+  const [articles, setArticles] = useState<any[]>([]);
   
   const [codePromo, setCodePromo] = useState("");
   const [reduction, setReduction] = useState(0);
@@ -98,6 +98,34 @@ const PanierPage: React.FC = () => {
   const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
   const [rond, setRond] = useState(false);
   const [expandedStores, setExpandedStores] = useState<Record<string, boolean>>({});
+
+  // Charger les articles depuis localStorage
+  useEffect(() => {
+    const loadArticles = () => {
+      if (typeof window !== 'undefined') {
+        const storedArticles = localStorage.getItem("panier");
+        if (storedArticles) {
+          setArticles(JSON.parse(storedArticles));
+        }
+      }
+    };
+    
+    loadArticles();
+    
+    // Écouter les changements du localStorage
+    const handleStorageChange = () => {
+      loadArticles();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    // Vérifier périodiquement pour les changements dans le même onglet
+    const interval = setInterval(loadArticles, 1000);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, []);
   const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [shippingCalculations, setShippingCalculations] = useState<Record<string, ShippingCalculation>>({});
@@ -136,11 +164,31 @@ const PanierPage: React.FC = () => {
     return categoryWeights[category] || 0.5; // 500g par défaut
   }, []);
 
+  // Fonction pour obtenir le stock disponible d'un article (basée sur le projet principal React)
+  const getAvailableStock = (article: any) => {
+    // Si on a un stock de variante spécifique sauvegardé (ajouté par ProduitDetailMain)
+    if (article.stockVariante !== undefined) {
+      return article.stockVariante;
+    }
+    
+    // Si l'article a des variantes dans ses données originales
+    if (article.variants && article.variants.length > 0) {
+      // Trouver la variante correspondant à la couleur sélectionnée
+      const variant = article.variants.find((v: any) => 
+        v.color === article.colors?.[0]
+      );
+      return variant ? (variant.quantity || variant.stock || 0) : 0;
+    }
+    
+    // Pour les produits sans variantes, utiliser le stock général du produit
+    return article.quantite || article.stock || article.quantity_in_stock || 0;
+  };
+
   // Memoization des calculs coûteux pour améliorer les performances
   const groupedByStore = useMemo(() => {
-    console.log({articles});
+    const storeGroups: Record<string, StoreGroup> = {};
     
-    return articles.reduce((storeGroups: Record<string, StoreGroup>, article) => {
+    articles.forEach((article, index) => {
       const storeId = article.Clefournisseur?._id || "unknown";
       const storeName = article.Clefournisseur?.storeName || article.Clefournisseur?.name || "Boutique inconnue";
       const productId = article._id;
@@ -172,23 +220,26 @@ const PanierPage: React.FC = () => {
         };
       }
 
-      const quantity = article.quantite || article.quantity || 0;
+      const quantity = article.quantity || 0;
 
       // Ajouter la variante au produit
       storeGroups[storeId].products[productId].variants.push(article);
       storeGroups[storeId].products[productId].totalQuantity += quantity;
-      storeGroups[storeId].products[productId].totalValue += 
-        (article.prixPromo || article.prix || article.price || 0) * quantity;
+      
+      // Calculer le prix de cette variante
+      const variantPrice = (article.prixPromo || article.prix || article.price || 0);
+      const variantTotalPrice = variantPrice * quantity;
+      
+      storeGroups[storeId].products[productId].totalValue += variantTotalPrice;
 
       // Calculer le poids (estimation basée sur les dimensions ou poids par défaut)
       const estimatedWeight = calculateProductWeight(article) * quantity;
       storeGroups[storeId].products[productId].totalWeight += estimatedWeight;
       storeGroups[storeId].totalWeight += estimatedWeight;
-      storeGroups[storeId].totalValue += 
-        (article.prixPromo || article.prix || article.price || 0) * quantity;
+      storeGroups[storeId].totalValue += variantTotalPrice;
+    });
 
-      return storeGroups;
-    }, {});
+    return storeGroups;
   }, [articles, calculateProductWeight]); // Dependency pour recalcul quand articles change
 
   // Version tableau pour le rendu
@@ -233,13 +284,7 @@ const PanierPage: React.FC = () => {
         data: error.response?.data
       });
       
-      // Si l'API échoue, utiliser l'ancien système comme fallback avec des détails d'erreur
-      const errorDetails = error.response?.status === 500 
-        ? 'Erreur serveur (500)' 
-        : error.code === 'ECONNABORTED' 
-          ? 'Timeout' 
-          : 'Erreur réseau';
-      
+      // Si l'API échoue, utiliser l'ancien système comme fallback
       return {
         success: false,
         fixedCost: 1000,
@@ -247,9 +292,8 @@ const PanierPage: React.FC = () => {
         weightCost: 250 * totalWeight,
         totalCost: 1000 + (250 * totalWeight),
         appliedPolicy: {
-          zone: `Politique par défaut (${errorDetails})`,
-          type: 'fallback',
-          error: errorDetails
+          zone: 'Politique par défaut',
+          type: 'fallback'
         }
       };
     }
@@ -326,12 +370,7 @@ const PanierPage: React.FC = () => {
     setShippingCalculations(calculations);
     setUnavailableProducts(unavailable);
     
-    // Afficher un message informatif à l'utilisateur si nécessaire
-    if (errorCount > 0 && successCount === 0) {
-      showAlert("warning", "Problème de connexion détecté. Tarifs d'expédition par défaut appliqués.");
-    } else if (errorCount > 0) {
-      showAlert("info", `${errorCount} boutique(s) utilisent les tarifs par défaut.`);
-    }
+    // Les erreurs sont gérées silencieusement avec fallback
   };
 
   const showAlert = (type: "info" | "success" | "warning" | "error" | "warn", message: string) => {
@@ -463,24 +502,19 @@ const PanierPage: React.FC = () => {
 
   // Fonction pour supprimer un article
   const removeArticle = (articleIndex: number) => {
-    const article = articles[articleIndex];
-    if (article) {
-      dispatch(deletePanier({
-        id: article._id || article.id,
-        color: article.color || article.couleur,
-        taille: article.taille
-      }));
-      
-      // Les articles sont automatiquement regroupés via useMemo
-      if (selectedZone) {
-        // Recalculer après suppression avec un délai pour laisser Redux se mettre à jour
-        setTimeout(() => {
-          recalculateAllShipping(groupedByStore, selectedZone);
-        }, 100);
-      }
-      
-      handleSuccess("Article supprimé du panier");
+    const updatedArticles = articles.filter((_, index) => index !== articleIndex);
+    setArticles(updatedArticles);
+    localStorage.setItem("panier", JSON.stringify(updatedArticles));
+    
+    // Les articles sont automatiquement regroupés via useMemo
+    if (selectedZone) {
+      // Recalculer après suppression avec un délai pour laisser l'état se mettre à jour
+      setTimeout(() => {
+        recalculateAllShipping(groupedByStore, selectedZone);
+      }, 100);
     }
+    
+    handleSuccess("Article supprimé du panier");
   };
 
   // Fonction pour mettre à jour la quantité d'un article
@@ -490,22 +524,33 @@ const PanierPage: React.FC = () => {
       return;
     }
 
-    const article = articles[articleIndex];
-    if (article) {
-      dispatch(updatePanierQuantity({
-        id: article._id || article.id,
-        color: article.color || article.couleur,
-        taille: article.taille,
-        quantite: newQuantity
-      }));
+    // Vérifier le stock avant d'incrémenter
+    const currentArticle = articles[articleIndex];
+    if (currentArticle) {
+      const availableStock = getAvailableStock(currentArticle);
       
-      // Les articles sont automatiquement regroupés via useMemo
-      if (selectedZone) {
-        // Recalculer après mise à jour avec un délai pour laisser Redux se mettre à jour
-        setTimeout(() => {
-          recalculateAllShipping(groupedByStore, selectedZone);
-        }, 100);
+      if (newQuantity > availableStock) {
+        // Silencieusement limiter à la quantité disponible
+        newQuantity = availableStock;
       }
+    }
+
+    const updatedArticles = articles.map((article, index) => 
+      index === articleIndex ? { 
+        ...article, 
+        quantity: newQuantity
+      } : article
+    );
+    
+    setArticles(updatedArticles);
+    localStorage.setItem("panier", JSON.stringify(updatedArticles));
+    
+    // Forcer le recalcul des frais d'expédition
+    if (selectedZone) {
+      // Recalculer après mise à jour avec un délai pour laisser l'état se mettre à jour
+      setTimeout(() => {
+        recalculateAllShipping(groupedByStore, selectedZone);
+      }, 100);
     }
   };
 
@@ -654,16 +699,23 @@ const PanierPage: React.FC = () => {
               variant="outline"
               size="icon"
               className="h-7 w-7 sm:h-8 sm:w-8"
-              onClick={() => updateQuantity(articleIndex, variant.quantity - 1)}
+              onClick={() => updateQuantity(articleIndex, (variant.quantity || 0) - 1)}
             >
               <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
-            <span className="w-6 sm:w-8 text-center text-sm sm:text-base font-medium">{variant.quantity}</span>
+            <span className="w-6 sm:w-8 text-center text-sm sm:text-base font-medium">
+              {variant.quantity || 0}
+            </span>
+            {/* Afficher le stock disponible */}
+            <span className="text-xs text-gray-500 ml-1">
+              /{getAvailableStock(variant)}
+            </span>
             <Button
               variant="outline"
               size="icon"
               className="h-7 w-7 sm:h-8 sm:w-8"
-              onClick={() => updateQuantity(articleIndex, variant.quantity + 1)}
+              disabled={(variant.quantity || 0) >= getAvailableStock(variant)}
+              onClick={() => updateQuantity(articleIndex, (variant.quantity || 0) + 1)}
             >
               <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
@@ -731,10 +783,11 @@ const PanierPage: React.FC = () => {
         {isExpanded && (
           <div className="p-2 sm:p-3 bg-gray-50 rounded space-y-2 sm:space-y-3 mt-2">
             {product.variants.map((variant, index) => {
+              // Trouver l'index réel de cette variante dans le tableau articles original
               const articleIndex = articles.findIndex(article => 
                 article._id === variant._id && 
-                (article.color || article.couleur) === (variant.color || variant.couleur) && 
-                article.taille === variant.taille
+                article.colors?.[0] === variant.colors?.[0] && 
+                article.sizes?.[0] === variant.sizes?.[0]
               );
               return renderVariant(variant, storeId, product.productId, articleIndex);
             })}

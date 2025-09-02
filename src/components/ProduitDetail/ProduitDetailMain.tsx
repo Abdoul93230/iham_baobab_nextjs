@@ -681,6 +681,10 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
               ? discountedPrice
               : originalPrice,
           prixPromo: discountedPrice,
+          // Préserver le stock de la variante sélectionnée
+          ...(selectedVariant && { 
+            stockVariante: selectedVariant.quantity || selectedVariant.stock || 0 
+          })
         };
 
         const updatedProducts = [...existingProducts, newProduct];
@@ -797,6 +801,10 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
             ? discountedPrice
             : originalPrice,
         prixPromo: discountedPrice,
+        // Préserver le stock de la variante sélectionnée
+        ...(selectedVariant && { 
+          stockVariante: selectedVariant.quantity || selectedVariant.stock || 0 
+        })
       };
 
       const updatedProducts = [...existingProducts, newProduct];
@@ -805,7 +813,7 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
     }
 
     // Rediriger vers le panier
-    router.push("/panier");
+    router.push("/Panier");
   };
 
   // Gestion du zoom avec la molette de souris

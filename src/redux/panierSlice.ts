@@ -75,13 +75,29 @@ const panierSlice = createSlice({
   reducers: {
     // Charger le panier depuis localStorage
     loadPanier: (state) => {
-      state.articles = loadFromLocalStorage();
+      const articles = loadFromLocalStorage();
+      // Normaliser les articles lors du chargement
+      state.articles = articles.map((article: PanierArticle) => {
+        // Pour les articles en localStorage, quantity représente la quantité dans le panier
+        // et quantite peut représenter le stock du produit
+        const panierQuantity = article.quantity || 1; // Quantité dans le panier
+        
+        return {
+          ...article,
+          quantite: panierQuantity, // Utiliser la quantité du panier
+          quantity: panierQuantity  // Maintenir l'alias
+        };
+      });
       state.isLoaded = true;
     },
 
     // Ajouter un article au panier
     addToPanier: (state, action: PayloadAction<PanierArticle>) => {
       const article = action.payload;
+      
+      // S'assurer d'utiliser quantity si disponible, sinon quantite
+      const quantiteToAdd = article.quantity || article.quantite || 1;
+      
       const existingIndex = state.articles.findIndex(
         (item) =>
           item.id === article.id &&
@@ -91,10 +107,15 @@ const panierSlice = createSlice({
 
       if (existingIndex >= 0) {
         // Si l'article existe déjà, augmenter la quantité
-        state.articles[existingIndex].quantite += article.quantite;
+        state.articles[existingIndex].quantite += quantiteToAdd;
       } else {
-        // Sinon, ajouter le nouvel article
-        state.articles.push(article);
+        // Normaliser l'article avant ajout
+        const normalizedArticle = {
+          ...article,
+          quantite: quantiteToAdd, // Utiliser la quantité à ajouter
+          quantity: quantiteToAdd  // Maintenir l'alias pour compatibilité
+        };
+        state.articles.push(normalizedArticle);
       }
       
       saveToLocalStorage(state.articles);
