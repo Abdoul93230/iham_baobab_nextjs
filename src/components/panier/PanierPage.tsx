@@ -236,7 +236,6 @@ const PanierPage: React.FC = () => {
       const estimatedWeight = calculateProductWeight(article) * quantity;
       storeGroups[storeId].products[productId].totalWeight += estimatedWeight;
       storeGroups[storeId].totalWeight += estimatedWeight;
-      storeGroups[storeId].totalValue += variantTotalPrice;
     });
 
     return storeGroups;
@@ -610,7 +609,7 @@ const PanierPage: React.FC = () => {
   // Calculer les totaux
   const calculerSousTotal = () => {
     return articles.reduce(
-      (total, article) => total + (article.prixPromo || article.prix || article.price || 0) * (article.quantite || article.quantity || 0),
+      (total, article) => total + (article.prixPromo || article.prix || article.price || 0) * (article.quantity || 0),
       0
     );
   };
