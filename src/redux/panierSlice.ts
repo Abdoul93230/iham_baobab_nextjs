@@ -1,14 +1,27 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export interface PanierArticle {
+  _id: string;
   id: string;
   name: string;
   prix: number;
+  prixPromo?: number;
+  price?: number;
   images?: string[];
+  image1?: string;
+  imageUrl?: string;
   quantite: number;
+  quantity?: number; // Alias pour compatibilité
   color?: string;
+  couleur?: string;
   taille?: string;
   poids?: number;
+  ClefType?: string;
+  Clefournisseur?: {
+    _id: string;
+    storeName?: string;
+    name?: string;
+  };
   shipping?: {
     zones: Array<{
       name: string;
@@ -17,6 +30,11 @@ export interface PanierArticle {
       transporteurContact?: string;
     }>;
     weight: number;
+    dimensions?: {
+      length: number;
+      width: number;
+      height: number;
+    };
   };
 }
 

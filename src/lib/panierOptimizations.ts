@@ -1,14 +1,17 @@
 // SEO et optimisations de performance pour le panier
 import { useMemo, useCallback } from 'react';
 
+// Types pour les fonctions
+type DebounceFunction = (...args: unknown[]) => void;
+
 // Hook personnalisé pour optimiser les calculs du panier
 export const usePanierOptimizations = () => {
   
   // Debounce pour les appels API de calcul des frais d'expédition
   const debounce = useMemo(() => {
-    return (func: Function, wait: number) => {
+    return (func: DebounceFunction, wait: number) => {
       let timeout: NodeJS.Timeout;
-      return function executedFunction(...args: any[]) {
+      return function executedFunction(...args: unknown[]) {
         const later = () => {
           clearTimeout(timeout);
           func(...args);
@@ -45,11 +48,11 @@ export const usePanierOptimizations = () => {
 
   // Throttle pour les re-calculs de total
   const throttle = useMemo(() => {
-    return (func: Function, limit: number) => {
+    return (func: DebounceFunction, limit: number) => {
       let inThrottle: boolean;
-      return function(this: any, ...args: any[]) {
+      return function(...args: unknown[]) {
         if (!inThrottle) {
-          func.apply(this, args);
+          func(...args);
           inThrottle = true;
           setTimeout(() => inThrottle = false, limit);
         }

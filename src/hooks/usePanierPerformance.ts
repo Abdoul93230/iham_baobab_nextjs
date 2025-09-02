@@ -2,6 +2,11 @@
 
 import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 
+// Types pour éviter les any
+type CallbackFunction = (...args: unknown[]) => void;
+type ThrottleFunction = (...args: unknown[]) => void;
+type CalculationFunction = () => unknown;
+
 // Hook pour optimiser les performances du panier
 export const usePanierPerformance = () => {
   
@@ -13,39 +18,40 @@ export const usePanierPerformance = () => {
     console.log('Panier re-render count:', renderCountRef.current);
   });
 
-  // Debounce optimisé pour les calculs
-  const useDebounce = useCallback((callback: Function, delay: number) => {
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Debounce optimisé pour les calculs - créé au niveau supérieur
+  const createDebounce = useCallback((callback: CallbackFunction, delay: number) => {
+    let timeoutId: NodeJS.Timeout | null = null;
     
-    return useCallback((...args: any[]) => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+    return (...args: unknown[]) => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
       }
       
-      timeoutRef.current = setTimeout(() => {
+      timeoutId = setTimeout(() => {
         callback(...args);
       }, delay);
-    }, [callback, delay]);
+    };
   }, []);
 
-  // Throttle pour limiter les appels API
-  const useThrottle = useCallback((callback: Function, limit: number) => {
-    const inThrottle = useRef(false);
+  // Throttle pour limiter les appels API - créé au niveau supérieur
+  const createThrottle = useCallback((callback: ThrottleFunction, limit: number) => {
+    let inThrottle = false;
     
-    return useCallback((...args: any[]) => {
-      if (!inThrottle.current) {
+    return (...args: unknown[]) => {
+      if (!inThrottle) {
         callback(...args);
-        inThrottle.current = true;
+        inThrottle = true;
         setTimeout(() => {
-          inThrottle.current = false;
+          inThrottle = false;
         }, limit);
       }
-    }, [callback, limit]);
+    };
   }, []);
 
-  // Memoization avancée pour les calculs de panier
-  const memoizeCalculation = useCallback((fn: Function, deps: any[]) => {
-    return useMemo(() => fn(), deps);
+  // Memoization simplifiée
+  const memoizeCalculation = useCallback((fn: CalculationFunction, deps: unknown[]) => {
+    // Retourne directement la fonction pour être utilisée avec useMemo dans le composant
+    return { fn, deps };
   }, []);
 
   // Observer pour le lazy loading des images
@@ -175,8 +181,8 @@ export const usePanierPerformance = () => {
   }, []);
 
   // Mesure de performance pour les fonctions critiques
-  const measurePerformance = useCallback((name: string, fn: Function) => {
-    return (...args: any[]) => {
+  const measurePerformance = useCallback((name: string, fn: (...args: unknown[]) => unknown) => {
+    return (...args: unknown[]) => {
       if (typeof window !== 'undefined' && window.performance) {
         performance.mark(`${name}-start`);
         const result = fn(...args);
@@ -197,8 +203,8 @@ export const usePanierPerformance = () => {
   }, [imageObserver, performanceObserver]);
 
   return {
-    useDebounce,
-    useThrottle,
+    createDebounce,
+    createThrottle,
     memoizeCalculation,
     imageObserver,
     optimizeProductGroups,
@@ -211,7 +217,7 @@ export const usePanierPerformance = () => {
 };
 
 // Hook pour la gestion optimisée du scroll
-export const useOptimizedScroll = (callback: Function, threshold = 100) => {
+export const useOptimizedScroll = (callback: (isScrolling: boolean) => void, threshold = 100) => {
   const scrolling = useRef(false);
   
   useEffect(() => {

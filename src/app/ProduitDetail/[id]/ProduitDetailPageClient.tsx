@@ -48,7 +48,7 @@ export default function ProduitDetailPageClient({ productId, serverData }: Produ
   if (!serverData?.product) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <HomeHeader paniernbr={0} chg={handlePanierChange} />
+        <HomeHeader chg={handlePanierChange} />
         <div className="container mx-auto p-4">
           <div className="flex flex-col lg:flex-row gap-6">
             <div className="lg:flex-1">
@@ -68,7 +68,7 @@ export default function ProduitDetailPageClient({ productId, serverData }: Produ
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <HomeHeader paniernbr={0} chg={handlePanierChange} />
+      <HomeHeader chg={handlePanierChange} />
       <ProduitDetailMain 
         productId={productId} 
         panierchg={handlePanierChange}

@@ -32,10 +32,10 @@ import { io, Socket } from "socket.io-client";
 import SearchBar from "../SearchBarNew";
 import { fetchUserLikes } from "@/redux/likesSlice";
 import HeaderMobile from "./HeaderMobile";
+import { usePanierSync } from "@/hooks/usePanierSync";
 
 interface HomeHeaderProps {
-  paniernbr: number;
-  chg: () => void;
+  chg?: () => void; // Optionnel maintenant
 }
 
 interface Category {
@@ -44,10 +44,13 @@ interface Category {
   image: string;
 }
 
-const HomeHeader: React.FC<HomeHeaderProps> = ({ paniernbr, chg }) => {
+const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const categories = useAppSelector((state) => state.products.categories) as Category[];
+  
+  // Utiliser notre hook de synchronisation du panier
+  const { panierCount } = usePanierSync();
   const acces = useAppSelector(selectAcces);
   const currentUser = useAppSelector((state) => state.user.user);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -290,7 +293,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ paniernbr, chg }) => {
                 localStorage.removeItem("userToken");
                 
                 // Mettre à jour l'état de connexion
-                chg();
+                chg?.();
                 
                 // Fermer les dropdowns
                 setActiveDropdown(null);
@@ -586,7 +589,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ paniernbr, chg }) => {
                     setIsMenuOpen(false);
                   }} className="relative">
                     <div className="bg-emerald-600 rounded-full z-10 w-3 h-3 flex items-center justify-center text-white text-[8px] font-bold absolute -top-1 -right-1">
-                      {paniernbr ? paniernbr : 0}
+                      {panierCount || 0}
                     </div>
                     <ShoppingCart
                       className="h-4 w-4 text-amber-800 hover:text-amber-900 cursor-pointer transition-transform transform hover:scale-110"
@@ -703,7 +706,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ paniernbr, chg }) => {
 
             <div onClick={() => router.push("/Panier")} className="relative cursor-pointer">
               <div className="bg-emerald-600 rounded-full z-10 w-5 h-5 flex items-center justify-center text-white text-xs font-bold absolute -top-2 -right-2">
-                {paniernbr ? paniernbr : 0}
+                {panierCount || 0}
               </div>
               <ShoppingCart
                 className="h-6 w-6 text-amber-800 hover:text-amber-900 cursor-pointer transition-transform transform hover:scale-110"
@@ -750,7 +753,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ paniernbr, chg }) => {
         <HeaderMobile 
           setIsMobileMenuOpen={setIsMobileMenuOpen}
           nbr={nbr}
-          paniernbr={paniernbr}
+          paniernbr={panierCount}
         />
       )}
     </div>

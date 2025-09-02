@@ -70,41 +70,16 @@ const profileSEOConfig = {
 };
 
 export default function ProfilePage() {
-  const [paniernbr, setPaniernbr] = useState(0);
   const [isClient, setIsClient] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
     setIsClient(true);
-    
-    // Gestion sécurisée du panier
-    const updateCartCount = () => {
-      try {
-        const local = localStorage.getItem("panier");
-        if (local) {
-          const parsedPanier = JSON.parse(local);
-          setPaniernbr(Array.isArray(parsedPanier) ? parsedPanier.length : 0);
-        }
-      } catch (error) {
-        console.error("Erreur lors de la lecture du panier:", error);
-        setPaniernbr(0);
-      }
-    };
-
-    updateCartCount();
   }, []);
 
+  // Fonction vide pour compatibilité (le panier est maintenant géré par Redux)
   const handleCartChange = () => {
-    try {
-      const local = localStorage.getItem("panier");
-      if (local) {
-        const parsedPanier = JSON.parse(local);
-        setPaniernbr(Array.isArray(parsedPanier) ? parsedPanier.length : 0);
-      }
-    } catch (error) {
-      console.error("Erreur lors de la lecture du panier:", error);
-      setPaniernbr(0);
-    }
+    // Plus besoin de logique ici, le Redux gère automatiquement
   };
 
   // SEO dynamique basé sur l'utilisateur connecté
@@ -205,7 +180,7 @@ export default function ProfilePage() {
       {/* Contenu principal avec structure sémantique */}
       <div itemScope itemType="https://schema.org/ProfilePage">
         <header role="banner">
-          <HomeHeader paniernbr={paniernbr} chg={handleCartChange} />
+          <HomeHeader chg={handleCartChange} />
         </header>
 
         {/* Fil d'Ariane pour navigation */}

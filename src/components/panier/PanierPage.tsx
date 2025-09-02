@@ -8,8 +8,6 @@ import {
   Minus,
   RefreshCw,
   ShoppingCart,
-  CreditCard,
-  Tag,
   Truck,
   ChevronUp,
   ChevronDown,
@@ -19,7 +17,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import axios from "axios";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import ZoneSelector from "./ZoneSelector";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
@@ -27,6 +25,11 @@ import { Badge } from "../ui/badge";
 import { formatCurrency } from "../../lib/utils";
 import Alert from "../Alert";
 import { RootState } from "@/redux/store";
+import { 
+  selectPanierArticles, 
+  deletePanier, 
+  updateQuantity as updatePanierQuantity 
+} from "@/redux/panierSlice";
 
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 
@@ -83,7 +86,11 @@ interface ShippingCalculation {
 // Composant principal
 const PanierPage: React.FC = () => {
   const router = useRouter();
-  const [articles, setArticles] = useState<any[]>([]);
+  const dispatch = useDispatch();
+  
+  // Utiliser Redux pour les articles du panier au lieu de l'état local
+  const articles = useSelector(selectPanierArticles);
+  
   const [codePromo, setCodePromo] = useState("");
   const [reduction, setReduction] = useState(0);
   const [estAbonne, setEstAbonne] = useState(false);
@@ -157,7 +164,7 @@ const PanierPage: React.FC = () => {
         storeGroups[storeId].products[productId] = {
           productId,
           name: article.name,
-          imageUrl: article.image1 || article.imageUrl,
+          imageUrl: article.image1 || article.imageUrl || '/placeholder-image.svg',
           variants: [],
           totalQuantity: 0,
           totalValue: 0,
@@ -165,18 +172,20 @@ const PanierPage: React.FC = () => {
         };
       }
 
+      const quantity = article.quantite || article.quantity || 0;
+
       // Ajouter la variante au produit
       storeGroups[storeId].products[productId].variants.push(article);
-      storeGroups[storeId].products[productId].totalQuantity += article.quantity;
+      storeGroups[storeId].products[productId].totalQuantity += quantity;
       storeGroups[storeId].products[productId].totalValue += 
-        (article.prixPromo || article.prix || article.price || 0) * article.quantity;
+        (article.prixPromo || article.prix || article.price || 0) * quantity;
 
       // Calculer le poids (estimation basée sur les dimensions ou poids par défaut)
-      const estimatedWeight = calculateProductWeight(article) * article.quantity;
+      const estimatedWeight = calculateProductWeight(article) * quantity;
       storeGroups[storeId].products[productId].totalWeight += estimatedWeight;
       storeGroups[storeId].totalWeight += estimatedWeight;
       storeGroups[storeId].totalValue += 
-        (article.prixPromo || article.prix || article.price || 0) * article.quantity;
+        (article.prixPromo || article.prix || article.price || 0) * quantity;
 
       return storeGroups;
     }, {});
@@ -396,8 +405,8 @@ const PanierPage: React.FC = () => {
 
         setSelectedZone(detectedZone);
 
-        // Les articles sont maintenant groupés automatiquement via useMemo
-        setArticles(panierItems);
+        // Les articles viennent maintenant automatiquement de Redux
+        // Plus besoin de setArticles(panierItems)
 
         // Calculer les frais d'expédition si une zone est détectée
         if (detectedZone) {
@@ -416,7 +425,7 @@ const PanierPage: React.FC = () => {
         setLoading(false);
         
         // Fallback complet: continuer sans détection de zone
-        setArticles(panierItems);
+        // Les articles viennent automatiquement de Redux
         
         showAlert("warning", "Impossible de détecter automatiquement votre zone. Veuillez la sélectionner manuellement.");
       }
@@ -454,16 +463,24 @@ const PanierPage: React.FC = () => {
 
   // Fonction pour supprimer un article
   const removeArticle = (articleIndex: number) => {
-    const updatedArticles = articles.filter((_, index) => index !== articleIndex);
-    setArticles(updatedArticles);
-    localStorage.setItem("panier", JSON.stringify(updatedArticles));
-    
-    // Les articles sont automatiquement regroupés via useMemo
-    if (selectedZone) {
-      recalculateAllShipping(groupedByStore, selectedZone);
+    const article = articles[articleIndex];
+    if (article) {
+      dispatch(deletePanier({
+        id: article._id || article.id,
+        color: article.color || article.couleur,
+        taille: article.taille
+      }));
+      
+      // Les articles sont automatiquement regroupés via useMemo
+      if (selectedZone) {
+        // Recalculer après suppression avec un délai pour laisser Redux se mettre à jour
+        setTimeout(() => {
+          recalculateAllShipping(groupedByStore, selectedZone);
+        }, 100);
+      }
+      
+      handleSuccess("Article supprimé du panier");
     }
-    
-    handleSuccess("Article supprimé du panier");
   };
 
   // Fonction pour mettre à jour la quantité d'un article
@@ -473,15 +490,22 @@ const PanierPage: React.FC = () => {
       return;
     }
 
-    const updatedArticles = [...articles];
-    updatedArticles[articleIndex].quantity = newQuantity;
-    
-    setArticles(updatedArticles);
-    localStorage.setItem("panier", JSON.stringify(updatedArticles));
-    
-    // Les articles sont automatiquement regroupés via useMemo
-    if (selectedZone) {
-      recalculateAllShipping(groupedByStore, selectedZone);
+    const article = articles[articleIndex];
+    if (article) {
+      dispatch(updatePanierQuantity({
+        id: article._id || article.id,
+        color: article.color || article.couleur,
+        taille: article.taille,
+        quantite: newQuantity
+      }));
+      
+      // Les articles sont automatiquement regroupés via useMemo
+      if (selectedZone) {
+        // Recalculer après mise à jour avec un délai pour laisser Redux se mettre à jour
+        setTimeout(() => {
+          recalculateAllShipping(groupedByStore, selectedZone);
+        }, 100);
+      }
     }
   };
 
@@ -541,7 +565,7 @@ const PanierPage: React.FC = () => {
   // Calculer les totaux
   const calculerSousTotal = () => {
     return articles.reduce(
-      (total, article) => total + (article.prixPromo || article.prix || article.price || 0) * article.quantity,
+      (total, article) => total + (article.prixPromo || article.prix || article.price || 0) * (article.quantite || article.quantity || 0),
       0
     );
   };
@@ -709,8 +733,8 @@ const PanierPage: React.FC = () => {
             {product.variants.map((variant, index) => {
               const articleIndex = articles.findIndex(article => 
                 article._id === variant._id && 
-                article.colors?.[0] === variant.colors?.[0] && 
-                article.sizes?.[0] === variant.sizes?.[0]
+                (article.color || article.couleur) === (variant.color || variant.couleur) && 
+                article.taille === variant.taille
               );
               return renderVariant(variant, storeId, product.productId, articleIndex);
             })}

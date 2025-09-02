@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
 import { useAppDispatch } from "@/redux/hooks";
 import { 
   getProducts, 
@@ -10,7 +9,7 @@ import {
   getProducts_Pubs, 
   getProducts_Commentes 
 } from "@/redux/productsSlice";
-import { loadPanier, selectPanierCount } from "@/redux/panierSlice";
+import { loadPanier } from "@/redux/panierSlice";
 import { loadUser } from "@/redux/userSlice";
 import HomeHeader from "@/components/home/HomeHeader";
 import HomeMain from "@/components/home/HomeMain";
@@ -20,8 +19,7 @@ export default function Home() {
   const dispatch = useAppDispatch();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
-  // Redux selectors
-  const panierCount = useSelector(selectPanierCount);
+  // Redux selectors - Plus besoin de panierCount ici car géré par le header directement
   const [loading, setLoading] = useState(true);
 
   // Chargement des données au démarrage (comme dans le projet React)
@@ -67,7 +65,6 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       <HomeHeader 
-        paniernbr={panierCount}
         chg={toggleMenu}
       />
       <HomeMain isOpen={isMenuOpen} />
