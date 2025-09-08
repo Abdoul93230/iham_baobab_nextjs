@@ -4,8 +4,10 @@ import { ReduxProvider } from "@/redux/provider";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import AuthChecker from "@/components/auth/AuthChecker";
+import DataLoader from "@/components/DataLoader";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
   title: "IhamBaobab - Marketplace Africaine",
   description: "Votre marketplace de confiance pour vos achats en ligne au Niger et partout dans le monde",
   keywords: ["marketplace", "e-commerce", "Niger", "Bénin", "Mobile Money", "achats en ligne"],
@@ -15,11 +17,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: "IhamBaobab - Marketplace Africaine",
     description: "Votre marketplace de confiance pour vos achats en ligne au Niger et partout dans le monde",
-    url: "https://ihambaobabv.onrender.com", // Remplacez par votre vraie URL
+    url: "/", // URL relative, sera combinée avec metadataBase
     siteName: "IhamBaobab",
     images: [
       {
-        url: "/LogoText.png", // Utilise votre logo existant temporairement
+        url: "/LogoText.png", // URL relative
         width: 1200,
         height: 630,
         alt: "IhamBaobab - Marketplace Africaine",
@@ -64,7 +66,9 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <ReduxProvider>
           <AuthChecker>
-            {children}
+            <DataLoader>
+              {children}
+            </DataLoader>
           </AuthChecker>
           <ToastContainer
             position="top-right"

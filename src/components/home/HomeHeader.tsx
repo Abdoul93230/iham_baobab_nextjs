@@ -583,19 +583,20 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
                 </button>
 
                 {/* Shopping Cart Button */}
-                <button className="bg-blue-500 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transform transition-transform duration-300 hover:scale-125 hover:shadow-2xl">
-                  <div onClick={() => {
+                <button 
+                  onClick={() => {
                     router.push("/Panier");
                     setIsMenuOpen(false);
-                  }} className="relative">
-                    <div className="bg-emerald-600 rounded-full z-10 w-3 h-3 flex items-center justify-center text-white text-[8px] font-bold absolute -top-1 -right-1">
-                      {panierCount || 0}
-                    </div>
-                    <ShoppingCart
-                      className="h-4 w-4 text-amber-800 hover:text-amber-900 cursor-pointer transition-transform transform hover:scale-110"
-                      aria-label="Panier"
-                    />
+                  }} 
+                  className="relative bg-blue-500 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transform transition-transform duration-300 hover:scale-125 hover:shadow-2xl"
+                >
+                  <div className="bg-emerald-600 rounded-full z-10 w-3 h-3 flex items-center justify-center text-white text-[8px] font-bold absolute -top-1 -right-1">
+                    {panierCount || 0}
                   </div>
+                  <ShoppingCart
+                    className="h-4 w-4 text-amber-800 hover:text-amber-900 cursor-pointer transition-transform transform hover:scale-110"
+                    aria-label="Panier"
+                  />
                 </button>
 
                 {/* Message Button */}
@@ -648,7 +649,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
             </div>
 
             <button
-              onClick={() => router.push("/Produit promotions")}
+              onClick={() => router.push("/promotion")}
               className="text-amber-800 hover:text-amber-900"
             >
               Promotions

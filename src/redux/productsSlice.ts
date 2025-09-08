@@ -62,6 +62,7 @@ interface ProductsState {
   products_Commentes: any[];
   loading?: boolean;
   error?: string | null;
+  lastFetched?: number; // Timestamp pour la cache
 }
 
 const initialState: ProductsState = {
@@ -72,6 +73,7 @@ const initialState: ProductsState = {
   products_Commentes: [],
   loading: false,
   error: null,
+  lastFetched: 0,
 };
 
 // Async thunks qui correspondent à vos actions originales
@@ -169,6 +171,7 @@ export const getSlice = createSlice({
       .addCase(getProducts.fulfilled, (state, action) => {
         state.loading = false;
         state.data = action.payload;
+        state.lastFetched = Date.now();
       })
       .addCase(getProducts.rejected, (state, action) => {
         state.loading = false;
@@ -182,6 +185,7 @@ export const getSlice = createSlice({
       .addCase(getCategories.fulfilled, (state, action) => {
         state.loading = false;
         state.categories = action.payload;
+        state.lastFetched = Date.now();
       })
       .addCase(getCategories.rejected, (state, action) => {
         state.loading = false;
@@ -190,6 +194,7 @@ export const getSlice = createSlice({
       // getTypes
       .addCase(getTypes.fulfilled, (state, action) => {
         state.types = action.payload;
+        state.lastFetched = Date.now();
       })
       // getProducts_Pubs
       .addCase(getProducts_Pubs.fulfilled, (state, action) => {
