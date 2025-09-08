@@ -213,7 +213,7 @@ const HeaderMobile: React.FC<HeaderMobileProps> = ({
         <div className="relative flex flex-col space-y-4 p-4 overflow-y-auto h-[calc(100vh-180px)]">
           {/* Boutons fixes */}
           {[
-            { name: "Promotions", link: "/promotions" },
+            { name: "Promotions", link: "/promotion" },
             { name: "Nouveautés", link: "/nouveautes" },
           ].map((item, idx) => (
             <button
@@ -282,7 +282,7 @@ const HeaderMobile: React.FC<HeaderMobileProps> = ({
                       onMouseLeave={() => setHoveredItem(null)}
                       onClick={() => {
                         if (section.question === "Catégories") {
-                          router.push(`/categorie/${answer}`);
+                          router.push(`/Categorie/${answer}`);
                           setIsMobileMenuOpen(false);
                         } else if (section.question === "Compte") {
                           const link = section.links?.[index];
