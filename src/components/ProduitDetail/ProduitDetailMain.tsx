@@ -1502,7 +1502,7 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
               <button
                 className="p-2"
                 onClick={() =>
-                  router.push(`/Boutique/${produit?.Clefournisseur?._id}`)
+                  router.push(`/boutique/${produit?.Clefournisseur?._id}`)
                 }
               >
                 <Store className="w-5 h-5" />
