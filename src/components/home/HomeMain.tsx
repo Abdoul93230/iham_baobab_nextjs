@@ -235,7 +235,7 @@ const HomeMain: React.FC<HomeMainProps> = ({ isOpen }) => {
             <div key={index} className="mr-3">
               <div className="w-32 border border-gray-300 h-32 overflow-hidden rounded-lg">
                 <Image
-                  src="https://zz.jumia.is/cms/Coupon_Corner_TN300x300.jpg"
+                  src="/BO.jpg"
                   alt={`Publication ${card}`}
                   width={128}
                   height={128}

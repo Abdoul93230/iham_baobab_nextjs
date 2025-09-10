@@ -20,7 +20,7 @@ export default function CategoryNotFound() {
             Catégorie non trouvée
           </h2>
           <p className="text-gray-600 mb-8">
-            Désolé, la catégorie que vous recherchez n'existe pas ou n'est plus disponible.
+            Désolé, la catégorie que vous recherchez n&apos;existe pas ou n&apos;est plus disponible.
           </p>
         </div>
 

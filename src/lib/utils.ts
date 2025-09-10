@@ -39,3 +39,42 @@ export function formatPrice(price: number): string {
   
   return new Intl.NumberFormat('fr-FR').format(price);
 }
+
+// Fonction pour formater les dates
+export function formatDate(date: string | Date, locale: string = 'fr-FR'): string {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  return dateObj.toLocaleDateString(locale, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
+// Fonction pour générer un slug à partir d'un texte
+// export function generateSlug(text: string): string {
+//   return text
+//     .toLowerCase()
+//     .normalize('NFD')
+//     .replace(/[\u0300-\u036f]/g, '')
+//     .replace(/[^a-z0-9\s-]/g, '')
+//     .replace(/\s+/g, '-')
+//     .replace(/-+/g, '-')
+//     .trim('-');
+// }
+export function generateSlug(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // supprime accents
+    .replace(/[^a-z0-9\s-]/g, '')    // supprime caractères spéciaux
+    .replace(/\s+/g, '-')            // remplace espaces par "-"
+    .replace(/-+/g, '-')             // évite plusieurs "-"
+    .replace(/^-+|-+$/g, '');        // supprime "-" au début et à la fin
+}
+
+
+// Fonction pour tronquer un texte
+export function truncateText(text: string, maxLength: number = 100): string {
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength).replace(/\s+\S*$/, '') + '...';
+}

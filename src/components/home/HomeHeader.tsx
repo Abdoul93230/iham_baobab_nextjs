@@ -245,9 +245,9 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
           setActiveDropdown(null);
           setIsMobileMenuOpen(false);
           if (acces === "oui") {
-            router.push("/dashboard");
+            router.push("/commandes");
           } else {
-            router.push("/auth/login?returnUrl=/dashboard");
+            router.push("/auth/login?returnUrl=/commandes");
           }
         },
       },
@@ -271,9 +271,9 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
           setActiveDropdown(null);
           setIsMobileMenuOpen(false);
           if (acces === "oui") {
-            router.push("/profile");
+            router.push("/livraison");
           } else {
-            router.push("/auth/login?returnUrl=/profile");
+            router.push("/auth/login?returnUrl=/livraison");
           }
         },
       },
@@ -328,7 +328,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
         onClick: () => {
           setActiveDropdown(null);
           setIsMobileMenuOpen(false);
-          router.push("/profile");
+          router.push("/livraison");
         },
       },
       {
@@ -417,7 +417,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
                 onClick={() => {
                   setActiveDropdown(null);
                   setIsMobileMenuOpen(false);
-                  router.push("/dashboard");
+                  router.push("/voir-plus");
                 }}
                 className="w-full text-center text-sm font-medium text-[#30A08B] hover:text-[#2a907d] transition-colors"
               >
@@ -571,7 +571,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
                     className="relative text-amber-800 hover:text-amber-900"
                     aria-label="Wishlist"
                     onClick={() => {
-                      router.push("/Like produit");
+                      router.push("/like-produit");
                       setIsMenuOpen(false);
                     }}
                   >
@@ -697,7 +697,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
             <button
               className="relative text-amber-800 hover:text-amber-900"
               aria-label="Wishlist"
-              onClick={() => router.push("/Like produit")}
+              onClick={() => router.push("/like-produit")}
             >
               <Heart className="h-6 w-6" />
               <span className="absolute -top-1 -right-1 bg-emerald-500 rounded-full w-4 h-4 text-xs text-white flex items-center justify-center">

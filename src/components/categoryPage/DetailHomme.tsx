@@ -565,7 +565,7 @@ const DetailHomme: React.FC<DetailHommeProps> = ({
                   </div>
                 </button>
                 <button
-                  onClick={() => router.push("/Like-produit")}
+                  onClick={() => router.push("/like-produit")}
                   className="transition-colors rounded-full flex items-center justify-center text-white shadow-lg transform transition-transform duration-300 hover:scale-125 hover:shadow-2xl"
                 >
                   <div className="relative text-amber-800 hover:text-[#30A08B]">
@@ -632,7 +632,7 @@ const DetailHomme: React.FC<DetailHommeProps> = ({
                   <span className="text-xs mt-1">Compte</span>
                 </button>
                 <button 
-                  onClick={() => router.push("/Like-produit")}
+                  onClick={() => router.push("/like-produit")}
                   className="flex flex-col items-center text-gray-600"
                 >
                   <Heart className="w-6 h-6" />

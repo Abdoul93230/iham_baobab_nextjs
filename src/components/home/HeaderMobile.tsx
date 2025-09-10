@@ -103,9 +103,9 @@ const HeaderMobile: React.FC<HeaderMobileProps> = ({
       ],
       links: [
         "/profile",
-        "/dashboard/orders",
+        "/commandes",
         "/invite",
-        "/profile/addresses",
+        "/livraison",
         "/suggestion",
         "/",
       ],
@@ -140,7 +140,7 @@ const HeaderMobile: React.FC<HeaderMobileProps> = ({
       countBg: "bg-emerald-500",
       label: "Wishlist",
       onClick: () => {
-        router.push("/likes");
+        router.push("/like-produit");
         setIsMobileMenuOpen(false);
       },
     },
@@ -214,7 +214,7 @@ const HeaderMobile: React.FC<HeaderMobileProps> = ({
           {/* Boutons fixes */}
           {[
             { name: "Promotions", link: "/promotion" },
-            { name: "Nouveautés", link: "/nouveautes" },
+            { name: "Nouveautés", link: "/nouveaux" },
           ].map((item, idx) => (
             <button
               key={idx}

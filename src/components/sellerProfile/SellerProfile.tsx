@@ -26,7 +26,7 @@ import {
   ThumbsUp,
   ThumbsDown,
 } from "lucide-react";
-// import socialService from "./socialService"; // Vous devrez adapter ce service
+import socialService from "./socialService"; // Vous devrez adapter ce service
 
 // Remplacez cette URL par votre URL backend réelle
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
@@ -84,7 +84,7 @@ export default function SellerProfile({ sellerId }: SellerProfileProps) {
         );
 
         // Récupérer les statistiques sociales
-        // const statsResponse = await socialService.getSellerSocialStats(sellerId);
+        const statsResponse = await socialService.getSellerSocialStats(sellerId);
 
         // Vérifier si l'utilisateur suit ce vendeur (seulement si connecté)
         if (isAuthenticated) {
@@ -92,16 +92,16 @@ export default function SellerProfile({ sellerId }: SellerProfileProps) {
             // Cette vérification nécessiterait une API supplémentaire au backend
             // Par exemple: /sellers/:sellerId/checkFollowing
             // Pour l'instant, on peut vérifier si l'ID de l'utilisateur est dans la liste des followers
-            // const followersResponse = await socialService.getSellerFollowers(sellerId);
-            // const userId = JSON.parse(localStorage.getItem("userEcomme") || '{}')?.id;
-            // const isUserFollowing = followersResponse.data.followers.some(
-            //   (follower: any) => follower._id === userId
-            // );
-            // setIsFollowing(isUserFollowing);
+            const followersResponse = await socialService.getSellerFollowers(sellerId);
+            const userId = JSON.parse(localStorage.getItem("userEcomme") || '{}')?.id;
+            const isUserFollowing = followersResponse.data.followers.some(
+              (follower: any) => follower._id === userId
+            );
+            setIsFollowing(isUserFollowing);
 
             // Vérifier si l'utilisateur a liké la boutique
-            // const likeResponse = await socialService.checkStoreLike(sellerId);
-            // setHasLikedStore(likeResponse.data.liked);
+            const likeResponse = await socialService.checkStoreLike(sellerId);
+            setHasLikedStore(likeResponse.data.liked);
           } catch (error) {
             console.error(
               "Erreur lors de la vérification des relations sociales:",
@@ -112,7 +112,7 @@ export default function SellerProfile({ sellerId }: SellerProfileProps) {
 
         setSeller(sellerResponse?.data?.data);
         setProducts(productsResponse?.data?.data);
-        // setSocialStats(statsResponse.data.stats);
+        setSocialStats(statsResponse.data.stats);
         setLoading(false);
       } catch (err) {
         setError("Erreur lors du chargement des données");
@@ -130,14 +130,14 @@ export default function SellerProfile({ sellerId }: SellerProfileProps) {
   useEffect(() => {
     const fetchReviews = async () => {
       try {
-        // const reviewsResponse = await socialService.getSellerReviews(
-        //   sellerId,
-        //   currentPage,
-        //   10 // Nombre d'avis par page
-        // );
+        const reviewsResponse = await socialService.getSellerReviews(
+          sellerId,
+          currentPage,
+          10 // Nombre d'avis par page
+        );
 
-        // setReviews(reviewsResponse.data.reviews);
-        // setTotalPages(reviewsResponse.data.totalPages);
+        setReviews(reviewsResponse.data.reviews);
+        setTotalPages(reviewsResponse.data.totalPages);
       } catch (error) {
         console.error("Erreur lors de la récupération des avis:", error);
       }
@@ -158,7 +158,7 @@ export default function SellerProfile({ sellerId }: SellerProfileProps) {
 
     try {
       if (isFollowing) {
-        // await socialService.unfollowSeller(sellerId);
+        await socialService.unfollowSeller(sellerId);
         setIsFollowing(false);
         // Mettre à jour les statistiques
         setSocialStats({
@@ -166,7 +166,7 @@ export default function SellerProfile({ sellerId }: SellerProfileProps) {
           followersCount: socialStats.followersCount - 1,
         });
       } else {
-        // await socialService.followSeller(sellerId);
+        await socialService.followSeller(sellerId);
         setIsFollowing(true);
         // Mettre à jour les statistiques
         setSocialStats({
@@ -189,7 +189,7 @@ export default function SellerProfile({ sellerId }: SellerProfileProps) {
 
     try {
       if (hasLikedStore) {
-        // await socialService.unlikeStore(sellerId);
+        await socialService.unlikeStore(sellerId);
         setHasLikedStore(false);
         // Mettre à jour les statistiques
         setSocialStats({
@@ -197,7 +197,7 @@ export default function SellerProfile({ sellerId }: SellerProfileProps) {
           likesCount: socialStats.likesCount - 1,
         });
       } else {
-        // await socialService.likeStore(sellerId);
+        await socialService.likeStore(sellerId);
         setHasLikedStore(true);
         // Mettre à jour les statistiques
         setSocialStats({
@@ -220,18 +220,18 @@ export default function SellerProfile({ sellerId }: SellerProfileProps) {
 
     try {
       if (isCurrentlyLiked) {
-        // await socialService.unlikeReview(reviewId);
+        await socialService.unlikeReview(reviewId);
       } else {
-        // await socialService.likeReview(reviewId);
+        await socialService.likeReview(reviewId);
       }
 
       // Rafraîchir la liste des avis
-      // const reviewsResponse = await socialService.getSellerReviews(
-      //   sellerId,
-      //   currentPage,
-      //   10
-      // );
-      // setReviews(reviewsResponse.data.reviews);
+      const reviewsResponse = await socialService.getSellerReviews(
+        sellerId,
+        currentPage,
+        10
+      );
+      setReviews(reviewsResponse.data.reviews);
     } catch (error) {
       console.error("Erreur lors du like de l'avis:", error);
       alert("Une erreur s'est produite. Veuillez réessayer.");
@@ -253,25 +253,25 @@ export default function SellerProfile({ sellerId }: SellerProfileProps) {
     }
 
     try {
-      // await socialService.createReview(sellerId, {
-      //   rating: newReview.rating,
-      //   comment: newReview.comment,
-      // });
+      await socialService.createReview(sellerId, {
+        rating: newReview.rating,
+        comment: newReview.comment,
+      });
 
       // Réinitialiser le formulaire
       setNewReview({ rating: 0, comment: "" });
 
       // Rafraîchir la liste des avis et les stats
-      // const reviewsResponse = await socialService.getSellerReviews(
-      //   sellerId,
-      //   1,
-      //   10
-      // );
-      // setReviews(reviewsResponse.data.reviews);
+      const reviewsResponse = await socialService.getSellerReviews(
+        sellerId,
+        1,
+        10
+      );
+      setReviews(reviewsResponse.data.reviews);
       setCurrentPage(1);
 
-      // const statsResponse = await socialService.getSellerSocialStats(sellerId);
-      // setSocialStats(statsResponse.data.stats);
+      const statsResponse = await socialService.getSellerSocialStats(sellerId);
+      setSocialStats(statsResponse.data.stats);
 
       alert("Votre avis a été publié avec succès!");
     } catch (error) {
@@ -294,15 +294,15 @@ export default function SellerProfile({ sellerId }: SellerProfileProps) {
       // await socialService.deleteReview(reviewId);
 
       // Rafraîchir la liste des avis et les stats
-      // const reviewsResponse = await socialService.getSellerReviews(
-      //   sellerId,
-      //   currentPage,
-      //   10
-      // );
-      // setReviews(reviewsResponse.data.reviews);
+      const reviewsResponse = await socialService.getSellerReviews(
+        sellerId,
+        currentPage,
+        10
+      );
+      setReviews(reviewsResponse.data.reviews);
 
-      // const statsResponse = await socialService.getSellerSocialStats(sellerId);
-      // setSocialStats(statsResponse.data.stats);
+      const statsResponse = await socialService.getSellerSocialStats(sellerId);
+      setSocialStats(statsResponse.data.stats);
 
       alert("Avis supprimé avec succès.");
     } catch (error) {

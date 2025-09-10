@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo, useCallback } from "react";
 import {
   Search,
   ShoppingCart,
@@ -27,11 +27,12 @@ import Image from "next/image";
 import { usePanierSync } from "@/hooks/usePanierSync";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 
-interface ProduitPromotionProps {
-  acces: boolean;
+interface NouveauterPageProps {
+  paniernbr?: any[];
+  acces?: boolean;
 }
 
-export default function ProduitPromotion({ acces }: ProduitPromotionProps) {
+export default function NouveauterPage({ paniernbr = [], acces = true }: NouveauterPageProps) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   
@@ -42,9 +43,7 @@ export default function ProduitPromotion({ acces }: ProduitPromotionProps) {
   const [activeCategory, setActiveCategory] = useState("Tous les produits");
   const swiperRef = useRef(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryName, setCategoryName] = useState(
-    "mode et divers sous un même toit"
-  );
+  const [categoryName, setCategoryName] = useState("mode et divers sous un même toit");
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
   const [notificationType, setNotificationType] = useState("success");
@@ -56,45 +55,40 @@ export default function ProduitPromotion({ acces }: ProduitPromotionProps) {
   const [dynamicKeywords, setDynamicKeywords] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("newest");
 
+  // Redux selectors
   const DATA_Products = useAppSelector((state: any) => state.products.data);
-  const DATA_Categories = useAppSelector((state: any) => state.products.categories);
   const DATA_Types = useAppSelector((state: any) => state.products.types);
-  
-  // Likes state from Redux
+  const DATA_Categories = useAppSelector((state: any) => state.products.categories);
   const { likedProducts, loading: likesLoading } = useAppSelector((state: any) => state.likes);
   
   const userId = typeof window !== 'undefined' 
     ? JSON.parse(localStorage.getItem("userEcomme") || '{}')?.id 
     : null;
 
-  // Filtrer les produits avec un prix promotionnel (vérifie que prixPromo existe et est inférieur au prix normal)
-  // Utiliser useMemo pour éviter les recalculs à chaque render
-  const produitsEnPromo = React.useMemo(() => {
-    const promos = DATA_Products?.filter(
-      (produit: any) => 
-        produit.prixPromo && 
-        produit.prix && 
-        parseFloat(produit.prixPromo) > 0 &&
-        parseFloat(produit.prixPromo) < parseFloat(produit.prix)
-    ) || [];
-    
-    return promos;
-  }, [DATA_Products]);
-
-  const filteredCategories = React.useMemo(() => 
+  // Memoized calculations
+  const filteredCategories = useMemo(() => 
     DATA_Categories?.filter((c: any) => c.name !== "all") || []
   , [DATA_Categories]);
 
-  React.useEffect(() => {
-    if (userId && typeof dispatch === 'function') {
-      dispatch(fetchUserLikes(userId) as any);
-    }
-  }, [userId, dispatch]);
+  // Filtrer et trier les nouveaux produits (10 derniers produits ajoutés)
+  const nouveauxProduits = useMemo(() => {
+    if (!DATA_Products?.length) return [];
+    
+    // Créer une copie et trier par date de création (plus récent en premier)
+    const sortedProducts = [...DATA_Products].sort((a, b) => {
+      const dateA = new Date(a.createdAt || a._id).getTime();
+      const dateB = new Date(b.createdAt || b._id).getTime();
+      return dateB - dateA;
+    });
+    
+    // Prendre les 10 plus récents
+    return sortedProducts.slice(0, 10);
+  }, [DATA_Products]);
 
   // Générer des suggestions de recherche avec useMemo
-  const searchSuggestionsList = React.useMemo(() => {
-    if (searchTerm.length >= 2 && produitsEnPromo.length > 0) {
-      return produitsEnPromo
+  const searchSuggestionsList = useMemo(() => {
+    if (searchTerm.length >= 2 && nouveauxProduits.length > 0) {
+      return nouveauxProduits
         .filter((product: any) => 
           product.name.toLowerCase().includes(searchTerm.toLowerCase())
         )
@@ -108,23 +102,110 @@ export default function ProduitPromotion({ acces }: ProduitPromotionProps) {
         }));
     }
     return [];
-  }, [searchTerm, produitsEnPromo]);
+  }, [searchTerm, nouveauxProduits]);
 
-  // Mettre à jour les états basés sur les suggestions calculées
+  // Fonction optimisée pour filtrer les produits
+  const getFilteredProducts = useMemo(() => {
+    let filtered = nouveauxProduits;
+
+    // Filtrer par catégorie si ce n'est pas "Tous les produits"
+    if (activeCategory !== "Tous les produits") {
+      const selectedCategory = DATA_Categories?.find((cat: any) => cat._id === activeCategory);
+      
+      if (selectedCategory) {
+        filtered = nouveauxProduits.filter((product: any) => {
+          const productType = DATA_Types?.find((type: any) => type._id === product.ClefType);
+          return productType && productType.clefCategories === selectedCategory._id;
+        });
+      }
+    }
+
+    // Filtrer par terme de recherche
+    if (searchTerm.trim()) {
+      filtered = filtered.filter((prod: any) =>
+        prod?.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Appliquer le tri
+    return [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'price-low':
+          const priceA = parseFloat(a.prixPromo) || parseFloat(a.prix);
+          const priceB = parseFloat(b.prixPromo) || parseFloat(b.prix);
+          return priceA - priceB;
+        case 'price-high':
+          const priceHighA = parseFloat(a.prixPromo) || parseFloat(a.prix);
+          const priceHighB = parseFloat(b.prixPromo) || parseFloat(b.prix);
+          return priceHighB - priceHighA;
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'newest':
+        default:
+          const dateA = new Date(a.createdAt || a._id).getTime();
+          const dateB = new Date(b.createdAt || b._id).getTime();
+          return dateB - dateA;
+      }
+    });
+  }, [nouveauxProduits, activeCategory, searchTerm, sortBy, DATA_Categories, DATA_Types]);
+
+  const filteredProducts = getFilteredProducts;
+
+  // Générer des mots-clés dynamiques basés sur les nouveaux produits
+  const generateDynamicKeywords = useCallback((products: any[]) => {
+    const allWords: string[] = [];
+    
+    products.forEach((product: any) => {
+      const words = product.name
+        .toLowerCase()
+        .split(/[\s-_,()]+/)
+        .filter((word: string) => word.length > 2)
+        .map((word: string) => word.trim());
+      
+      allWords.push(...words);
+    });
+
+    const wordFrequency: { [key: string]: number } = {};
+    allWords.forEach((word: string) => {
+      wordFrequency[word] = (wordFrequency[word] || 0) + 1;
+    });
+
+    return Object.entries(wordFrequency)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 6)
+      .map(([word]) => word.charAt(0).toUpperCase() + word.slice(1));
+  }, []);
+
+  // Effects
+  React.useEffect(() => {
+    if (userId && typeof dispatch === 'function') {
+      dispatch(fetchUserLikes(userId) as any);
+    }
+  }, [userId, dispatch]);
+
   React.useEffect(() => {
     setSearchSuggestions(searchSuggestionsList);
     setShowSuggestions(searchSuggestionsList.length > 0 && searchTerm.length >= 2);
   }, [searchSuggestionsList, searchTerm]);
 
-  // Générer des mots-clés dynamiques basés sur les produits en promotion
   React.useEffect(() => {
-    if (produitsEnPromo.length > 0) {
-      const keywords = generateDynamicKeywords(produitsEnPromo);
+    if (nouveauxProduits.length > 0) {
+      const keywords = generateDynamicKeywords(nouveauxProduits);
       setDynamicKeywords(keywords);
     }
-  }, [DATA_Products]);
+  }, [nouveauxProduits, generateDynamicKeywords]);
 
-  // Gérer la fermeture des suggestions en cliquant ailleurs
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      const heroHeight = 400;
+      setShowFixedSearch(scrollY > heroHeight);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -137,74 +218,24 @@ export default function ProduitPromotion({ acces }: ProduitPromotionProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Fonction pour générer des mots-clés à partir des noms de produits
-  const generateDynamicKeywords = (products: any[]) => {
-    const allWords: string[] = [];
-    const brands: string[] = [];
-    
-    // Extraire tous les mots des noms de produits et les marques
-    products.forEach((product: any) => {
-      // Extraire les mots des noms de produits
-      const words = product.name
-        .toLowerCase()
-        .split(/[\s-_,()]+/) // Séparer par espaces, tirets, virgules, parenthèses
-        .filter((word: string) => word.length > 2) // Garder seulement les mots de plus de 2 caractères
-        .map((word: string) => word.trim());
-      
-      allWords.push(...words);
-      
-      // Extraire les marques potentielles (premiers mots souvent)
-      if (product.name.split(' ').length > 1) {
-        brands.push(product.name.split(' ')[0].toLowerCase());
-      }
-    });
-
-    // Compter la fréquence des mots
-    const wordFrequency: { [key: string]: number } = {};
-    allWords.forEach((word: string) => {
-      wordFrequency[word] = (wordFrequency[word] || 0) + 1;
-    });
-
-    // Trier par fréquence et prendre les 6 premiers
-    const sortedWords = Object.entries(wordFrequency)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 6)
-      .map(([word]) => word.charAt(0).toUpperCase() + word.slice(1));
-
-    return sortedWords;
-  };
-
-  // Gérer l'affichage de la barre de recherche fixe au scroll
-  React.useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY;
-      const heroHeight = 400;
-      setShowFixedSearch(scrollY > heroHeight);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Fonction pour afficher les notifications
-  const showToast = (message: string, type = "success") => {
+  // Callback functions
+  const showToast = useCallback((message: string, type = "success") => {
     setNotificationMessage(message);
     setNotificationType(type);
     setShowNotification(true);
     setTimeout(() => setShowNotification(false), 3000);
-  };
+  }, []);
 
-  // Fonction pour gérer la recherche avec effet
-  const handleSearchChange = (value: string) => {
+  const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);
     setIsSearching(true);
     
     setTimeout(() => {
       setIsSearching(false);
     }, 300);
-  };
+  }, []);
 
-  const handleLikeClick = async (product: any) => {
+  const handleLikeClick = useCallback(async (product: any) => {
     if (!userId) {
       showToast("Veuillez vous connecter pour ajouter des favoris", "error");
       return;
@@ -223,81 +254,32 @@ export default function ProduitPromotion({ acces }: ProduitPromotionProps) {
       showToast("Une erreur est survenue", "error");
       console.error("Erreur:", error);
     }
-  };
+  }, [userId, dispatch, likedProducts, showToast]);
 
-  // Utiliser useMemo pour optimiser le filtrage des produits
-  const filteredProducts = React.useMemo(() => {
-    let filtered = produitsEnPromo;
-
-    // Filtrer par catégorie si ce n'est pas "Tous les produits"
-    if (activeCategory !== "Tous les produits") {
-      // Trouver la catégorie sélectionnée
-      const selectedCategory = DATA_Categories?.find((cat: any) => cat.name === activeCategory);
-      
-      if (selectedCategory) {
-        // Filtrer les produits par cette catégorie
-        filtered = produitsEnPromo.filter((product: any) => {
-          // Trouver le type du produit
-          const productType = DATA_Types?.find((type: any) => type._id === product.ClefType);
-          // Vérifier si le type appartient à la catégorie sélectionnée
-          return productType && productType.clefCategories === selectedCategory._id;
-        });
-      }
-    }
-
-    // Filtrer par terme de recherche
-    if (searchTerm.trim()) {
-      filtered = filtered.filter((prod: any) =>
-        prod?.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Appliquer le tri
-    const sortedProducts = [...filtered].sort((a, b) => {
-      switch (sortBy) {
-        case 'price-low':
-          return parseFloat(a.prixPromo) - parseFloat(b.prixPromo);
-        case 'price-high':
-          return parseFloat(b.prixPromo) - parseFloat(a.prixPromo);
-        case 'discount':
-          const discountA = ((parseFloat(a.prix) - parseFloat(a.prixPromo)) / parseFloat(a.prix)) * 100;
-          const discountB = ((parseFloat(b.prix) - parseFloat(b.prixPromo)) / parseFloat(b.prix)) * 100;
-          return discountB - discountA;
-        case 'newest':
-        default:
-          // Tri par date de création (plus récent en premier)
-          return new Date(b.createdAt || b._id).getTime() - new Date(a.createdAt || a._id).getTime();
-      }
-    });
-
-    return sortedProducts;
-  }, [produitsEnPromo, activeCategory, searchTerm, sortBy, DATA_Categories, DATA_Types]);
-
-  const handleCategoryClick = (categoryId: string, name: string) => {
+  const handleCategoryClick = useCallback((categoryId: string, name: string) => {
     setActiveCategory(categoryId);
     setCategoryName(name);
     setIsMenuOpen(false);
-  };
+  }, []);
 
-  const handleSortChange = (value: string) => {
+  const handleSortChange = useCallback((value: string) => {
     setIsLoading(true);
     setSortBy(value);
     
-    // Simuler un petit délai pour l'effet visuel
     setTimeout(() => {
       setIsLoading(false);
       showToast(`Produits triés par ${
         value === 'price-low' ? 'prix croissant' :
         value === 'price-high' ? 'prix décroissant' :
-        value === 'discount' ? 'réduction maximale' :
-        'date récente'
+        value === 'name' ? 'nom alphabétique' :
+        'plus récent'
       }`);
     }, 300);
-  };
+  }, [showToast]);
 
-  function getRandomIntBetween3and5() {
+  const getRandomIntBetween3and5 = useCallback(() => {
     return Math.floor(Math.random() * (5 - 3 + 1)) + 3;
-  }
+  }, []);
 
   const CommentCard = ({ comment }: { comment: any }) => (
     <div className="p-2 border rounded-md" ref={swiperRef}>
@@ -571,13 +553,13 @@ export default function ProduitPromotion({ acces }: ProduitPromotionProps) {
 
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-[#30A08B] to-[#B2905F] text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 lg:py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 md:py-8 lg:py-12">
           <div className="text-center">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-              🔥 Promotions Exceptionnelles
+              ✨ Nouveaux Produits
             </h1>
             <p className="text-xl md:text-2xl mb-8 text-white/90">
-              Découvrez nos meilleures offres avec des réductions allant jusqu'à 70%
+              Découvrez nos derniers arrivages et restez à la pointe des tendances
             </p>
             
             {/* Barre de recherche moderne dans le hero */}
@@ -594,7 +576,7 @@ export default function ProduitPromotion({ acces }: ProduitPromotionProps) {
                   {/* Input */}
                   <input
                     type="search"
-                    placeholder="Que recherchez-vous en promotion aujourd'hui ?"
+                    placeholder="Rechercher dans nos nouveaux produits..."
                     className="flex-1 py-4 pr-6 text-gray-800 placeholder-gray-500 bg-transparent border-none focus:outline-none focus:ring-0 text-base md:text-lg font-medium"
                     value={searchTerm}
                     onChange={(e) => handleSearchChange(e.target.value)}
@@ -635,9 +617,9 @@ export default function ProduitPromotion({ acces }: ProduitPromotionProps) {
               {/* Suggestions de recherche populaires */}
               <div className="mt-4 flex flex-wrap justify-center gap-2">
                 <span className="text-white/80 text-sm">
-                  {dynamicKeywords.length > 0 ? 'Populaire en promotion:' : 'Recherche populaire:'}
+                  {dynamicKeywords.length > 0 ? 'Nouveautés populaires:' : 'Recherche populaire:'}
                 </span>
-                {(dynamicKeywords.length > 0 ? dynamicKeywords : ['Téléphones', 'Vêtements', 'Chaussures', 'Accessoires', 'Électronique', 'Beauté']).map((tag) => (
+                {(dynamicKeywords.length > 0 ? dynamicKeywords : ['Mode', 'Électronique', 'Accessoires', 'Beauté', 'Sport', 'Maison']).map((tag) => (
                   <button
                     key={tag}
                     onClick={() => setSearchTerm(tag)}
@@ -701,30 +683,30 @@ export default function ProduitPromotion({ acces }: ProduitPromotionProps) {
             </div>
 
             <div className="flex flex-wrap justify-center gap-4 text-sm md:text-base mb-6">
-              <span className="bg-white/20 px-4 py-2 rounded-full">✨ Livraison gratuite</span>
-              <span className="bg-white/20 px-4 py-2 rounded-full">🛡️ Garantie qualité</span>
-              <span className="bg-white/20 px-4 py-2 rounded-full">⚡ Stocks limités</span>
+              <span className="bg-white/20 px-4 py-2 rounded-full">🆕 Nouveautés exclusives</span>
+              <span className="bg-white/20 px-4 py-2 rounded-full">🚚 Livraison rapide</span>
+              <span className="bg-white/20 px-4 py-2 rounded-full">💎 Qualité premium</span>
             </div>
 
-            {/* Statistiques de promotion */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+            {/* Statistiques des nouveaux produits */}
+            {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
               <div className="text-center">
                 <div className="text-2xl md:text-3xl font-bold">{filteredProducts.length}</div>
-                <div className="text-sm md:text-base text-white/80">Produits</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold">70%</div>
-                <div className="text-sm md:text-base text-white/80">Jusqu'à</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold">50+</div>
-                <div className="text-sm md:text-base text-white/80">Variétés</div>
+                <div className="text-sm md:text-base text-white/80">Nouveaux</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl md:text-3xl font-bold">100%</div>
-                <div className="text-sm md:text-base text-white/80">Satisfait</div>
+                <div className="text-sm md:text-base text-white/80">Récents</div>
               </div>
-            </div>
+              <div className="text-center">
+                <div className="text-2xl md:text-3xl font-bold">24h</div>
+                <div className="text-sm md:text-base text-white/80">Ajoutés</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl md:text-3xl font-bold">⭐</div>
+                <div className="text-sm md:text-base text-white/80">Tendance</div>
+              </div>
+            </div> */}
           </div>
         </div>
       </div>
@@ -736,7 +718,7 @@ export default function ProduitPromotion({ acces }: ProduitPromotionProps) {
             <div className="relative">
               <input
                 type="text"
-                placeholder="Rechercher des promotions..."
+                placeholder="Rechercher des nouveaux produits..."
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#30A08B]/20 focus:border-[#30A08B] outline-none transition-all duration-300"
@@ -755,69 +737,13 @@ export default function ProduitPromotion({ acces }: ProduitPromotionProps) {
         </div>
       )}
 
-      {/* Section d'informations - Version mobile compacte */}
-      <div className="bg-white py-2 md:py-6 border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Version mobile: Badges horizontaux compacts */}
-          <div className="flex overflow-x-auto gap-2 pb-1 md:hidden" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
-            <div className="flex-shrink-0 flex items-center bg-gradient-to-r from-[#30A08B] to-[#268070] text-white px-3 py-1.5 rounded-full text-xs">
-              <span className="mr-1">🔐</span>
-              Sécurisé
-            </div>
-            <div className="flex-shrink-0 flex items-center bg-gradient-to-r from-[#30A08B] to-[#268070] text-white px-3 py-1.5 rounded-full text-xs">
-              <span className="mr-1">💎</span>
-              Qualité
-            </div>
-            <div className="flex-shrink-0 flex items-center bg-gradient-to-r from-[#30A08B] to-[#268070] text-white px-3 py-1.5 rounded-full text-xs">
-              <span className="mr-1">🔥</span>
-              Prix bas
-            </div>
-          </div>
-
-          {/* Version desktop: Layout complet */}
-          <div className="hidden md:block">
-            <div className="text-center mb-6">
-              <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-2">
-                Nos avantages
-              </h2>
-            </div>
-            
-            <div className="grid grid-cols-3 gap-6">
-            <div className="text-center p-6 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <div className="w-16 h-16 bg-[#30A08B] rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">�</span>
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Paiement Sécurisé</h3>
-              <p className="text-gray-600 text-sm">Transactions 100% sécurisées</p>
-            </div>
-            
-            <div className="text-center p-6 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <div className="w-16 h-16 bg-[#30A08B] rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">💎</span>
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Qualité Garantie</h3>
-              <p className="text-gray-600 text-sm">Produits authentiques et de haute qualité</p>
-            </div>
-            
-            <div className="text-center p-6 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-              <div className="w-16 h-16 bg-[#30A08B] rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">🔥</span>
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Prix Imbattables</h3>
-              <p className="text-gray-600 text-sm">Les meilleures promotions du marché</p>
-            </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Breadcrumb Navigation */}
       <div className="bg-gray-50 border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <Breadcrumb 
             items={[
               { label: "Accueil", href: "/" },
-              { label: "Promotions", href: "/promotion", current: true }
+              { label: "Nouveaux Produits", href: "/nouveaux-produits", current: true }
             ]}
           />
         </div>
@@ -832,27 +758,27 @@ export default function ProduitPromotion({ acces }: ProduitPromotionProps) {
               {searchTerm ? (
                 <>Résultats pour "{searchTerm}" ({filteredProducts.length})</>
               ) : (
-                <>Produits en Promotion ({filteredProducts.length})</>
+                <>Nouveaux Produits ({filteredProducts.length})</>
               )}
               {sortBy !== 'newest' && (
                 <span className="text-sm font-normal bg-[#30A08B] text-white px-2 py-1 rounded-full">
                   {sortBy === 'price-low' && 'Prix ↗'}
                   {sortBy === 'price-high' && 'Prix ↘'}
-                  {sortBy === 'discount' && 'Réduction ↘'}
+                  {sortBy === 'name' && 'A-Z'}
                 </span>
               )}
             </h2>
             <p className="text-gray-600">
               {searchTerm ? 
                 `${filteredProducts.length} produit(s) trouvé(s)` : 
-                'Découvrez nos meilleures offres du moment'
+                'Découvrez nos derniers arrivages et nouveautés exclusives'
               }
               {sortBy !== 'newest' && (
                 <span className="ml-2 text-sm text-[#30A08B]">
                   • Trié par {
                     sortBy === 'price-low' ? 'prix croissant' :
                     sortBy === 'price-high' ? 'prix décroissant' :
-                    sortBy === 'discount' ? 'réduction maximale' : ''
+                    sortBy === 'name' ? 'nom alphabétique' : ''
                   }
                 </span>
               )}
@@ -873,7 +799,7 @@ export default function ProduitPromotion({ acces }: ProduitPromotionProps) {
                 <option value="newest">Plus récent</option>
                 <option value="price-low">Prix croissant</option>
                 <option value="price-high">Prix décroissant</option>
-                <option value="discount">Réduction max</option>
+                <option value="name">Nom (A-Z)</option>
               </select>
             </div>
           )}
@@ -910,7 +836,7 @@ export default function ProduitPromotion({ acces }: ProduitPromotionProps) {
                     width={400}
                     height={300}
                   />
-                  
+
                   {/* Like Button */}
                   <button
                     onClick={(e) => {
@@ -934,13 +860,19 @@ export default function ProduitPromotion({ acces }: ProduitPromotionProps) {
                     />
                   </button>
 
-                  <span className="absolute top-2 right-2 bg-[#62aca2bb] text-white text-xs font-bold py-1 px-2 rounded-full">
-                    -{" "}
-                    {Math.round(
-                      ((product.prix - product.prixPromo) / product.prix) * 100
-                    )}{" "}
-                    %
-                  </span>
+                  <button className="absolute top-2 right-4 py-1 px-2 text-white rounded-full shadow-md bg-[#62aca2bb] transition-colors text-xs font-bold">
+                    nouveau
+                  </button>
+
+                  {product?.prixPromo && product?.prixPromo > 0 && (
+                    <span className="absolute bottom-2 left-2 bg-[#62aca2bb] text-white text-xs font-bold py-1 px-2 rounded-full">
+                      -{" "}
+                      {Math.round(
+                        ((product.prix - product.prixPromo) / product.prix) * 100
+                      )}{" "}
+                      %
+                    </span>
+                  )}
                 </div>
                 <div className="p-4">
                   <h3 className="text-base md:text-lg font-medium mb-2 text-gray-800">
@@ -986,7 +918,7 @@ export default function ProduitPromotion({ acces }: ProduitPromotionProps) {
                   <Search className="w-12 h-12 text-gray-400" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                  {searchTerm ? 'Aucun résultat trouvé' : 'Aucun produit en promotion'}
+                  {searchTerm ? 'Aucun résultat trouvé' : 'Aucun nouveau produit'}
                 </h3>
                 <p className="text-gray-600 mb-6">
                   {searchTerm ? (
@@ -995,7 +927,7 @@ export default function ProduitPromotion({ acces }: ProduitPromotionProps) {
                       <br />Essayez avec d'autres mots-clés.
                     </>
                   ) : (
-                    'Il n\'y a actuellement aucun produit en promotion dans cette catégorie.'
+                    'Il n\'y a actuellement aucun nouveau produit dans cette catégorie.'
                   )}
                 </p>
                 {searchTerm && (
