@@ -33,7 +33,7 @@ Migration du projet React `iham_baobab_web` vers Next.js pour améliorer :
 - **Responsive** : Mobile-first avec Tailwind
 
 ## 🔌 APIs et intégrations
-- **Backend** : `https://secoure.onrender.com`
+- **Backend** : `https://ihambackend.onrender.com`
 - **Socket.io** : Chat en temps réel
 - **Mobile Money** : Intégration des paiements africains
 - **iPay** : Système de paiement

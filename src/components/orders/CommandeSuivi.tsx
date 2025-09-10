@@ -29,7 +29,7 @@ import OrderedItems from "./OrderedItems";
 import OrderPaymentHandler from "./OrderPaymentHandler";
 import OrderTracking from "./OrderTracking";
 
-const BackendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://secoure.onrender.com";
+const BackendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://ihambackend.onrender.com";
 
 interface Order {
   _id: string;

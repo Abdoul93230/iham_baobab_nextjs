@@ -112,7 +112,7 @@ export class AuthService {
     try {
       console.log("🔍 Vérification du token auprès du serveur...");
       
-      const response = await fetch('https://secoure.onrender.com/verify', {
+      const response = await fetch('https://ihambackend.onrender.com/verify', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -93,7 +93,7 @@ export const loginUser = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await fetch("https://secoure.onrender.com/login", {
+      const response = await fetch("https://ihambackend.onrender.com/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -139,7 +139,7 @@ export const registerUser = createAsyncThunk(
   ) => {
     try {
       // Étape 1: Inscription
-      const registerResponse = await fetch("https://secoure.onrender.com/user", {
+      const registerResponse = await fetch("https://ihambackend.onrender.com/user", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -154,7 +154,7 @@ export const registerUser = createAsyncThunk(
       }
 
       // Étape 2: Connexion automatique après inscription
-      const loginResponse = await fetch("https://secoure.onrender.com/login", {
+      const loginResponse = await fetch("https://ihambackend.onrender.com/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -195,7 +195,7 @@ export const registerUser = createAsyncThunk(
           </ul>
           <p>Cordialement,<br>L'équipe IhamBaobab</p>`;
 
-        await fetch("https://secoure.onrender.com/sendMail", {
+        await fetch("https://ihambackend.onrender.com/sendMail", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -224,7 +224,7 @@ export const forgotPassword = createAsyncThunk(
   "user/forgotPassword",
   async (email: string, { rejectWithValue }) => {
     try {
-      const response = await fetch("https://secoure.onrender.com/forgotPassword", {
+      const response = await fetch("https://ihambackend.onrender.com/forgotPassword", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -258,7 +258,7 @@ export const resetPassword = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await fetch("https://secoure.onrender.com/reset_password", {
+      const response = await fetch("https://ihambackend.onrender.com/reset_password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

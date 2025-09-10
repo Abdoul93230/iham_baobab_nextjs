@@ -59,7 +59,7 @@ const commandesSEOConfig = {
     },
     {
       rel: "dns-prefetch",
-      href: process.env.NEXT_PUBLIC_BACKEND_URL || "https://secoure.onrender.com",
+      href: process.env.NEXT_PUBLIC_BACKEND_URL || "https://ihambackend.onrender.com",
     },
   ],
 };
@@ -94,7 +94,7 @@ export default function CommandeSuivi() {
         <NextSeo {...commandesSEOConfig} />
         <Head>
           <link rel="preload" href="/icon_user.png" as="image" />
-          <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_BACKEND_URL || "https://secoure.onrender.com"} />
+          <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_BACKEND_URL || "https://ihambackend.onrender.com"} />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         </Head>
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
