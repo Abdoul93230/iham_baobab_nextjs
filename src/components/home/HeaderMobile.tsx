@@ -104,7 +104,7 @@ const HeaderMobile: React.FC<HeaderMobileProps> = ({
       links: [
         "/profile",
         "/commandes",
-        "/invite",
+        "/invite-ami",
         "/livraison",
         "/suggestion",
         "/",
@@ -122,12 +122,12 @@ const HeaderMobile: React.FC<HeaderMobileProps> = ({
         "Information Legal",
       ],
       links: [
-        "/help",
-        "/delivery",
+        "/invite-ami",
+        "/livraison",
         "/settings/notifications",
-        "/privacy",
+        "/confidentialite",
         "/faq",
-        "/legal",
+        "/informations-legales",
       ],
     },
   ];

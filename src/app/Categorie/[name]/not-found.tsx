@@ -29,7 +29,7 @@ export default function CategoryNotFound() {
             href="/Home"
             className="inline-block w-full bg-[#30A08B] text-white py-3 px-6 rounded-lg hover:bg-[#268070] transition-colors font-medium"
           >
-            Retour à l'accueil
+            Retour à l&apos;accueil
           </Link>
           
           <Link

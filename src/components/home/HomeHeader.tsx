@@ -258,9 +258,9 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
           setActiveDropdown(null);
           setIsMobileMenuOpen(false);
           if (acces === "oui") {
-            router.push("/dashboard");
+            router.push("/invite-ami");
           } else {
-            router.push("/auth/login?returnUrl=/dashboard");
+            router.push("/auth/login?returnUrl=/invite-ami");
           }
         },
       },
@@ -319,7 +319,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
         onClick: () => {
           setActiveDropdown(null);
           setIsMobileMenuOpen(false);
-          router.push("/dashboard");
+          router.push("/centre-aide");
         },
       },
       {
@@ -346,18 +346,18 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
         onClick: () => {
           setActiveDropdown(null);
           setIsMobileMenuOpen(false);
-          router.push("/dashboard");
+          router.push("/confidentialite");
         },
       },
       {
         icon: HelpCircle,
         label: "Questions fréquemment posées",
-        onClick: () => router.push("/Question Fréquement possées"),
+        onClick: () => router.push("/faq"),
       },
       {
         icon: Info,
         label: "Informations légales",
-        onClick: () => router.push("/Legal information"),
+        onClick: () => router.push("/informations-legales"),
       },
     ];
 

@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+// import useAuth from "@/hooks/useAuth";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 // Types TypeScript
 interface Product {
@@ -28,12 +30,14 @@ interface Product {
 }
 
 type SortBy = "dateAdded" | "price" | "name";
+type FilterCategory = "all" | "Chaussures" | "Vêtements" | "Accessoires";
 
 const LikeProduitContent = () => {
   const router = useRouter();
 
   const [likedProducts, setLikedProducts] = useState<Product[]>([]);
   const [sortBy, setSortBy] = useState<SortBy>("dateAdded");
+  const [filterCategory, setFilterCategory] = useState<FilterCategory>("all");
   const [hoveredProduct, setHoveredProduct] = useState<string | null>(null);
   const [showNotification, setShowNotification] = useState<boolean>(false);
   const [notificationMessage, setNotificationMessage] = useState<string>("");
@@ -42,7 +46,7 @@ const LikeProduitContent = () => {
 
   const API_URL = process.env.NEXT_PUBLIC_Backend_Url;
   const userId = JSON.parse(localStorage.getItem("userEcomme") || "null")?.id;
-
+  // const { user, isAuthenticated, signOut } = useAuth();
   // Fonction pour afficher les notifications
   const showToast = (message: string) => {
     setNotificationMessage(message);
@@ -72,8 +76,6 @@ const LikeProduitContent = () => {
   useEffect(() => {
     fetchLikedProducts();
   }, []);
-
-
 
   const removeFromLiked = async (productId: string) => {
     try {
@@ -143,6 +145,7 @@ const LikeProduitContent = () => {
   }
 
   return (
+    <ProtectedRoute requireAuth={true}>
     <div className="min-h-screen bg-gray-50">
       {/* Notification Toast */}
       <div
@@ -167,6 +170,16 @@ const LikeProduitContent = () => {
         <div className="flex justify-between items-center mb-6">
           <div className="flex space-x-4">
             <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value as FilterCategory)}
+              className="rounded-lg border-gray-300 focus:ring-[#30A08B] focus:border-[#30A08B]"
+            >
+              <option value="all">Toutes les catégories</option>
+              <option value="Chaussures">Chaussures</option>
+              <option value="Vêtements">Vêtements</option>
+              <option value="Accessoires">Accessoires</option>
+            </select>
+            <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortBy)}
               className="rounded-lg border-gray-300 focus:ring-[#30A08B] focus:border-[#30A08B]"
@@ -188,6 +201,11 @@ const LikeProduitContent = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {likedProducts
+              .filter(
+                (product) =>
+                  filterCategory === "all" ||
+                  product.category === filterCategory
+              )
               .sort((a, b) => {
                 if (sortBy === "price") return a.price - b.price;
                 if (sortBy === "name") return a.name.localeCompare(b.name);
@@ -207,9 +225,9 @@ const LikeProduitContent = () => {
                       className="w-full h-48 object-cover"
                     />
                     <div
-                      className={`absolute inset-0 bg-black flex items-center justify-center space-x-4 transition-opacity duration-300 ${
+                      className={`absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center space-x-4 transition-opacity duration-300 ${
                         hoveredProduct === product._id
-                          ? "opacity-80"
+                          ? "opacity-100"
                           : "opacity-0"
                       }`}
                     >
@@ -270,6 +288,7 @@ const LikeProduitContent = () => {
         )}
       </div>
     </div>
+    </ProtectedRoute>
   );
 };
 
