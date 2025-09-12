@@ -24,8 +24,11 @@ import {
   Headphones,
   ArrowRight,
   ThumbsUp,
+  Store,
+  Users,
+  Package,
+  ShoppingCart,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 interface Article {
@@ -48,10 +51,9 @@ const ServicePage = () => {
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("relevance");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const router = useRouter();
 
   const filterOptions = {
-    categories: ["Commandes", "Paiement", "Compte", "Livraison", "Produits", "Retours"],
+    categories: ["Commandes", "Paiement", "Boutiques", "Compte", "Livraison", "Produits", "Retours", "Vendeurs"],
     type: ["FAQ", "Guide", "Tutoriel", "Information"],
     importance: ["Essentiel", "Recommandé", "Optionnel"],
   };
@@ -62,7 +64,6 @@ const ServicePage = () => {
     { id: "popular", label: "Plus populaire", icon: BarChart },
   ];
 
-  // Déplacer helpData dans useMemo pour qu'il soit stable
   const helpData = useMemo(() => [
     {
       id: "commandes",
@@ -71,40 +72,84 @@ const ServicePage = () => {
       color: "from-blue-500 to-blue-600",
       articles: [
         {
-          title: "Comment passer une commande ?",
-          content: "Parcourez notre catalogue, ajoutez les produits souhaités au panier, puis suivez les étapes de commande. Un compte utilisateur facilite le processus.",
-          tags: ["commander", "panier", "achat", "étapes"],
+          title: "Comment passer une commande sur la marketplace ?",
+          content: "Explorez les produits de différentes boutiques, ajoutez-les à votre panier. Même si vous sélectionnez des produits de boutiques différentes, ils seront automatiquement regroupés par boutique lors de la commande. Chaque boutique traitera sa partie de commande individuellement.",
+          tags: ["commander", "panier", "boutiques", "marketplace", "achat"],
           category: "Commandes",
           type: "Guide",
           lastUpdated: "2024-01-15",
           popularity: 98,
         },
         {
-          title: "Suivre ma commande en temps réel",
-          content: "Connectez-vous à votre compte pour voir l'état de votre commande. Vous recevrez des notifications SMS et email à chaque étape : préparation, expédition, livraison.",
-          tags: ["suivi", "commande", "tracking", "livraison", "notifications"],
+          title: "Suivre mes commandes multi-boutiques",
+          content: "Connectez-vous pour voir toutes vos commandes. Si vous avez commandé dans plusieurs boutiques, vous verrez une commande séparée pour chaque boutique avec son propre suivi. Chaque vendeur gère sa propre expédition et vous recevrez des notifications pour chacune.",
+          tags: ["suivi", "multi-boutiques", "tracking", "vendeurs", "notifications"],
           category: "Commandes",
           type: "FAQ",
           lastUpdated: "2024-01-15",
           popularity: 95,
         },
         {
-          title: "Modifier ou annuler ma commande",
-          content: "Les modifications sont possibles dans les 2h suivant la validation. Passé ce délai, contactez notre service client pour les commandes non expédiées.",
-          tags: ["modifier", "annuler", "commande", "délai"],
+          title: "Modifier ou annuler une commande marketplace",
+          content: "Les modifications dépendent de chaque boutique. Généralement possible dans les 2h après validation. Si votre panier contient des produits de plusieurs boutiques, vous devrez contacter chaque vendeur séparément via notre système de messagerie intégré.",
+          tags: ["modifier", "annuler", "commande", "vendeurs", "marketplace"],
           category: "Commandes",
           type: "Information",
           lastUpdated: "2024-01-14",
           popularity: 88,
         },
         {
-          title: "Délais de traitement des commandes",
-          content: "Nos commandes sont traitées sous 24h ouvrées. La préparation prend 1-2 jours selon la disponibilité des produits artisanaux.",
-          tags: ["délai", "traitement", "préparation", "temps"],
+          title: "Comprendre les délais par boutique",
+          content: "Chaque boutique a ses propres délais de traitement (1-3 jours généralement). Si vous commandez dans plusieurs boutiques, vos colis arriveront séparément selon les délais de chaque vendeur. La plateforme coordonne mais chaque boutique expédie indépendamment.",
+          tags: ["délai", "boutiques", "traitement", "vendeurs", "coordination"],
           category: "Commandes",
           type: "Information",
           lastUpdated: "2024-01-13",
           popularity: 82,
+        },
+      ],
+    },
+    {
+      id: "boutiques",
+      title: "Boutiques & Vendeurs",
+      icon: Store,
+      color: "from-indigo-500 to-indigo-600",
+      articles: [
+        {
+          title: "Comment identifier une boutique fiable ?",
+          content: "Vérifiez les évaluations des boutiques (étoiles), lisez les avis clients, regardez depuis quand la boutique est active. Les boutiques certifiées ont un badge spécial. Consultez les politiques de retour de chaque boutique avant d'acheter.",
+          tags: ["fiabilité", "évaluations", "avis", "certification", "boutiques"],
+          category: "Boutiques",
+          type: "Guide",
+          lastUpdated: "2024-01-16",
+          popularity: 94,
+        },
+        {
+          title: "Contacter un vendeur directement",
+          content: "Utilisez le système de messagerie intégré sur chaque page produit ou boutique. Vos conversations sont sécurisées et archivées. Les vendeurs s'engagent à répondre sous 24h. En cas de non-réponse, contactez le support IhamBaobab.",
+          tags: ["contact", "messagerie", "vendeur", "communication", "support"],
+          category: "Boutiques",
+          type: "FAQ",
+          lastUpdated: "2024-01-15",
+          popularity: 89,
+        },
+        {
+          title: "Signaler un problème avec une boutique",
+          content: "Utilisez le système de signalement sur la page boutique ou contactez le support. Nous médions les conflits entre acheteurs et vendeurs. En cas de problème grave, nous pouvons suspendre une boutique et protéger les acheteurs.",
+          tags: ["signalement", "problème", "médiation", "protection", "conflit"],
+          category: "Boutiques",
+          type: "Information",
+          lastUpdated: "2024-01-14",
+          popularity: 85,
+        },
+        {
+          title: "Politiques des boutiques individuelles",
+          content: "Chaque boutique définit ses propres conditions (délais, retours, garanties). Ces informations sont affichées sur chaque page boutique. En cas de contradiction avec nos conditions générales, les règles de la plateforme prévalent pour la protection des acheteurs.",
+          tags: ["politiques", "conditions", "boutiques", "règles", "protection"],
+          category: "Boutiques",
+          type: "Information",
+          lastUpdated: "2024-01-13",
+          popularity: 78,
         },
       ],
     },
@@ -115,31 +160,40 @@ const ServicePage = () => {
       color: "from-green-500 to-green-600",
       articles: [
         {
-          title: "Zones de livraison disponibles",
-          content: "Nous livrons dans tout Niamey et les principales villes du Niger. Livraison internationale disponible sur demande pour certains produits.",
-          tags: ["zone", "livraison", "Niamey", "Niger", "international"],
+          title: "Livraisons multiples : comment ça marche ?",
+          content: "Si vous commandez dans plusieurs boutiques, vous recevrez plusieurs colis selon les délais de chaque vendeur. Niamey : 1-3 jours, autres villes : 2-7 jours selon la boutique. Frais calculés par boutique, optimisés quand possible.",
+          tags: ["livraisons multiples", "colis", "délais", "frais", "boutiques"],
           category: "Livraison",
-          type: "Information",
+          type: "Guide",
           lastUpdated: "2024-01-16",
           popularity: 92,
         },
         {
-          title: "Délais et frais de livraison",
-          content: "Niamey : 24-48h (2000 FCFA). Autres villes : 3-5 jours (3000 FCFA). Livraison gratuite dès 50000 FCFA d'achat.",
-          tags: ["délai", "frais", "livraison", "gratuite", "prix"],
+          title: "Frais de livraison par boutique",
+          content: "Chaque boutique fixe ses frais de livraison. Si vous commandez dans 3 boutiques, vous paierez 3 frais de livraison. Certaines boutiques offrent la livraison gratuite dès un certain montant. Regroupez vos achats par boutique pour économiser.",
+          tags: ["frais", "livraison", "boutiques", "économies", "regroupement"],
           category: "Livraison",
           type: "Information",
           lastUpdated: "2024-01-15",
           popularity: 89,
         },
         {
-          title: "Que faire si je ne reçois pas ma commande ?",
-          content: "Contactez-nous immédiatement si votre commande n'arrive pas dans les délais. Nous garantissons le remboursement ou un renvoi gratuit.",
-          tags: ["retard", "problème", "livraison", "garantie"],
+          title: "Suivi des colis multiples",
+          content: "Chaque colis de chaque boutique a son propre numéro de suivi. Vous recevez les informations de suivi par SMS/email pour chaque expédition. Consultez votre compte pour voir tous vos suivis en un seul endroit.",
+          tags: ["suivi", "colis multiples", "numéros", "tracking", "compte"],
           category: "Livraison",
           type: "FAQ",
           lastUpdated: "2024-01-14",
-          popularity: 76,
+          popularity: 87,
+        },
+        {
+          title: "Problème avec une livraison spécifique",
+          content: "Identifiez d'abord quelle boutique est concernée. Contactez le vendeur via la messagerie. Si pas de réponse sous 48h, le support IhamBaobab intervient. Nous garantissons la livraison ou le remboursement pour tous les achats sur la plateforme.",
+          tags: ["problème", "livraison", "vendeur", "support", "garantie"],
+          category: "Livraison",
+          type: "FAQ",
+          lastUpdated: "2024-01-13",
+          popularity: 84,
         },
       ],
     },
@@ -150,66 +204,84 @@ const ServicePage = () => {
       color: "from-purple-500 to-purple-600",
       articles: [
         {
-          title: "Moyens de paiement acceptés",
-          content: "Carte bancaire (Visa, MasterCard), Mobile Money (Orange, Airtel, Moov), paiement à la livraison disponible à Niamey.",
-          tags: ["paiement", "carte", "mobile money", "livraison"],
+          title: "Paiement sécurisé centralisé",
+          content: "TOUS les paiements passent par IhamBaobab pour votre sécurité. Même si vous achetez dans plusieurs boutiques, un seul paiement sécurisé. Nous redistribuons ensuite aux vendeurs après livraison confirmée. Carte bancaire, Mobile Money (Orange, Airtel, Moov).",
+          tags: ["paiement centralisé", "sécurité", "redistribution", "vendeurs", "mobile money"],
+          category: "Paiement",
+          type: "Information",
+          lastUpdated: "2024-01-15",
+          popularity: 96,
+        },
+        {
+          title: "Protection des paiements marketplace",
+          content: "Vos paiements sont bloqués jusqu'à confirmation de livraison. Si un vendeur ne livre pas ou si le produit ne correspond pas, remboursement automatique. Cette garantie s'applique à tous les vendeurs de la plateforme sans exception.",
+          tags: ["protection", "remboursement", "garantie", "livraison", "sécurité"],
           category: "Paiement",
           type: "Information",
           lastUpdated: "2024-01-15",
           popularity: 94,
         },
         {
-          title: "Sécurité des paiements en ligne",
-          content: "Tous nos paiements sont sécurisés SSL. Nous ne stockons jamais vos données bancaires. Système de paiement certifié PCI-DSS.",
-          tags: ["sécurité", "SSL", "protection", "données"],
+          title: "Facturation multi-boutiques",
+          content: "Une seule facture IhamBaobab avec le détail par boutique. TVA et taxes gérées automatiquement. Pour les entreprises, possibilité de factures séparées par boutique si nécessaire pour la comptabilité.",
+          tags: ["facturation", "TVA", "entreprises", "comptabilité", "détail"],
           category: "Paiement",
           type: "Information",
-          lastUpdated: "2024-01-15",
+          lastUpdated: "2024-01-14",
           popularity: 87,
         },
         {
-          title: "Problème lors du paiement",
-          content: "En cas d'échec de paiement, vérifiez vos informations bancaires, votre solde, ou contactez votre banque. Notre équipe peut vous aider.",
-          tags: ["erreur", "échec", "paiement", "problème", "support"],
+          title: "Problèmes de paiement et litiges",
+          content: "En cas d'échec de paiement ou de litige avec un vendeur, le support IhamBaobab intervient immédiatement. Nous gérons tous les remboursements et conflits. Vos droits sont protégés même si le vendeur devient injoignable.",
+          tags: ["litiges", "remboursements", "protection", "support", "conflits"],
           category: "Paiement",
           type: "FAQ",
-          lastUpdated: "2024-01-14",
-          popularity: 85,
+          lastUpdated: "2024-01-13",
+          popularity: 91,
         },
       ],
     },
     {
       id: "compte",
-      title: "Mon Compte",
+      title: "Mon Compte Acheteur",
       icon: User,
       color: "from-amber-500 to-amber-600",
       articles: [
         {
-          title: "Créer et gérer mon compte",
-          content: "Créez votre compte en 2 minutes avec votre email. Accédez à votre historique, gérez vos adresses et suivez vos commandes facilement.",
-          tags: ["compte", "inscription", "gestion", "profil"],
+          title: "Tableau de bord unifié",
+          content: "Votre compte centralise tous vos achats de toutes les boutiques. Historique complet, suivi des commandes, conversations avec les vendeurs, avis laissés, tout est regroupé pour une gestion simplifiée de votre expérience marketplace.",
+          tags: ["tableau de bord", "centralisation", "historique", "conversations", "avis"],
           category: "Compte",
           type: "Guide",
           lastUpdated: "2024-01-15",
           popularity: 96,
         },
         {
-          title: "Récupérer mon mot de passe",
-          content: "Cliquez sur 'Mot de passe oublié' sur la page de connexion. Vous recevrez un lien de réinitialisation par email sous 5 minutes.",
-          tags: ["mot de passe", "oublié", "récupérer", "reset"],
-          category: "Compte",
-          type: "FAQ",
-          lastUpdated: "2024-01-13",
-          popularity: 89,
-        },
-        {
-          title: "Modifier mes informations personnelles",
-          content: "Connectez-vous à votre compte, allez dans 'Mon Profil' pour modifier vos informations, adresses de livraison et préférences.",
-          tags: ["profil", "modifier", "informations", "adresse"],
+          title: "Gérer mes adresses et préférences",
+          content: "Sauvegardez plusieurs adresses de livraison. Configurez vos préférences par type de produit. Définissez vos boutiques favorites pour recevoir leurs nouveautés. Paramétrez vos notifications pour chaque type d'événement.",
+          tags: ["adresses", "préférences", "boutiques favorites", "notifications", "configuration"],
           category: "Compte",
           type: "Guide",
+          lastUpdated: "2024-01-14",
+          popularity: 88,
+        },
+        {
+          title: "Historique et évaluations",
+          content: "Consultez tous vos achats par boutique et par période. Laissez des avis sur les produits ET les boutiques. Vos évaluations aident la communauté et améliorent la qualité de la marketplace. Système de points de fidélité basé sur vos achats.",
+          tags: ["historique", "évaluations", "avis", "communauté", "fidélité"],
+          category: "Compte",
+          type: "Information",
+          lastUpdated: "2024-01-13",
+          popularity: 82,
+        },
+        {
+          title: "Sécurité et confidentialité",
+          content: "Authentification à deux facteurs disponible. Vos données personnelles ne sont jamais partagées avec les vendeurs (seulement les infos de livraison). Contrôlez qui peut voir vos avis et votre activité sur la plateforme.",
+          tags: ["sécurité", "confidentialité", "authentification", "données", "contrôle"],
+          category: "Compte",
+          type: "Information",
           lastUpdated: "2024-01-12",
-          popularity: 78,
+          popularity: 90,
         },
       ],
     },
@@ -220,31 +292,40 @@ const ServicePage = () => {
       color: "from-red-500 to-red-600",
       articles: [
         {
-          title: "Origine et authenticité de nos produits",
-          content: "Tous nos produits sont fabriqués par des artisans locaux du Niger. Chaque pièce est unique et certifiée authentique avec traçabilité complète.",
-          tags: ["origine", "authenticité", "artisan", "Niger", "qualité"],
+          title: "Vérification de la qualité des produits",
+          content: "IhamBaobab vérifie tous les vendeurs avant inscription. Système de notation produits et boutiques. Signalement rapide des contrefaçons. Chaque produit indique clairement sa boutique d'origine et ses certifications éventuelles.",
+          tags: ["vérification", "qualité", "notation", "contrefaçons", "certifications"],
           category: "Produits",
           type: "Information",
           lastUpdated: "2024-01-16",
           popularity: 93,
         },
         {
-          title: "Guide des tailles et mesures",
-          content: "Consultez notre guide détaillé des tailles pour chaque type de produit. En cas de doute, contactez-nous pour des conseils personnalisés.",
-          tags: ["taille", "mesure", "guide", "conseil"],
+          title: "Comparer les produits entre boutiques",
+          content: "Utilisez nos outils de comparaison pour les produits similaires de différentes boutiques. Comparez prix, délais, évaluations boutiques, conditions de retour. Filtrez par localisation du vendeur pour optimiser les délais.",
+          tags: ["comparaison", "prix", "délais", "évaluations", "localisation"],
           category: "Produits",
           type: "Guide",
-          lastUpdated: "2024-01-14",
-          popularity: 81,
+          lastUpdated: "2024-01-15",
+          popularity: 85,
         },
         {
-          title: "Entretien et conservation",
-          content: "Instructions d'entretien spécifiques pour chaque matériau : cuir, textile, bois, métal. Prolongez la durée de vie de vos produits artisanaux.",
-          tags: ["entretien", "conservation", "matériau", "durée"],
+          title: "Authenticité et origine des produits",
+          content: "Chaque boutique certifie l'origine de ses produits. Labels 'Artisan Local Niger' pour les créations locales. Système de traçabilité pour les produits importés. Signalement communautaire des produits suspects avec vérification rapide.",
+          tags: ["authenticité", "origine", "artisan local", "traçabilité", "signalement"],
           category: "Produits",
-          type: "Guide",
+          type: "Information",
+          lastUpdated: "2024-01-14",
+          popularity: 88,
+        },
+        {
+          title: "Garanties et conformité",
+          content: "Garantie plateforme minimum 30 jours même si la boutique propose moins. Vérification de conformité pour les produits sensibles (alimentaire, cosmétique). Médiation automatique en cas de produit non-conforme.",
+          tags: ["garanties", "conformité", "vérification", "médiation", "protection"],
+          category: "Produits",
+          type: "Information",
           lastUpdated: "2024-01-13",
-          popularity: 74,
+          popularity: 87,
         },
       ],
     },
@@ -255,37 +336,89 @@ const ServicePage = () => {
       color: "from-teal-500 to-teal-600",
       articles: [
         {
-          title: "Politique de retour 30 jours",
-          content: "Retour gratuit sous 30 jours si vous n'êtes pas satisfait. Produit dans son état d'origine avec emballage. Remboursement sous 7 jours.",
-          tags: ["retour", "30 jours", "remboursement", "politique"],
+          title: "Politique de retour unifiée",
+          content: "Retour possible 30 jours minimum sur tous les produits de toutes les boutiques. Si une boutique propose mieux, vous en bénéficiez. Retour gratuit en cas de défaut ou erreur vendeur. IhamBaobab gère tous les remboursements pour votre protection.",
+          tags: ["retour unifié", "30 jours", "remboursement", "protection", "gratuit"],
           category: "Retours",
           type: "Information",
           lastUpdated: "2024-01-15",
-          popularity: 90,
+          popularity: 92,
         },
         {
-          title: "Comment retourner un produit ?",
-          content: "Contactez notre service client pour obtenir une étiquette de retour gratuite. Emballez le produit et envoyez-le à l'adresse indiquée.",
-          tags: ["retourner", "étiquette", "emballage", "procédure"],
+          title: "Processus de retour multi-boutiques",
+          content: "Un seul formulaire pour tous vos retours. Sélectionnez les produits à retourner (même de boutiques différentes). Étiquettes de retour générées automatiquement. Remboursement central par IhamBaobab même si le vendeur refuse initialement.",
+          tags: ["processus unifié", "formulaire", "étiquettes", "remboursement central", "protection"],
           category: "Retours",
           type: "Guide",
           lastUpdated: "2024-01-14",
-          popularity: 83,
+          popularity: 89,
         },
         {
-          title: "Échange et remplacnement",
-          content: "Échange gratuit en cas de défaut ou d'erreur de notre part. Pour un changement de taille ou couleur, frais de port à votre charge.",
-          tags: ["échange", "remplacement", "défaut", "erreur"],
+          title: "Médiation des litiges vendeur-acheteur",
+          content: "En cas de désaccord avec un vendeur, IhamBaobab intervient comme médiateur neutre. Service de résolution de conflits avec délai maximum 7 jours. Décision finale contraignante pour les vendeurs inscrits sur la plateforme.",
+          tags: ["médiation", "litiges", "résolution", "neutre", "contraignant"],
           category: "Retours",
           type: "Information",
           lastUpdated: "2024-01-13",
-          popularity: 77,
+          popularity: 86,
+        },
+        {
+          title: "Remboursements et délais",
+          content: "Remboursement automatique 5-7 jours après réception du retour. Pas d'attente de l'accord vendeur. Pour les paiements Mobile Money, remboursement immédiat. Historique complet des remboursements dans votre compte.",
+          tags: ["remboursement automatique", "délais", "mobile money", "historique", "immédiat"],
+          category: "Retours",
+          type: "FAQ",
+          lastUpdated: "2024-01-12",
+          popularity: 91,
+        },
+      ],
+    },
+    {
+      id: "vendeurs",
+      title: "Devenir Vendeur",
+      icon: Users,
+      color: "from-orange-500 to-orange-600",
+      articles: [
+        {
+          title: "Créer ma boutique sur IhamBaobab",
+          content: "Inscription gratuite en 10 minutes. Vérification d'identité obligatoire. Créez votre vitrine, ajoutez vos produits, fixez vos conditions. Formation en ligne gratuite pour optimiser vos ventes. Support dédié aux nouveaux vendeurs.",
+          tags: ["inscription", "boutique", "vérification", "formation", "support"],
+          category: "Vendeurs",
+          type: "Guide",
+          lastUpdated: "2024-01-16",
+          popularity: 88,
+        },
+        {
+          title: "Commission et paiements vendeurs",
+          content: "Commission de 5% sur les ventes réalisées. Paiement automatique 7 jours après livraison confirmée. Paiement par Mobile Money ou virement bancaire. Tableau de bord détaillé des revenus et commissions. Pas de frais cachés.",
+          tags: ["commission", "5%", "paiement automatique", "mobile money", "transparent"],
+          category: "Vendeurs",
+          type: "Information",
+          lastUpdated: "2024-01-15",
+          popularity: 94,
+        },
+        {
+          title: "Outils de gestion pour vendeurs",
+          content: "Interface complète : gestion stock, commandes, messagerie clients, statistiques de vente. Application mobile pour gérer votre boutique partout. Outils marketing : promotions, codes de réduction, mise en avant produits.",
+          tags: ["outils gestion", "interface", "mobile", "marketing", "promotions"],
+          category: "Vendeurs",
+          type: "Information",
+          lastUpdated: "2024-01-14",
+          popularity: 85,
+        },
+        {
+          title: "Support et formation vendeurs",
+          content: "Centre de formation en ligne gratuit. Webinaires hebdomadaires sur les ventes en ligne. Support technique dédié. Conseils personnalisés pour développer votre activité. Communauté de vendeurs pour échanger bonnes pratiques.",
+          tags: ["formation", "webinaires", "support", "conseils", "communauté"],
+          category: "Vendeurs",
+          type: "Information",
+          lastUpdated: "2024-01-13",
+          popularity: 82,
         },
       ],
     },
   ], []);
 
-  // Utiliser useCallback pour stabiliser la fonction
   const searchAndFilterContent = useCallback((query: string, filters: string[], sortType: string, category: string) => {
     const results: Article[] = [];
     const searchTerm = query.toLowerCase();
@@ -339,7 +472,6 @@ const ServicePage = () => {
     return results;
   }, [helpData]);
 
-  // Maintenant le useEffect ne se déclenche que quand les dépendances changent vraiment
   useEffect(() => {
     const results = searchAndFilterContent(
       searchQuery,
@@ -369,13 +501,18 @@ const ServicePage = () => {
         <div className="absolute inset-0 bg-black opacity-10"></div>
         <div className="relative max-w-6xl mx-auto px-4 py-12 sm:py-16 lg:py-20">
           <div className="text-center mb-8">
-            <HelpCircle className="w-16 h-16 mx-auto mb-6 opacity-90" />
+            <div className="flex justify-center items-center gap-4 mb-6">
+              <HelpCircle className="w-16 h-16 opacity-90" />
+              <Store className="w-12 h-12 opacity-75" />
+              <ShoppingCart className="w-12 h-12 opacity-75" />
+            </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">
               Centre d&apos;Aide IhamBaobab
             </h1>
-            <p className="text-lg sm:text-xl opacity-90 max-w-3xl mx-auto mb-8">
-              Trouvez rapidement des réponses à toutes vos questions. Notre équipe est là pour vous accompagner dans votre expérience d&apos;achat.
-            </p>
+            <div className="text-lg sm:text-xl opacity-90 max-w-4xl mx-auto mb-4">
+              <p className="mb-2">La marketplace qui connecte des milliers de vendeurs nigériens avec leurs clients</p>
+              <p className="text-base opacity-75">Une plateforme, mille boutiques, une expérience d&apos;achat sécurisée et unifiée</p>
+            </div>
           </div>
 
           {/* Search Section */}
@@ -387,7 +524,7 @@ const ServicePage = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setIsSearchFocused(true)}
-                  placeholder="Rechercher une réponse... (ex: suivre ma commande)"
+                  placeholder="Rechercher une réponse... (ex: paiement sécurisé, livraison multi-boutiques)"
                   className="w-full px-6 py-4 pr-14 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/30 focus:bg-white/20 transition-all duration-300 text-base"
                 />
                 {searchQuery && (

@@ -1133,7 +1133,7 @@ const PanierPage: React.FC = () => {
                   } else {
                     localStorage.setItem("orderShippingZone", JSON.stringify(selectedZone));
                     localStorage.setItem("orderShippingCalculations", JSON.stringify(shippingCalculations));
-                    router.push("/OrderConfirmation?fromCart=true");
+                    router.push("/order-confirmation?fromCart=true");
                   }
                 }}
                 className="bg-[#30A08B] text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold hover:bg-[#30A08B]/90 text-sm sm:text-base flex-shrink-0"
@@ -1160,12 +1160,12 @@ const PanierPage: React.FC = () => {
                 if (acces === "non") {
                   handleWarning("Veuillez vous connecter d'abord");
                   setTimeout(() => {
-                    router.push("/Connexion?fromCart=true");
+                    router.push("/auth/login?fromCart=true&returnUrl=/order-confirmation");
                   }, 1000);
                 } else {
                   localStorage.setItem("orderShippingZone", JSON.stringify(selectedZone));
                   localStorage.setItem("orderShippingCalculations", JSON.stringify(shippingCalculations));
-                  router.push("/OrderConfirmation?fromCart=true");
+                  router.push("/order-confirmation?fromCart=true");
                 }
               }}
               className="w-full bg-[#30A08B] text-white py-3 rounded-lg font-semibold hover:bg-[#30A08B]/90"

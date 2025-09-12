@@ -89,7 +89,7 @@ const HomeFooter: React.FC = () => {
             <ul className="space-y-2">
               <li>
                 <button
-                  onClick={() => router.push("/AboutUs")}
+                  onClick={() => router.push("/about")}
                   className="hover:text-emerald-300 transition duration-300 transform hover:scale-105 text-left"
                 >
                   Qui sommes-nous
@@ -97,7 +97,7 @@ const HomeFooter: React.FC = () => {
               </li>
               <li>
                 <button
-                  onClick={() => router.push("/SuppliersPage")}
+                  onClick={() => router.push("/suppliers")}
                   className="hover:text-emerald-300 transition duration-300 transform hover:scale-105 text-left"
                 >
                   Nos magasins
@@ -105,7 +105,7 @@ const HomeFooter: React.FC = () => {
               </li>
               <li>
                 <button
-                  onClick={() => router.push("/AnniversaryPreview")}
+                  onClick={() => router.push("/anniversary")}
                   className="hover:text-emerald-300 transition duration-300 transform hover:scale-105 text-left"
                 >
                   IHAM Baobab Anniversery {new Date().getFullYear()}
@@ -120,7 +120,7 @@ const HomeFooter: React.FC = () => {
             <ul className="space-y-2">
               <li>
                 <button
-                  onClick={() => router.push("/ContactPage")}
+                  onClick={() => router.push("/contact")}
                   className="hover:text-emerald-300 transition duration-300 transform hover:scale-105 text-left"
                 >
                   Contactez-nous
@@ -128,7 +128,7 @@ const HomeFooter: React.FC = () => {
               </li>
               <li>
                 <button
-                  onClick={() => router.push("/BecomeSellerPage")}
+                  onClick={() => router.push("/become-seller")}
                   className="hover:text-emerald-300 transition duration-300 transform hover:scale-105 text-left"
                 >
                   Devenir vendeur
@@ -144,7 +144,7 @@ const HomeFooter: React.FC = () => {
               </li>
               <li>
                 <button
-                  onClick={() => router.push("/NigerPresencePage")}
+                  onClick={() => router.push("/niger-presence")}
                   className="hover:text-emerald-300 transition duration-300 transform hover:scale-105 text-left"
                 >
                   Partout au Niger
