@@ -82,7 +82,7 @@ export default function NouveauxProduitsPage() {
             "@type": "WebPage",
             "name": "Nouveaux Produits - IhamBaobab",
             "description": "Découvrez nos tout nouveaux produits et les dernières tendances exclusives",
-            "url": "https://ihambaobab.com/nouveaux-produits",
+            "url": "https://ihambaobab.com/nouveaux",
             "mainEntity": {
               "@type": "ItemList",
               "name": "Nouveaux Produits",
@@ -102,19 +102,19 @@ export default function NouveauxProduitsPage() {
                   "@type": "ListItem", 
                   "position": 2,
                   "name": "Nouveaux Produits",
-                  "item": "https://ihambaobab.com/nouveaux-produits"
+                  "item": "https://ihambaobab.com/nouveaux"
                 }
               ]
             },
             "potentialAction": [
               {
                 "@type": "SearchAction",
-                "target": "https://ihambaobab.com/nouveaux-produits?search={search_term}",
+                "target": "https://ihambaobab.com/nouveaux?search={search_term}",
                 "query-input": "required name=search_term"
               },
               {
                 "@type": "ViewAction",
-                "target": "https://ihambaobab.com/nouveaux-produits",
+                "target": "https://ihambaobab.com/nouveaux",
                 "name": "Voir tous les nouveaux produits"
               }
             ],
@@ -173,7 +173,7 @@ export default function NouveauxProduitsPage() {
             "@type": "CollectionPage",
             "name": "Nouveaux Produits",
             "description": "Collection des nouveaux produits sur IhamBaobab",
-            "url": "https://ihambaobab.com/nouveaux-produits",
+            "url": "https://ihambaobab.com/nouveaux",
             "isPartOf": {
               "@type": "WebSite",
               "name": "IhamBaobab",

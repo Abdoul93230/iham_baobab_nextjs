@@ -655,7 +655,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
               Promotions
             </button>
             <button
-              onClick={() => router.push("/Nouveau produit")}
+              onClick={() => router.push("/nouveaux")}
               className="text-amber-800 hover:text-amber-900"
             >
               Nouveautés

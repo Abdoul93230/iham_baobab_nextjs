@@ -124,20 +124,20 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
 
   const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
   const API_URL = process.env.NEXT_PUBLIC_Backend_Url;
-  
+
   // Redux hooks
   const dispatch = useAppDispatch();
   const DATA_Products = useAppSelector((state) => state.products.data);
   const DATA_Types = useAppSelector((state) => state.products.types);
   const DATA_Categories = useAppSelector((state) => state.products.categories);
   const likedProducts = useAppSelector((state) => state.likes.likedProducts);
-  
+
   // État local pour les données immédiates (hydratation SSR)
   const [immediateProducts, setImmediateProducts] = useState<any[]>([]);
   const [immediateProduct, setImmediateProduct] = useState<any>(null);
   const [immediateTypes, setImmediateTypes] = useState<any[]>([]);
   const [immediateCategories, setImmediateCategories] = useState<any[]>([]);
-  
+
   // Hydratation immédiate avec les données serveur
   useEffect(() => {
     if (serverData) {
@@ -145,15 +145,15 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
       if (serverData.product) {
         setImmediateProduct(serverData.product);
       }
-      
+
       const allProductsData = [
         ...(serverData.product ? [serverData.product] : []),
         ...serverData.similarProducts,
         ...serverData.allProducts
       ];
-      
+
       setImmediateProducts(allProductsData);
-      
+
       // Ajouter types et catégories si disponibles
       if (serverData.type) {
         setImmediateTypes([serverData.type]);
@@ -163,13 +163,13 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
       }
     }
   }, [serverData]);
-  
+
   // Utiliser les données immédiates si disponibles, sinon fallback sur Redux
   const effectiveProducts = immediateProducts.length > 0 ? immediateProducts : DATA_Products;
   const effectiveProduct = immediateProduct || effectiveProducts.find((p: any) => p._id === productId);
   const effectiveTypes = immediateTypes.length > 0 ? immediateTypes : DATA_Types;
   const effectiveCategories = immediateCategories.length > 0 ? immediateCategories : DATA_Categories;
-  
+
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
   const [notificationType, setNotificationType] = useState<"success" | "error">("success");
@@ -341,12 +341,12 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
 
   const increaseQuantity = () => {
     if (!produit) return;
-    
+
     const availableStock = getAvailableStock();
-    const existingProducts = typeof window !== 'undefined' 
-      ? JSON.parse(localStorage.getItem("panier") || "[]") 
+    const existingProducts = typeof window !== 'undefined'
+      ? JSON.parse(localStorage.getItem("panier") || "[]")
       : [];
-      
+
     const existingProduct = existingProducts.find((p: any) => {
       if (!produit.variants || produit.variants.length === 0) {
         return p?._id === produit?._id;
@@ -578,18 +578,18 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
   // Calculer le prix et la remise
   const originalPrice = produit?.prix || 0;
   const discountedPrice = produit?.prixPromo || 0;
-  const discountPercentage = originalPrice > 0 && discountedPrice > 0 
+  const discountPercentage = originalPrice > 0 && discountedPrice > 0
     ? Math.round(((originalPrice - discountedPrice) / originalPrice) * 100)
     : 0;
 
   const addToCart = () => {
     if (!produit) return;
-    
+
     if (!westAfricanCountries.includes(pays?.toLowerCase())) {
       handleWarning(`ce Produit ne peut etre expedier au ${pays}`);
       return;
     }
-    
+
     // Vérification des variantes de couleur
     if (produit?.variants && produit.variants.length >= 2 && !selectedVariant) {
       handleWarning(
@@ -682,8 +682,8 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
               : originalPrice,
           prixPromo: discountedPrice,
           // Préserver le stock de la variante sélectionnée
-          ...(selectedVariant && { 
-            stockVariante: selectedVariant.quantity || selectedVariant.stock || 0 
+          ...(selectedVariant && {
+            stockVariante: selectedVariant.quantity || selectedVariant.stock || 0
           })
         };
 
@@ -707,12 +707,12 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
 
   const addToCart2 = () => {
     if (!produit) return;
-    
+
     if (!westAfricanCountries.includes(pays?.toLowerCase())) {
       handleWarning(`ce Produit ne peut etre expedier au ${pays}`);
       return;
     }
-    
+
     // Vérification des variantes de couleur
     if (produit?.variants && produit.variants.length >= 2 && !selectedVariant) {
       handleWarning(
@@ -802,8 +802,8 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
             : originalPrice,
         prixPromo: discountedPrice,
         // Préserver le stock de la variante sélectionnée
-        ...(selectedVariant && { 
-          stockVariante: selectedVariant.quantity || selectedVariant.stock || 0 
+        ...(selectedVariant && {
+          stockVariante: selectedVariant.quantity || selectedVariant.stock || 0
         })
       };
 
@@ -928,8 +928,8 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
   };
 
   // Créer l'URL canonique
-  const canonicalUrl = typeof window !== 'undefined' 
-    ? `${window.location.origin}/ProduitDetail/${productId}` 
+  const canonicalUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/ProduitDetail/${productId}`
     : "";
 
   // Ajout de la fonction pour gérer le clic sur le bouton WhatsApp
@@ -1008,8 +1008,8 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
               <div
                 key={index}
                 className={`w-[80px] h-[80px] cursor-pointer rounded flex-shrink-0 overflow-hidden transition-all duration-200 ${activeImageIndex === index
-                    ? "border-2 border-solid border-[#30A08B]"
-                    : "border border-gray-300"
+                  ? "border-2 border-solid border-[#30A08B]"
+                  : "border border-gray-300"
                   }`}
                 onMouseEnter={() => setActiveImageIndex(index)}
                 onClick={() => setActiveImageIndex(index)}
@@ -1138,11 +1138,10 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
                         onClick={() => handleVariantChange(variant)}
                       >
                         <img
-                          className={`w-full h-full object-cover transition-all duration-200 ${
-                            selectedVariant?.color === variant?.color 
-                              ? "brightness-105" 
+                          className={`w-full h-full object-cover transition-all duration-200 ${selectedVariant?.color === variant?.color
+                              ? "brightness-105"
                               : "hover:brightness-110"
-                          }`}
+                            }`}
                           src={variant.imageUrl}
                           alt={`Image ${variant.color}`}
                         />
@@ -1312,7 +1311,7 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
                 <MapPin className="w-5 h-5 mr-1" />
                 <span>{pays?.toLocaleUpperCase()}</span>
               </div>
-              
+
               <CountryPage
                 isOpen={isCountryOpen}
                 setIsCountryOpen={setIsCountryOpen}
@@ -1352,15 +1351,31 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
             {/* Section Informations Boutique */}
             {produit?.Clefournisseur && (
               <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
-                <h3 className="font-semibold mb-3 flex items-center text-[#30A08B]">
+                <h3 className="font-semibold mb-3 flex items-center text-[#30A08B]"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() =>
+                    // router.push(`/boutique/${produit?.Clefournisseur?._id}`
+                    router.push(`/boutique/${produit?.Clefournisseur?.storeName}`
+
+                    )
+                  }
+                >
                   <Store className="w-5 h-5 mr-2" />
                   Informations sur la boutique
                 </h3>
-                
+
                 <div className="flex items-start space-x-4">
                   {/* Logo de la boutique */}
                   {produit.Clefournisseur.logo && (
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() =>
+                        // router.push(`/boutique/${produit?.Clefournisseur?._id}`
+                        router.push(`/boutique/${produit?.Clefournisseur?.storeName}`
+
+                        )
+                      }
+                    >
                       <img
                         src={produit.Clefournisseur.logo}
                         alt={`Logo ${produit.Clefournisseur.storeName || produit.Clefournisseur.name}`}
@@ -1368,13 +1383,13 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
                       />
                     </div>
                   )}
-                  
+
                   <div className="flex-1">
                     {/* Nom de la boutique */}
                     <h4 className="font-semibold text-lg text-gray-800">
                       {produit.Clefournisseur.storeName || produit.Clefournisseur.name}
                     </h4>
-                    
+
                     {/* Description */}
                     {produit.Clefournisseur.storeDescription && (
                       <p className="text-sm text-gray-600 mb-2 overflow-hidden" style={{
@@ -1385,7 +1400,7 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
                         {produit.Clefournisseur.storeDescription}
                       </p>
                     )}
-                    
+
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       {/* Localisation */}
                       <div className="flex items-center text-gray-600">
@@ -1394,13 +1409,13 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
                           {produit.Clefournisseur.city}, {produit.Clefournisseur.region}
                         </span>
                       </div>
-                      
+
                       {/* Note de la boutique */}
-                      {produit.Clefournisseur.rating && (
+                      {produit.Clefournisseur.rating ? (
                         <div className="flex items-center text-gray-600">
                           <FaStar className="w-4 h-4 mr-1 text-yellow-400" />
                           <span>
-                            {produit.Clefournisseur.rating}/5 
+                            {produit.Clefournisseur.rating}/5
                             {produit.Clefournisseur.reviewsCount && (
                               <span className="text-xs ml-1">
                                 ({produit.Clefournisseur.reviewsCount} avis)
@@ -1408,8 +1423,8 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
                             )}
                           </span>
                         </div>
-                      )}
-                      
+                      ): null}
+
                       {/* Horaires d'ouverture */}
                       {produit.Clefournisseur.openingHours && (
                         <div className="flex items-start text-gray-600 col-span-2">
@@ -1419,7 +1434,7 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
                           </span>
                         </div>
                       )}
-                      
+
                       {/* Type de boutique */}
                       {produit.Clefournisseur.storeType && (
                         <div className="flex items-center text-gray-600">
@@ -1428,15 +1443,15 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
                           </span>
                         </div>
                       )}
-                      
+
                       {/* Followers */}
-                      {produit.Clefournisseur.followersCount && (
+                      {produit.Clefournisseur.followersCount ? (
                         <div className="flex items-center text-gray-600">
                           <span className="text-xs">👥 {produit.Clefournisseur.followersCount} followers</span>
                         </div>
-                      )}
+                      ) : null}
                     </div>
-                    
+
                     {/* Badge de validation */}
                     {produit.Clefournisseur.isvalid && (
                       <div className="mt-2">
@@ -1483,8 +1498,8 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
                 onClick={addToCart2}
                 disabled={getAvailableStock() <= 0}
                 className={`w-full py-3 rounded-md mb-2 md:mb-0 ${getAvailableStock() <= 0
-                    ? 'bg-gray-400 cursor-not-allowed text-gray-600'
-                    : 'bg-[#30A08B] hover:bg-[#228B73] text-white'
+                  ? 'bg-gray-400 cursor-not-allowed text-gray-600'
+                  : 'bg-[#30A08B] hover:bg-[#228B73] text-white'
                   }`}
               >
                 {getAvailableStock() <= 0 ? "Rupture de stock" : "Acheter maintenant"}
@@ -1498,12 +1513,18 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
             </div>
           </div>
           <div className="flex justify-between px-6 py-4 border-t">
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center"
+              style={{ cursor: 'pointer' }}
+              onClick={() =>
+                // router.push(`/boutique/${produit?.Clefournisseur?._id}`
+                router.push(`/boutique/${produit?.Clefournisseur?.storeName}`
+
+                )
+              }
+            >
               <button
                 className="p-2"
-                onClick={() =>
-                  router.push(`/boutique/${produit?.Clefournisseur?._id}`)
-                }
+                style={{ cursor: 'pointer' }}
               >
                 <Store className="w-5 h-5" />
               </button>
@@ -1590,7 +1611,7 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
           </div>
         </div>
       </div>
-      
+
       <ProduitSimilaires
         titre={"Articles similaires"}
         produits={products}
@@ -1621,7 +1642,7 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
         userId={userId}
         onLike={handleLikeClick}
       />
-      
+
       <CommentaireProduit
         name={produit?.name || ""}
         img={[produit?.image1 || "", produit?.image2 || "", produit?.image3 || ""].filter(Boolean)}

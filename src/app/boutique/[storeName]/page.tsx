@@ -6,16 +6,16 @@ import HomeHeader from "@/components/home/HomeHeader";
 
 interface PageProps {
   params: Promise<{
-    sellerId: string;
+    storeName: string;
   }>;
 }
 
 // Fonction pour récupérer les données côté serveur
-async function getSellerData(sellerId: string) {
+async function getSellerData(storeName: string) {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_Backend_Url || 'http://localhost:3001';
-    
-    const sellerResponse = await fetch(`${baseUrl}/getSeller/${sellerId}`, {
+
+    const sellerResponse = await fetch(`${baseUrl}/getSellerByName/${storeName}`, {
       next: { revalidate: 300 } // Cache pendant 5 minutes
     });
 
@@ -33,8 +33,8 @@ async function getSellerData(sellerId: string) {
 
 // Génération des métadonnées dynamiques
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { sellerId } = await params;
-  const sellerData = await getSellerData(sellerId);
+  const { storeName } = await params;
+  const sellerData = await getSellerData(storeName);
 
   if (!sellerData) {
     return {
@@ -69,8 +69,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function BoutiquePage({ params }: PageProps) {
-  const { sellerId } = await params;
-  const sellerData = await getSellerData(sellerId);
+  const { storeName } = await params;
+  const sellerData = await getSellerData(storeName);
 
   // Si la boutique n'existe pas, retourner 404
   if (!sellerData) {
@@ -80,7 +80,7 @@ export default async function BoutiquePage({ params }: PageProps) {
   return (
     <>
       <HomeHeader />
-      <BoutiqueMain sellerId={sellerId} />
+      <BoutiqueMain sellerId={sellerData?._id} storeName={sellerData.storeName} />
       <HomeFooter />
     </>
   );

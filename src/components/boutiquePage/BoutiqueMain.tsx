@@ -69,12 +69,14 @@ function cn(...classes: (string | undefined)[]): string {
 }
 
 interface BoutiqueMainProps {
+  storeName: string;
   sellerId: string;
 }
 
-const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId }) => {
+const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeName }) => {
   const router = useRouter();
   const { toast } = useToast();
+  // console.log({sellerId,storeName});
 
   // États principaux
   const [activeTab, setActiveTab] = useState("home");
@@ -140,10 +142,10 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId }) => {
 
   // Récupération des données au chargement
   useEffect(() => {
-    if (sellerId) {
+    if (storeName) {
       fetchStoreData();
     }
-  }, [sellerId]);
+  }, [storeName]);
 
   const showToast = (message: string, type = "success") => {
     setNotificationMessage(message);
@@ -199,7 +201,7 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId }) => {
   // Récupération des informations du vendeur
   const fetchSellerInfo = async () => {
     try {
-      const response = await axios.get(`${BackendUrl}/getSeller/${sellerId}`);
+      const response = await axios.get(`${BackendUrl}/getSellerByName/${storeName}`);
       setSellerInfo(response.data.data);
       setSocialStats({
         followersCount: response.data.data?.followersCount || 0,

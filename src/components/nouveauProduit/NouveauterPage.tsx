@@ -743,7 +743,7 @@ export default function NouveauterPage({ paniernbr = [], acces = true }: Nouveau
           <Breadcrumb 
             items={[
               { label: "Accueil", href: "/" },
-              { label: "Nouveaux Produits", href: "/nouveaux-produits", current: true }
+              { label: "Nouveaux Produits", href: "/nouveaux", current: true }
             ]}
           />
         </div>
