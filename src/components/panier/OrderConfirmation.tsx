@@ -10,12 +10,77 @@ import PaiementPage from "./PaiementPage";
 
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 
+// Liste des indicatifs de pays les plus courants
+const COUNTRY_CODES = [
+  { code: "+227", country: "Niger", flag: "🇳🇪" },
+  { code: "+33", country: "France", flag: "🇫🇷" },
+  { code: "+1", country: "États-Unis/Canada", flag: "🇺🇸" },
+  { code: "+44", country: "Royaume-Uni", flag: "🇬🇧" },
+  { code: "+49", country: "Allemagne", flag: "🇩🇪" },
+  { code: "+34", country: "Espagne", flag: "🇪🇸" },
+  { code: "+39", country: "Italie", flag: "🇮🇹" },
+  { code: "+212", country: "Maroc", flag: "🇲🇦" },
+  { code: "+213", country: "Algérie", flag: "🇩🇿" },
+  { code: "+216", country: "Tunisie", flag: "🇹🇳" },
+  { code: "+221", country: "Sénégal", flag: "🇸🇳" },
+  { code: "+223", country: "Mali", flag: "🇲🇱" },
+  { code: "+224", country: "Guinée", flag: "🇬🇳" },
+  { code: "+225", country: "Côte d'Ivoire", flag: "🇨🇮" },
+  { code: "+226", country: "Burkina Faso", flag: "🇧🇫" },
+  { code: "+228", country: "Togo", flag: "🇹🇬" },
+  { code: "+229", country: "Bénin", flag: "🇧🇯" },
+  { code: "+230", country: "Maurice", flag: "🇲🇺" },
+  { code: "+231", country: "Libéria", flag: "🇱🇷" },
+  { code: "+232", country: "Sierra Leone", flag: "🇸🇱" },
+  { code: "+233", country: "Ghana", flag: "🇬🇭" },
+  { code: "+234", country: "Nigéria", flag: "🇳🇬" },
+  { code: "+235", country: "Tchad", flag: "🇹🇩" },
+  { code: "+236", country: "République centrafricaine", flag: "🇨🇫" },
+  { code: "+237", country: "Cameroun", flag: "🇨🇲" },
+  { code: "+238", country: "Cap-Vert", flag: "🇨🇻" },
+  { code: "+239", country: "São Tomé-et-Príncipe", flag: "🇸🇹" },
+  { code: "+240", country: "Guinée équatoriale", flag: "🇬🇶" },
+  { code: "+241", country: "Gabon", flag: "🇬🇦" },
+  { code: "+242", country: "République du Congo", flag: "🇨🇬" },
+  { code: "+243", country: "République démocratique du Congo", flag: "🇨🇩" },
+  { code: "+244", country: "Angola", flag: "🇦🇴" },
+  { code: "+245", country: "Guinée-Bissau", flag: "🇬🇼" },
+  { code: "+246", country: "Territoire britannique de l'océan Indien", flag: "🇮🇴" },
+  { code: "+248", country: "Seychelles", flag: "🇸🇨" },
+  { code: "+249", country: "Soudan", flag: "🇸🇩" },
+  { code: "+250", country: "Rwanda", flag: "🇷🇼" },
+  { code: "+251", country: "Éthiopie", flag: "🇪🇹" },
+  { code: "+252", country: "Somalie", flag: "🇸🇴" },
+  { code: "+253", country: "Djibouti", flag: "🇩🇯" },
+  { code: "+254", country: "Kenya", flag: "🇰🇪" },
+  { code: "+255", country: "Tanzanie", flag: "🇹🇿" },
+  { code: "+256", country: "Ouganda", flag: "🇺🇬" },
+  { code: "+257", country: "Burundi", flag: "🇧🇮" },
+  { code: "+258", country: "Mozambique", flag: "🇲🇿" },
+  { code: "+260", country: "Zambie", flag: "🇿🇲" },
+  { code: "+261", country: "Madagascar", flag: "🇲🇬" },
+  { code: "+262", country: "La Réunion/Mayotte", flag: "🇷🇪" },
+  { code: "+263", country: "Zimbabwe", flag: "🇿🇼" },
+  { code: "+264", country: "Namibie", flag: "🇳🇦" },
+  { code: "+265", country: "Malawi", flag: "🇲🇼" },
+  { code: "+266", country: "Lesotho", flag: "🇱🇸" },
+  { code: "+267", country: "Botswana", flag: "🇧🇼" },
+  { code: "+268", country: "Eswatini", flag: "🇸🇿" },
+  { code: "+269", country: "Comores", flag: "🇰🇲" },
+  { code: "+290", country: "Sainte-Hélène", flag: "🇸🇭" },
+  { code: "+291", country: "Érythrée", flag: "🇪🇷" },
+  { code: "+297", country: "Aruba", flag: "🇦🇼" },
+  { code: "+298", country: "Îles Féroé", flag: "🇫🇴" },
+  { code: "+299", country: "Groenland", flag: "🇬🇱" },
+];
+
 // Utilitaires
 const PaymentMethods = {
   CARD: ["Visa", "master Card"],
-  MOBILE_WALLET: ["zeyna", "nita", "amana"],
+  MOBILE_WALLET: ["zeyna", "mynita", "amana"],
   MOBILE_MONEY: ["Mobile Money"],
   CASH_ON_DELIVERY: ["payé à la livraison"],
+  ASSISTED_PAYMENT: ["paiement_assiste"],
 };
 
 interface SecurityCodeModalProps {
@@ -119,6 +184,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
     name: "",
     email: "",
     numero: "",
+    countryCode: "+227", // Indicatif par défaut pour le Niger
     region: "",
     quartier: "",
     description: "",
@@ -149,7 +215,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
       if (userData) {
         setUser(JSON.parse(userData));
       }
-      
+
       // Récupérer la zone de livraison sélectionnée dans le panier
       const shippingZone = localStorage.getItem("orderShippingZone");
       if (shippingZone) {
@@ -208,11 +274,29 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
               regionValue = selectedZone.name;
             }
           }
+
+          // Extraire l'indicatif et le numéro du numéro complet
+          let countryCode = "+227"; // Valeur par défaut
+          let phoneNumber = "";
           
+          if (address.numero) {
+            const fullNumber = address.numero.toString();
+            // Chercher l'indicatif dans notre liste
+            const foundCountry = COUNTRY_CODES.find(country => fullNumber.startsWith(country.code));
+            if (foundCountry) {
+              countryCode = foundCountry.code;
+              phoneNumber = fullNumber.substring(foundCountry.code.length);
+            } else {
+              // Si aucun indicatif trouvé, supposer que c'est un numéro local
+              phoneNumber = fullNumber;
+            }
+          }
+
           setDeliveryInfo({
             name: address.name || "",
             email: address.email || "",
-            numero: address.numero || "",
+            numero: phoneNumber,
+            countryCode: countryCode,
             region: regionValue,
             quartier: address.quartier || "",
             description: address.description || "",
@@ -227,11 +311,12 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
           } else if (selectedZone.name) {
             regionValue = selectedZone.name;
           }
-          
+
           setDeliveryInfo(prev => ({
             ...prev,
             region: regionValue,
             quartier: "",
+            countryCode: "+227", // Valeur par défaut si pas d'adresse
           }));
         }
       } catch (error) {
@@ -262,6 +347,13 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
       errors.push("Le numéro de téléphone doit contenir au moins 8 chiffres");
     }
 
+    // Validation du format international du numéro
+    const fullPhoneNumber = deliveryInfo.countryCode + deliveryInfo.numero;
+    const phoneRegex = /^\+[1-9]\d{1,14}$/; // Format E.164 international
+    if (!phoneRegex.test(fullPhoneNumber)) {
+      errors.push("Le format du numéro de téléphone n'est pas valide");
+    }
+
     if (!deliveryInfo.region || deliveryInfo.region.length < 3) {
       errors.push("La région doit contenir au moins 3 caractères");
     }
@@ -275,60 +367,71 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
 
   // Amélioration de la validation des cartes
   const validatePaymentInfo = () => {
-    const errors = [];
+    // const errors = [];
+    const errors: string[] = [];
 
     if (!selectedPayment) {
       errors.push("Veuillez choisir un moyen de paiement");
       return errors;
     }
 
-    if (selectedPayment === "Visa") {
-      const rawNum = String(cardDetails.number || "").replace(/\s|-/g, "");
-      if (!/^4[0-9]{12}(?:[0-9]{3})?$/.test(rawNum)) {
-        errors.push("Le numéro de la carte Visa n'est pas valide");
-      }
-      if (!/^[0-9]{3}$/.test(cardDetails.cvc)) {
-        errors.push("Le code CVC n'est pas valide");
-      }
-      if (!cardDetails.expiry) {
-        errors.push("Veuillez sélectionner la date d'expiration");
-      }
-    } else if (selectedPayment === "master Card") {
-      const rawNum = String(cardDetails.number || "").replace(/\s|-/g, "");
-      if (!/^5[1-5][0-9]{14}$/.test(rawNum)) {
-        errors.push("Le numéro de la carte MasterCard n'est pas valide");
-      }
-      if (!/^[0-9]{3}$/.test(cardDetails.cvc)) {
-        errors.push("Le code CVC n'est pas valide");
-      }
-      if (!cardDetails.expiry) {
-        errors.push("Veuillez sélectionner la date d'expiration");
-      }
-    } else if (selectedPayment === "Mobile Money") {
-      if (!/^[0-9]{8,}$/.test(mobileDetails.number)) {
-        errors.push("Le format du numéro n'est pas valide");
-      }
-    } else if (["zeyna", "nita", "amana"].includes(selectedPayment)) {
-      if (!/^[0-9]{8,}$/.test(mobileDetails.number)) {
-        errors.push("Le format du numéro n'est pas valide");
-      }
-    }
+    // if (selectedPayment === "Visa") {
+    //   const rawNum = String(cardDetails.number || "").replace(/\s|-/g, "");
+    //   if (!/^4[0-9]{12}(?:[0-9]{3})?$/.test(rawNum)) {
+    //     errors.push("Le numéro de la carte Visa n'est pas valide");
+    //   }
+    //   if (!/^[0-9]{3}$/.test(cardDetails.cvc)) {
+    //     errors.push("Le code CVC n'est pas valide");
+    //   }
+    //   if (!cardDetails.expiry) {
+    //     errors.push("Veuillez sélectionner la date d'expiration");
+    //   }
+    // } else if (selectedPayment === "master Card") {
+    //   const rawNum = String(cardDetails.number || "").replace(/\s|-/g, "");
+    //   if (!/^5[1-5][0-9]{14}$/.test(rawNum)) {
+    //     errors.push("Le numéro de la carte MasterCard n'est pas valide");
+    //   }
+    //   if (!/^[0-9]{3}$/.test(cardDetails.cvc)) {
+    //     errors.push("Le code CVC n'est pas valide");
+    //   }
+    //   if (!cardDetails.expiry) {
+    //     errors.push("Veuillez sélectionner la date d'expiration");
+    //   }
+    // } else if (selectedPayment === "Mobile Money") {
+    //   if (!/^[0-9]{8,}$/.test(mobileDetails.number)) {
+    //     errors.push("Le format du numéro n'est pas valide");
+    //   }
+    // } else if (["zeyna", "mynita", "amana"].includes(selectedPayment)) {
+    //   if (!/^[0-9]{8,}$/.test(mobileDetails.number)) {
+    //     errors.push("Le format du numéro n'est pas valide");
+    //   }
+    // }
 
     return errors;
   };
 
-  const handleDeliveryChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleDeliveryChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
+
     // Empêcher la modification de la région si une zone est sélectionnée dans le panier
     if (name === 'region' && selectedZone) {
       return; // Ne pas permettre la modification
     }
+
+    // Pour le numéro de téléphone, ne garder que les chiffres
+    if (name === 'numero') {
+      const cleanedValue = value.replace(/[^0-9]/g, '');
+      setDeliveryInfo((prev) => ({
+        ...prev,
+        [name]: cleanedValue,
+      }));
+    } else {
+      setDeliveryInfo((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
     
-    setDeliveryInfo((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
     setSubmitStatus({
       loading: false,
       error: null,
@@ -371,7 +474,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
     const progressiveCheck = async () => {
       try {
         if (typeof window === 'undefined') return;
-        
+
         const transactionInfo = JSON.parse(
           localStorage.getItem("currentTransaction") || "{}"
         );
@@ -415,7 +518,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
   useEffect(() => {
     const handleVisibilityChange = async () => {
       if (typeof window === 'undefined') return;
-      
+
       if (!document.hidden) {
         const transactionInfo = JSON.parse(
           localStorage.getItem("currentTransaction") || "{}"
@@ -562,14 +665,33 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
     },
 
     async processPayment(paymentMethod: string, transactionId: string, orderTotal: number) {
+      // const pendingOrder = localStorage.getItem("pendingOrder");
+      // const transactionId = pendingOrder ? JSON.parse(pendingOrder).transactionId : null;
+
+      localStorage.setItem(
+        "paymentInfo",
+        JSON.stringify({
+          amount: orderTotal,
+          transactionId,
+        })
+      );
       if (PaymentMethods.CARD.includes(paymentMethod)) {
-        return processCardPayment(transactionId);
+        // return processCardPayment(transactionId);
+        return window.location.href = "/payment-page.html";
       } else if (PaymentMethods.MOBILE_WALLET.includes(paymentMethod)) {
-        return processMobilePayment(transactionId);
+        // return processMobilePayment(transactionId);
+
+        window.location.href = "/payment-page.html";
+        return Promise.resolve({ status: false });
       } else if (PaymentMethods.MOBILE_MONEY.includes(paymentMethod)) {
-        return processMobileMoneyPayment(transactionId);
+        // return processMobileMoneyPayment(transactionId);
+
+        window.location.href = "/payment-page.html";
+        return Promise.resolve({ status: false });
       }
-      return Promise.resolve({ status: "complete" });
+      // return Promise.resolve({ status: "complete" });
+      window.location.href = "/commandes";
+      return Promise.resolve({ status: false });
     },
   };
 
@@ -601,7 +723,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
 
     // 2. Vérification du panier
     if (typeof window === 'undefined') return;
-    
+
     const panier = JSON.parse(localStorage.getItem("panier") || "[]");
     if (!panier?.length) {
       AlertService.showAlert(setSubmitStatus, "Votre panier est vide");
@@ -630,7 +752,8 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
         })),
         prix: finalOrderTotal,
         statusPayment: PaymentMethods.CASH_ON_DELIVERY.includes(selectedPayment)
-          ? "payé à la livraison"
+          ? "payé à la livraison" : PaymentMethods.ASSISTED_PAYMENT.includes(selectedPayment)
+          ? "payé par téléphone"
           : "en_attente",
         reference: transactionId,
         livraisonDetails: {
@@ -638,7 +761,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
           email: deliveryInfo.email || null,
           region: deliveryInfo.region,
           quartier: deliveryInfo.quartier,
-          numero: deliveryInfo.numero,
+          numero: deliveryInfo.countryCode + deliveryInfo.numero, // Numéro complet international
           description: deliveryInfo.description,
         },
         prod: panier,
@@ -655,6 +778,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
 
       await axios.post(`${BackendUrl}/createOrUpdateAddress`, {
         ...deliveryInfo,
+        numero: deliveryInfo.countryCode + deliveryInfo.numero, // Numéro complet international
         email: deliveryInfo.email !== "" ? deliveryInfo.email : null,
         clefUser: userId,
       });
@@ -669,21 +793,38 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
       }
 
       // 5. Traitement du paiement
-      if (!PaymentMethods.CASH_ON_DELIVERY.includes(selectedPayment)) {
+      if (!(PaymentMethods.CASH_ON_DELIVERY.includes(selectedPayment) || PaymentMethods.ASSISTED_PAYMENT.includes(selectedPayment))) {
         const paymentStatus = await OrderManager.processPayment(
           selectedPayment,
           transactionId,
           finalOrderTotal
         );
-        if (!paymentStatus?.status || paymentStatus?.status !== "complete") {
+        // if (!paymentStatus?.status || paymentStatus?.status !== "complete") {
+        //   AlertService.showAlert(
+        //     setSubmitStatus,
+        //     paymentStatus?.data?.message ||
+        //     paymentStatus?.response?.data?.message ||
+        //     "Le paiement a échoué. Veuillez réessayer."
+        //   );
+        //   return;
+        // }
+
+        if (
+          !paymentStatus ||
+          typeof paymentStatus !== "object" ||
+          !("status" in paymentStatus) 
+          // ||
+          // paymentStatus.status !== "complete"
+        ) {
           AlertService.showAlert(
             setSubmitStatus,
-            paymentStatus?.data?.message ||
-              paymentStatus?.response?.data?.message ||
-              "Le paiement a échoué. Veuillez réessayer."
+            // paymentStatus?.data?.message ||
+            // paymentStatus?.response?.data?.message ||
+            "Le paiement a échoué. Veuillez réessayer."
           );
           return;
         }
+        return
       }
 
       checkPendingPayment2(transactionId);
@@ -710,7 +851,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
         "success"
       );
 
-      if (PaymentMethods.CASH_ON_DELIVERY.includes(selectedPayment)) {
+      if (PaymentMethods.CASH_ON_DELIVERY.includes(selectedPayment) || PaymentMethods.ASSISTED_PAYMENT.includes(selectedPayment)) {
         router.push("/commandes");
       }
     } catch (error) {
@@ -718,7 +859,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
       AlertService.showAlert(
         setSubmitStatus,
         (error as any).response?.data?.message ||
-          "Une erreur est survenue lors du traitement de votre commande"
+        "Une erreur est survenue lors du traitement de votre commande"
       );
     }
   };
@@ -738,7 +879,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
       AlertService.showAlert(
         setSubmitStatus,
         error?.response?.data?.message ||
-          "Le paiement a échoué. Veuillez réessayer."
+        "Le paiement a échoué. Veuillez réessayer."
       );
     },
 
@@ -875,7 +1016,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
           error,
           setSubmitStatus,
           error?.response?.data?.message ||
-            "Erreur lors du paiement mobile. Vérifiez votre numéro et réessayez."
+          "Erreur lors du paiement mobile. Vérifiez votre numéro et réessayez."
         );
         return error;
       }
@@ -1002,7 +1143,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
     await axios.post(`${BackendUrl}/payment_callback`, {
       status,
       customerName: user?.name,
-      msisdn: mobileDetails.number,
+      msisdn: deliveryInfo.countryCode + deliveryInfo.numero, // Numéro complet international
       reference: "komipay",
       publicReference: selectedPayment,
       externalReference: transactionId,
@@ -1062,7 +1203,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
   useEffect(() => {
     const checkPendingPayment = async () => {
       if (typeof window === 'undefined') return;
-      
+
       const pendingPayment = localStorage.getItem("paymentInitiated");
       if (pendingPayment) {
         setSubmitStatus({ loading: true, error: null, success: false });
@@ -1150,7 +1291,9 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
         return "Vous recevrez un code de confirmation par SMS.";
       case "payé à la livraison":
         return "Un agent se déplacera sous 24-48h. Paiement en espèces ou carte.";
-      case "nita":
+      case "paiement_assiste":
+        return "Vous serez contacté rapidement par un conseiller pour effectuer le paiement en toute sécurité.🤝";
+      case "mynita":
         return "Notification via l'app MyNita pour finaliser le paiement.";
       case "zeyna":
         return "Code USSD envoyé sur votre téléphone pour finaliser.";
@@ -1254,15 +1397,38 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
                     >
                       Numéro de téléphone
                     </label>
-                    <input
-                      type="tel"
-                      id="numero"
-                      name="numero"
-                      value={deliveryInfo.numero}
-                      onChange={handleDeliveryChange}
-                      className="mt-1 p-3 border border-gray-300 rounded-lg w-full"
-                      placeholder="Votre numéro de téléphone"
-                    />
+                    <div className="mt-1 flex">
+                      {/* Sélecteur d'indicatif de pays */}
+                      <select
+                        name="countryCode"
+                        value={deliveryInfo.countryCode}
+                        onChange={handleDeliveryChange}
+                        className="p-3 border border-gray-300 rounded-l-lg bg-gray-50 text-sm w-32"
+                      >
+                        {COUNTRY_CODES.map((country) => (
+                          <option key={country.code} value={country.code}>
+                            {country.flag} {country.code}
+                          </option>
+                        ))}
+                      </select>
+                      {/* Champ de numéro */}
+                      <input
+                        type="tel"
+                        id="numero"
+                        name="numero"
+                        value={deliveryInfo.numero}
+                        onChange={handleDeliveryChange}
+                        className="flex-1 p-3 border border-l-0 border-gray-300 rounded-r-lg"
+                        placeholder="87727501"
+                        maxLength={15}
+                      />
+                    </div>
+                    {/* Affichage du numéro complet */}
+                    {deliveryInfo.numero && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Numéro complet: {deliveryInfo.countryCode}{deliveryInfo.numero}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label
@@ -1279,11 +1445,10 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
                         value={deliveryInfo.region}
                         onChange={handleDeliveryChange}
                         readOnly={!!selectedZone}
-                        className={`mt-1 p-3 border border-gray-300 rounded-lg w-full ${
-                          selectedZone 
-                            ? 'bg-gray-100 cursor-not-allowed text-gray-600' 
-                            : 'bg-white'
-                        }`}
+                        className={`mt-1 p-3 border border-gray-300 rounded-lg w-full ${selectedZone
+                          ? 'bg-gray-100 cursor-not-allowed text-gray-600'
+                          : 'bg-white'
+                          }`}
                         placeholder="Votre région"
                       />
                       {selectedZone && (
@@ -1299,8 +1464,8 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
                     {selectedZone && (
                       <p className="text-xs text-gray-500 mt-1">
                         Zone sélectionnée: {
-                          selectedZone.fullPath || 
-                          (selectedZone.country && selectedZone.region && selectedZone.name 
+                          selectedZone.fullPath ||
+                          (selectedZone.country && selectedZone.region && selectedZone.name
                             ? `${selectedZone.country} > ${selectedZone.region} > ${selectedZone.name}`
                             : selectedZone.name)
                         }
@@ -1414,7 +1579,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
             success: false,
           });
         }}
-        onSubmit={handleSecuritySubmit || (() => {})}
+        onSubmit={handleSecuritySubmit || (() => { })}
         error={securityCodeModal.error}
       />
     </>

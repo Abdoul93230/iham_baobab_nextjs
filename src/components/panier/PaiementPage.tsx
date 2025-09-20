@@ -63,7 +63,7 @@ const PaiementPage: React.FC<PaiementPageProps> = ({
     },
     {
       id: "master Card",
-      name: "MasterCard", 
+      name: "MasterCard",
       category: "Carte",
       icon: "💳",
       color: "from-red-500 to-red-700",
@@ -77,24 +77,24 @@ const PaiementPage: React.FC<PaiementPageProps> = ({
       category: "Mobile",
       icon: "📱",
       color: "from-green-500 to-green-700",
-      bgColor: "bg-green-50", 
+      bgColor: "bg-green-50",
       borderColor: "border-green-200",
       textColor: "text-green-700"
     },
+    // {
+    //   id: "zeyna",
+    //   name: "Zeyna",
+    //   category: "Wallet",
+    //   icon: "💰",
+    //   color: "from-purple-500 to-purple-700",
+    //   bgColor: "bg-purple-50",
+    //   borderColor: "border-purple-200", 
+    //   textColor: "text-purple-700"
+    // },
     {
-      id: "zeyna",
-      name: "Zeyna",
-      category: "Wallet",
-      icon: "💰",
-      color: "from-purple-500 to-purple-700",
-      bgColor: "bg-purple-50",
-      borderColor: "border-purple-200", 
-      textColor: "text-purple-700"
-    },
-    {
-      id: "nita",
+      id: "mynita",
       name: "MyNita",
-      category: "Wallet", 
+      category: "Wallet",
       icon: "💰",
       color: "from-indigo-500 to-indigo-700",
       bgColor: "bg-indigo-50",
@@ -103,10 +103,10 @@ const PaiementPage: React.FC<PaiementPageProps> = ({
     },
     {
       id: "amana",
-      name: "Amana",
+      name: "Amanata",
       category: "Wallet",
       icon: "💰",
-      color: "from-yellow-500 to-yellow-700", 
+      color: "from-yellow-500 to-yellow-700",
       bgColor: "bg-yellow-50",
       borderColor: "border-yellow-200",
       textColor: "text-yellow-700"
@@ -120,7 +120,18 @@ const PaiementPage: React.FC<PaiementPageProps> = ({
       bgColor: "bg-orange-50",
       borderColor: "border-orange-200",
       textColor: "text-orange-700"
+    },
+    {
+      id: "paiement_assiste",
+      name: "Paiement assisté",
+      category: "Paiement",
+      icon: "📞",
+      color: "from-blue-500 to-blue-700",
+      bgColor: "bg-blue-50",
+      borderColor: "border-blue-200",
+      textColor: "text-blue-700"
     }
+
   ];
 
   const handleCardChange = (field: string, value: string) => {
@@ -159,7 +170,7 @@ const PaiementPage: React.FC<PaiementPageProps> = ({
               <p className="text-xs text-gray-500">Sécurisé par SSL</p>
             </div>
           </div>
-          
+
           <div className="space-y-3">
             <input
               type="text"
@@ -168,7 +179,7 @@ const PaiementPage: React.FC<PaiementPageProps> = ({
               onChange={(e) => handleCardChange("name", e.target.value)}
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm bg-white"
             />
-            
+
             <div className="relative">
               <input
                 type="text"
@@ -180,7 +191,7 @@ const PaiementPage: React.FC<PaiementPageProps> = ({
               />
               <Shield className="absolute right-3 top-3 h-4 w-4 text-green-500" />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-3">
               <input
                 type="text"
@@ -204,7 +215,7 @@ const PaiementPage: React.FC<PaiementPageProps> = ({
       );
     }
 
-    if (selectedPayment === "Mobile Money" || selectedPayment === "zeyna" || selectedPayment === "nita" || selectedPayment === "amana") {
+    if (selectedPayment === "Mobile Money" || selectedPayment === "zeyna" || selectedPayment === "mynita" || selectedPayment === "amana") {
       return (
         <div className="mt-6 p-5 bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-200 shadow-sm">
           <div className="flex items-center mb-4">
@@ -216,7 +227,7 @@ const PaiementPage: React.FC<PaiementPageProps> = ({
               <p className="text-xs text-gray-500">Votre numéro de mobile</p>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 gap-3">
             <div className="grid grid-cols-3 gap-3">
               <select
@@ -254,7 +265,7 @@ const PaiementPage: React.FC<PaiementPageProps> = ({
               <p className="text-xs text-gray-500">Étapes du paiement</p>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-2">
             {[
               { step: 1, text: "Confirmation" },
@@ -291,11 +302,10 @@ const PaiementPage: React.FC<PaiementPageProps> = ({
           <div
             key={method.id}
             onClick={() => handlePress(method.id)}
-            className={`relative p-4 rounded-xl cursor-pointer transition-all duration-300 transform hover:scale-105 border-2 ${
-              selectedPayment === method.id
+            className={`relative p-4 rounded-xl cursor-pointer transition-all duration-300 transform hover:scale-105 border-2 ${selectedPayment === method.id
                 ? `${method.borderColor} shadow-lg`
                 : "border-gray-200 hover:border-gray-300"
-            }`}
+              }`}
           >
             {/* Selection Indicator */}
             {selectedPayment === method.id && (
@@ -303,18 +313,18 @@ const PaiementPage: React.FC<PaiementPageProps> = ({
                 <Check className="h-3 w-3 text-white" />
               </div>
             )}
-            
+
             {/* Background when selected */}
             {selectedPayment === method.id && (
               <div className={`absolute inset-0 ${method.bgColor} opacity-20 rounded-xl`}></div>
             )}
-            
+
             <div className="relative text-center">
               {/* Icon */}
               <div className={`inline-flex p-2 rounded-lg bg-gradient-to-br ${method.color} text-white text-lg mb-2`}>
                 {method.icon}
               </div>
-              
+
               {/* Name */}
               <h3 className="font-medium text-gray-800 text-sm leading-tight">{method.name}</h3>
               <p className="text-xs text-gray-500 mt-1">{method.category}</p>
@@ -334,7 +344,7 @@ const PaiementPage: React.FC<PaiementPageProps> = ({
       )}
 
       {/* Payment Form */}
-      {renderPaymentForm()}
+      {/* {renderPaymentForm()} */}
 
       {/* Security Note */}
       {selectedPayment && (

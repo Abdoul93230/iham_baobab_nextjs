@@ -21,8 +21,11 @@ import {
   XCircle,
   RefreshCw,
   ShoppingCart,
+  DollarSign,
+  CheckCircle2,
+  XOctagon,
 } from "lucide-react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import axios from "axios";
 import OrderedItems from "./OrderedItems";
@@ -73,10 +76,18 @@ interface Message {
   read?: boolean;
 }
 
-const CommandeSuivi: React.FC = () => {
+interface CommandeSuiviTransactionProps {
+  transactionId: string;
+  status: string;
+  amount?: number;
+}
+
+const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
+  transactionId,
+  status,
+  amount
+}) => {
   const router = useRouter();
-  const params = useParams();
-  const id = params.id as string;
   
   const [activeTab, setActiveTab] = useState("details");
   const [showModal, setShowModal] = useState(false);
@@ -109,9 +120,9 @@ const CommandeSuivi: React.FC = () => {
           throw new Error("Utilisateur non connecté");
         }
 
-        // Fetch order details
+        // Fetch last order details using the new API
         const orderResponse = await axios.get(
-          `${BackendUrl}/getCommandesById/${id}`
+          `${BackendUrl}/getCommandeByReference/${transactionId}`
         );
         setOrder(orderResponse.data.commande);
         
@@ -145,11 +156,16 @@ const CommandeSuivi: React.FC = () => {
     };
 
     fetchOrderDetails();
-  }, [id]);
+  }, []);
 
-  // Fonction pour déterminer le type de commande
+  // Fonction pour déterminer le type de commande en tenant compte du statut de transaction
   const getOrderType = (): string => {
     if (!order) return "unknown";
+
+    // Si le statut de la transaction est failed, on considère la commande comme échouée
+    if (status === "failed") {
+      return "failed";
+    }
 
     if (order.statusLivraison === "annulé") {
       return "cancelled";
@@ -157,6 +173,11 @@ const CommandeSuivi: React.FC = () => {
 
     if (order.statusLivraison === "en cours" || order.statusPayment === "en cours") {
       return "inProgress";
+    }
+
+    // Si la transaction est réussie et que l'ordre est payé
+    if (status === "succeeded" && (order.statusPayment === "payé" || order.statusPayment === "payé à la livraison")) {
+      return "completed";
     }
 
     return "completed";
@@ -167,6 +188,7 @@ const CommandeSuivi: React.FC = () => {
     const orderType = getOrderType();
     return (
       orderType === "cancelled" ||
+      orderType === "failed" ||
       order?.statusPayment === "échec" ||
       (order?.statusPayment !== "payé à la livraison" && order?.statusPayment !== "payé")
     );
@@ -248,7 +270,7 @@ const CommandeSuivi: React.FC = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex items-center space-x-2">
           <Loader className="w-6 h-6 animate-spin text-teal-600" />
-          <span>Chargement des détails de la commande...</span>
+          <span>Chargement des détails de la transaction...</span>
         </div>
       </div>
     );
@@ -268,7 +290,16 @@ const CommandeSuivi: React.FC = () => {
   if (!order) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">Commande non trouvée</div>
+        <div className="text-center">
+          <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <div className="text-gray-500 mb-4">Aucune commande trouvée</div>
+          <button
+            onClick={() => router.push('/')}
+            className="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition-colors"
+          >
+            Retour à l'accueil
+          </button>
+        </div>
       </div>
     );
   }
@@ -283,8 +314,70 @@ const CommandeSuivi: React.FC = () => {
           onClick={() => router.back()}
         >
           <ChevronLeft className="w-5 h-5 mr-1" />
-          Retour aux commandes
+          Retour
         </button>
+
+        {/* Carte de statut de transaction */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="flex flex-col md:flex-row items-center justify-between">
+            <div className="flex items-center space-x-4 mb-4 md:mb-0">
+              {status === "succeeded" ? (
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle2 className="w-8 h-8 text-green-600" />
+                </div>
+              ) : status === "failed" ? (
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                  <XOctagon className="w-8 h-8 text-red-600" />
+                </div>
+              ) : (
+                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center">
+                  <Clock className="w-8 h-8 text-yellow-600" />
+                </div>
+              )}
+              
+              <div>
+                <h1 className="text-2xl font-bold text-gray-800">
+                  {status === "succeeded" ? "Paiement Réussi !" : 
+                   status === "failed" ? "Échec du Paiement" : 
+                   "Paiement en Cours"}
+                </h1>
+                <p className="text-gray-600">
+                  Transaction ID: {transactionId}
+                </p>
+                {amount && (
+                  <p className="text-lg font-semibold text-teal-600 mt-1">
+                    Montant: {formatPrice(amount)}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Message de statut */}
+            <div className="text-right">
+              {status === "succeeded" && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <p className="text-green-800 font-medium">
+                    ✅ Votre paiement a été traité avec succès
+                  </p>
+                  <p className="text-green-600 text-sm mt-1">
+                    Votre commande est maintenant confirmée
+                  </p>
+                </div>
+              )}
+              
+              {status === "failed" && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-red-800 font-medium">
+                    ❌ Le paiement a échoué
+                  </p>
+                  <p className="text-red-600 text-sm mt-1">
+                    Veuillez réessayer ou contacter le support
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* Affichage conditionnel des onglets selon le type de commande */}
         <div className="flex mb-4 border-b">
@@ -299,8 +392,8 @@ const CommandeSuivi: React.FC = () => {
             Détails de la commande
           </button>
 
-          {/* Masquer l'onglet carte pour les commandes annulées */}
-          {orderType !== "cancelled" && (
+          {/* Masquer l'onglet carte pour les commandes échouées ou annulées */}
+          {orderType !== "cancelled" && orderType !== "failed" && (
             <button
               className={`px-4 py-2 ${
                 activeTab === "map"
@@ -319,7 +412,8 @@ const CommandeSuivi: React.FC = () => {
             {/* Section des actions selon le type de commande */}
             <div className="flex flex-col sm:flex-row gap-4 mb-4 md:mb-0">
               {/* Gestion des paiements échoués */}
-              {(order?.statusPayment === "échec" ||
+              {(status === "failed" ||
+                order?.statusPayment === "échec" ||
                 (order?.statusPayment !== "payé à la livraison" &&
                   order?.statusPayment !== "payé")) ? (
                 <OrderPaymentHandler
@@ -345,12 +439,14 @@ const CommandeSuivi: React.FC = () => {
 
             <div>
               <div className="flex items-center mb-2">
-                <h1 className="text-xl md:text-2xl font-bold text-gray-800 mr-4">
+                <h2 className="text-xl md:text-2xl font-bold text-gray-800 mr-4">
                   Commande #{order?._id?.slice(0, 7) || "N/A"} ...
-                </h1>
+                </h2>
                 <span
                   className={`px-4 py-1 text-nowrap text-white rounded-full text-xs md:text-sm ${
                     orderType === "cancelled"
+                      ? "bg-red-500"
+                      : orderType === "failed"
                       ? "bg-red-500"
                       : orderType === "completed"
                       ? "bg-green-500"
@@ -358,9 +454,13 @@ const CommandeSuivi: React.FC = () => {
                   }`}
                 >
                   {orderType === "cancelled" && <XCircle className="w-3 h-3 inline mr-1" />}
+                  {orderType === "failed" && <XCircle className="w-3 h-3 inline mr-1" />}
                   {orderType === "completed" && <CheckCircle className="w-3 h-3 inline mr-1" />}
                   {orderType === "inProgress" && <Clock className="w-3 h-3 inline mr-1" />}
-                  {order?.statusPayment === "échec" ? order.etatTraitement : order.statusLivraison === "annulé" ? order.statusLivraison : null}
+                  {status === "failed" ? "Paiement échoué" : 
+                   order?.statusPayment === "échec" ? order.etatTraitement : 
+                   order.statusLivraison === "annulé" ? order.statusLivraison : 
+                   status === "succeeded" ? "Confirmé" : order.statusLivraison}
                 </span>
               </div>
               <div className="text-sm text-gray-600">
@@ -377,6 +477,21 @@ const CommandeSuivi: React.FC = () => {
             </div>
           </div>
 
+          {/* Alerte pour paiements échoués */}
+          {status === "failed" && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center gap-3">
+                <XCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                <div>
+                  <h3 className="font-medium text-red-800">Paiement échoué</h3>
+                  <p className="text-red-600 text-sm">
+                    Le paiement de votre commande n'a pas pu être traité. Vous pouvez réessayer le paiement en cliquant sur le bouton ci-dessus.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Alerte pour commandes annulées */}
           {(order?.statusPayment !== "échec" && orderType === "cancelled") && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -387,6 +502,25 @@ const CommandeSuivi: React.FC = () => {
                   <p className="text-red-600 text-sm">
                     Cette commande a été annulée. Vous pouvez la relancer en cliquant sur le bouton "Relancer la commande".
                   </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Confirmation de paiement réussi */}
+          {status === "succeeded" && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <div>
+                  <h3 className="font-medium text-green-800">Paiement confirmé</h3>
+                  <p className="text-green-600 text-sm">
+                    Votre paiement a été traité avec succès. Votre commande est maintenant confirmée et sera traitée dans les plus brefs délais.
+                  </p>
+                  <div className="mt-2 text-sm text-green-600">
+                    <p><strong>ID de transaction :</strong> {transactionId}</p>
+                    {amount && <p><strong>Montant payé :</strong> {formatPrice(amount)}</p>}
+                  </div>
                 </div>
               </div>
             </div>
@@ -454,13 +588,15 @@ const CommandeSuivi: React.FC = () => {
                     <div>
                       <p className="font-medium">Status du paiement</p>
                       <p className={`${
-                        order.statusPayment === "échec"
+                        status === "failed" || order.statusPayment === "échec"
                           ? "text-red-600"
-                          : order.statusPayment === "payé" || order.statusPayment === "payé à la livraison"
+                          : status === "succeeded" || order.statusPayment === "payé" || order.statusPayment === "payé à la livraison"
                           ? "text-green-600"
                           : "text-gray-600"
                       }`}>
-                        {order.statusPayment}
+                        {status === "failed" ? "Échec" : 
+                         status === "succeeded" ? "Payé" : 
+                         order.statusPayment}
                       </p>
                     </div>
                     <div>
@@ -487,6 +623,41 @@ const CommandeSuivi: React.FC = () => {
                 </div>
               </div>
 
+              {/* Informations de transaction */}
+              <div className="mb-8">
+                <h2 className="font-semibold text-lg mb-4">Informations de la transaction</h2>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <p className="font-medium">ID de transaction</p>
+                      <p className="text-gray-600 font-mono">{transactionId}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium">Statut de la transaction</p>
+                      <p className={`font-medium ${
+                        status === "succeeded" ? "text-green-600" : 
+                        status === "failed" ? "text-red-600" : 
+                        "text-yellow-600"
+                      }`}>
+                        {status === "succeeded" ? "Réussi" : 
+                         status === "failed" ? "Échoué" : 
+                         status}
+                      </p>
+                    </div>
+                    {amount && (
+                      <div>
+                        <p className="font-medium">Montant de la transaction</p>
+                        <p className="text-gray-600 font-semibold">{formatPrice(amount)}</p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-medium">Date de la transaction</p>
+                      <p className="text-gray-600">{new Date().toLocaleString("fr-FR")}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {order?.codePro && promoCode && (
                 <div className="mb-8">
                   <h2 className="font-semibold text-lg mb-4">Code promo appliqué</h2>
@@ -503,34 +674,51 @@ const CommandeSuivi: React.FC = () => {
             </>
           )}
 
-          {/* Afficher le suivi de carte seulement pour les commandes non annulées */}
-          {activeTab === "map" && orderType !== "cancelled" && (
+          {/* Afficher le suivi de carte seulement pour les commandes non annulées/échouées */}
+          {activeTab === "map" && orderType !== "cancelled" && orderType !== "failed" && (
             <div className="bg-white rounded-lg">
               <OrderTracking order={order} />
             </div>
           )}
 
-          {/* Informations supplémentaires pour commandes annulées */}
-          {orderType === "cancelled" && (
+          {/* Informations supplémentaires pour commandes échouées/annulées */}
+          {(orderType === "cancelled" || orderType === "failed") && (
             <div className="mt-8">
-              <h2 className="font-semibold text-lg mb-4">Raison de l'annulation</h2>
+              <h2 className="font-semibold text-lg mb-4">
+                {orderType === "failed" ? "Échec du paiement" : "Raison de l'annulation"}
+              </h2>
               <div className="bg-red-50 rounded-lg p-4">
                 <div className="flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-red-800 font-medium">Commande annulée</p>
+                    <p className="text-red-800 font-medium">
+                      {orderType === "failed" ? "Paiement non traité" : "Commande annulée"}
+                    </p>
                     <p className="text-red-600 text-sm mt-1">
-                      Cette commande a été annulée. Les raisons possibles incluent :
+                      {orderType === "failed" ? 
+                        "Le paiement n'a pas pu être traité. Les raisons possibles incluent :" :
+                        "Cette commande a été annulée. Les raisons possibles incluent :"}
                     </p>
                     <ul className="text-red-600 text-sm mt-2 list-disc list-inside space-y-1">
-                      <li>Produit non disponible en stock</li>
-                      <li>Problème de livraison dans votre zone</li>
-                      <li>Annulation à la demande du client</li>
-                      <li>Problème de paiement</li>
+                      {orderType === "failed" ? (
+                        <>
+                          <li>Fonds insuffisants sur le compte</li>
+                          <li>Carte expirée ou invalide</li>
+                          <li>Problème de réseau durant la transaction</li>
+                          <li>Limites de transaction dépassées</li>
+                        </>
+                      ) : (
+                        <>
+                          <li>Produit non disponible en stock</li>
+                          <li>Problème de livraison dans votre zone</li>
+                          <li>Annulation à la demande du client</li>
+                          <li>Problème de paiement</li>
+                        </>
+                      )}
                     </ul>
                     <div className="mt-4 p-3 bg-white rounded border border-red-200">
                       <p className="text-red-800 text-sm font-medium">
-                        💡 Astuce : Vous pouvez relancer cette commande en cliquant sur le bouton "Relancer la commande" ci-dessus.
+                        💡 Astuce : Vous pouvez {orderType === "failed" ? "réessayer le paiement" : "relancer cette commande"} en cliquant sur le bouton correspondant ci-dessus.
                       </p>
                     </div>
                   </div>
@@ -554,6 +742,25 @@ const CommandeSuivi: React.FC = () => {
                   </div>
                 </div>
 
+                <div className="flex items-center gap-3">
+                  <div className={`w-2 h-2 rounded-full ${
+                    status === "succeeded" ? "bg-green-600" : 
+                    status === "failed" ? "bg-red-600" : 
+                    "bg-yellow-600"
+                  }`}></div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">
+                      Traitement du paiement
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Transaction {transactionId} - {status === "succeeded" ? "Réussi" : status === "failed" ? "Échoué" : "En cours"}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {new Date().toLocaleString("fr-FR")}
+                    </p>
+                  </div>
+                </div>
+
                 {order.dateValidation && (
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
@@ -568,7 +775,7 @@ const CommandeSuivi: React.FC = () => {
 
                 <div className="flex items-center gap-3">
                   <div className={`w-2 h-2 rounded-full ${
-                    orderType === "cancelled"
+                    orderType === "cancelled" || orderType === "failed"
                       ? "bg-red-600"
                       : orderType === "completed"
                       ? "bg-green-600"
@@ -579,7 +786,7 @@ const CommandeSuivi: React.FC = () => {
                       Statut actuel : {order.etatTraitement}
                     </p>
                     <p className="text-xs text-gray-500">
-                      Livraison : {order.statusLivraison} | Paiement : {order.statusPayment}
+                      Livraison : {order.statusLivraison} | Paiement : {status === "succeeded" ? "Payé" : status === "failed" ? "Échoué" : order.statusPayment}
                     </p>
                   </div>
                 </div>
@@ -597,19 +804,19 @@ const CommandeSuivi: React.FC = () => {
                   <span className="font-medium">{formatPrice(order.prix - (order.reduction || 0))}</span>
                 </div>
 
-                {order.reduction && order.reduction > 0?  (
+                {order.reduction && order.reduction > 0 && (
                   <div className="flex justify-between items-center text-green-600">
                     <span>Réduction</span>
                     <span>-{formatPrice(order.reduction)}</span>
                   </div>
-                ): null}
+                )}
 
-                {promoCode ? (
+                {promoCode && (
                   <div className="flex justify-between items-center text-green-600">
                     <span>Code promo</span>
                     <span>-{formatPrice(promoCode.prixReduiction)}</span>
                   </div>
-                ): null}
+                )}
 
                 <div className="border-t pt-3">
                   <div className="flex justify-between items-center font-bold text-lg">
@@ -619,8 +826,10 @@ const CommandeSuivi: React.FC = () => {
                 </div>
 
                 <div className="text-sm text-gray-500 mt-2">
-                  <p>Mode de paiement : {order.statusPayment}</p>
-                  <p>Référence : {order.reference}</p>
+                  <p>Mode de paiement : {status === "succeeded" ? "Payé en ligne" : status === "failed" ? "Paiement échoué" : order.statusPayment}</p>
+                  <p>Référence commande : {order.reference}</p>
+                  <p>Transaction ID : {transactionId}</p>
+                  {amount && <p>Montant transaction : {formatPrice(amount)}</p>}
                 </div>
               </div>
             </div>
@@ -698,4 +907,4 @@ const CommandeSuivi: React.FC = () => {
   );
 };
 
-export default CommandeSuivi;
+export default CommandeSuiviTransaction;

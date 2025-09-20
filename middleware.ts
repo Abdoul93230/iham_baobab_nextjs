@@ -85,5 +85,6 @@ export const config = {
      * - public folder
      */
     "/((?!_next/static|_next/image|favicon.ico|public/).*)",
+    // "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|gif|ico|webp|css|js|json|txt|html)$).*)",
   ],
 };

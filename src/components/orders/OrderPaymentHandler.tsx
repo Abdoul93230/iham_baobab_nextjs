@@ -52,7 +52,7 @@ const OrderPaymentHandler: React.FC<OrderPaymentHandlerProps> = ({
         );
 
       // Rediriger vers la page panier
-      router.push("/panier");
+      router.push("/Panier");
     }
   };
 
