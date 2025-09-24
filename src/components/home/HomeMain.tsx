@@ -107,7 +107,7 @@ const HomeMain: React.FC<HomeMainProps> = ({ isOpen }) => {
                   </li>
                 );
               })}
-              <li className="mb-2" onClick={() => router.push("/Voir-plus")}>
+              <li className="mb-2" onClick={() => router.push("/voir-plus")}>
                 <button className="w-full text-left py-2 px-4 rounded hover:bg-[#FFE9CC] transition-colors duration-200 flex items-center space-x-2">
                   <span>➡️</span>
                   <span>Voir plus</span>

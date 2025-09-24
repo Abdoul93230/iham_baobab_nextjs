@@ -337,7 +337,8 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
         onClick: () => {
           setActiveDropdown(null);
           setIsMobileMenuOpen(false);
-          router.push("/dashboard");
+          // router.push("/dashboard");
+          router.push("/");
         },
       },
       {

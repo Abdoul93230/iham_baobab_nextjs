@@ -18,6 +18,8 @@ interface Status {
 }
 
 const OrderTracking: React.FC<OrderTrackingProps> = ({ order }) => {
+
+  
   const getStatusDetails = (): Status[] => {
     const statuses: Status[] = [
       {
@@ -34,6 +36,7 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ order }) => {
         description:
           order.statusPayment === "payé à la livraison"
             ? "payé à la livraison"
+            : order.statusPayment === "payé par téléphone"?"Paiement assisté"
             : order.statusPayment !== "échec" &&
               order.statusPayment !== "en cours" &&
               order.statusPayment !== "en attente" &&
@@ -59,7 +62,7 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ order }) => {
         title: "Traitement",
         description: order.etatTraitement,
         icon: order.etatTraitement === "Traité" ? CheckCircle : Clock,
-        isCompleted: order.etatTraitement === "Traité",
+        isCompleted: order?.etatTraitement === "Traité"|| order?.etatTraitement === "livraison reçu",
       },
       {
         id: 4,

@@ -168,7 +168,7 @@ const CommandeSuivi: React.FC = () => {
     return (
       orderType === "cancelled" ||
       order?.statusPayment === "échec" ||
-      (order?.statusPayment !== "payé à la livraison" && order?.statusPayment !== "payé")
+      (order?.statusPayment !== "payé à la livraison" && order?.statusPayment !== "payé" && order?.statusPayment !== "recu")
     );
   };
 
@@ -320,7 +320,7 @@ const CommandeSuivi: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-4 mb-4 md:mb-0">
               {/* Gestion des paiements échoués */}
               {(order?.statusPayment === "échec" ||
-                (order?.statusPayment !== "payé à la livraison" &&
+                (order?.statusPayment !== "payé à la livraison" && order?.statusPayment !== "recu" && 
                   order?.statusPayment !== "payé")) ? (
                 <OrderPaymentHandler
                   panier={order?.prod || null}
@@ -460,7 +460,9 @@ const CommandeSuivi: React.FC = () => {
                           ? "text-green-600"
                           : "text-gray-600"
                       }`}>
-                        {order.statusPayment}
+                        {order.statusPayment === "payé par téléphone"
+                            ? "Paiement assisté"
+                            :order.statusPayment}
                       </p>
                     </div>
                     <div>
@@ -579,7 +581,8 @@ const CommandeSuivi: React.FC = () => {
                       Statut actuel : {order.etatTraitement}
                     </p>
                     <p className="text-xs text-gray-500">
-                      Livraison : {order.statusLivraison} | Paiement : {order.statusPayment}
+                      Livraison : {order.statusLivraison} | Paiement : { order.statusPayment === "payé par téléphone"
+      ? "Paiement assisté" :order.statusPayment}
                     </p>
                   </div>
                 </div>
@@ -619,7 +622,8 @@ const CommandeSuivi: React.FC = () => {
                 </div>
 
                 <div className="text-sm text-gray-500 mt-2">
-                  <p>Mode de paiement : {order.statusPayment}</p>
+                  <p>Mode de paiement : {order.statusPayment === "payé par téléphone"
+                            ? "Paiement assisté" : order.statusPayment}</p>
                   <p>Référence : {order.reference}</p>
                 </div>
               </div>

@@ -88,7 +88,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
   amount
 }) => {
   const router = useRouter();
-  
+
   const [activeTab, setActiveTab] = useState("details");
   const [showModal, setShowModal] = useState(false);
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
@@ -101,7 +101,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
   const [promoCode, setPromoCode] = useState<PromoCode | null>(null);
   const [reorderLoading, setReorderLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -125,7 +125,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
           `${BackendUrl}/getCommandeByReference/${transactionId}`
         );
         setOrder(orderResponse.data.commande);
-        
+
         if (orderResponse.data.commande?.livraisonDetails) {
           setShippingAddress(orderResponse.data.commande?.livraisonDetails);
         } else {
@@ -223,9 +223,8 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
 
   const ChatMessage: React.FC<{ message: Message }> = ({ message }) => (
     <div
-      className={`flex ${
-        message.isDeliverer ? "justify-start" : "justify-end"
-      } mb-4`}
+      className={`flex ${message.isDeliverer ? "justify-start" : "justify-end"
+        } mb-4`}
     >
       <div className="max-w-[100%] sm:max-w-[70%] bg-gray-100 rounded-lg p-3">
         <div className="flex items-start gap-2">
@@ -236,9 +235,8 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
           )}
           <div className="flex-1">
             <p
-              className={`text-sm font-medium ${
-                message.isDeliverer ? "text-gray-800" : "text-teal-800"
-              }`}
+              className={`text-sm font-medium ${message.isDeliverer ? "text-gray-800" : "text-teal-800"
+                }`}
             >
               {message.isDeliverer ? "Livreur" : "Vous"}
             </p>
@@ -334,12 +332,12 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                   <Clock className="w-8 h-8 text-yellow-600" />
                 </div>
               )}
-              
+
               <div>
                 <h1 className="text-2xl font-bold text-gray-800">
-                  {status === "succeeded" ? "Paiement Réussi !" : 
-                   status === "failed" ? "Échec du Paiement" : 
-                   "Paiement en Cours"}
+                  {status === "succeeded" ? "Paiement Réussi !" :
+                    status === "failed" ? "Échec du Paiement" :
+                      "Paiement en Cours"}
                 </h1>
                 <p className="text-gray-600">
                   Transaction ID: {transactionId}
@@ -364,7 +362,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                   </p>
                 </div>
               )}
-              
+
               {status === "failed" && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <p className="text-red-800 font-medium">
@@ -382,11 +380,10 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
         {/* Affichage conditionnel des onglets selon le type de commande */}
         <div className="flex mb-4 border-b">
           <button
-            className={`px-4 py-2 ${
-              activeTab === "details"
-                ? "border-b-2 border-teal text-teal"
-                : "text-gray-600"
-            }`}
+            className={`px-4 py-2 ${activeTab === "details"
+              ? "border-b-2 border-teal text-teal"
+              : "text-gray-600"
+              }`}
             onClick={() => setActiveTab("details")}
           >
             Détails de la commande
@@ -395,11 +392,10 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
           {/* Masquer l'onglet carte pour les commandes échouées ou annulées */}
           {orderType !== "cancelled" && orderType !== "failed" && (
             <button
-              className={`px-4 py-2 ${
-                activeTab === "map"
-                  ? "border-b-2 border-teal text-teal"
-                  : "text-gray-600"
-              }`}
+              className={`px-4 py-2 ${activeTab === "map"
+                ? "border-b-2 border-teal text-teal"
+                : "text-gray-600"
+                }`}
               onClick={() => setActiveTab("map")}
             >
               Suivre sur la carte
@@ -443,24 +439,23 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                   Commande #{order?._id?.slice(0, 7) || "N/A"} ...
                 </h2>
                 <span
-                  className={`px-4 py-1 text-nowrap text-white rounded-full text-xs md:text-sm ${
-                    orderType === "cancelled"
-                      ? "bg-red-500"
-                      : orderType === "failed"
+                  className={`px-4 py-1 text-nowrap text-white rounded-full text-xs md:text-sm ${orderType === "cancelled"
+                    ? "bg-red-500"
+                    : orderType === "failed"
                       ? "bg-red-500"
                       : orderType === "completed"
-                      ? "bg-green-500"
-                      : "bg-teal-500"
-                  }`}
+                        ? "bg-green-500"
+                        : "bg-teal-500"
+                    }`}
                 >
                   {orderType === "cancelled" && <XCircle className="w-3 h-3 inline mr-1" />}
                   {orderType === "failed" && <XCircle className="w-3 h-3 inline mr-1" />}
                   {orderType === "completed" && <CheckCircle className="w-3 h-3 inline mr-1" />}
                   {orderType === "inProgress" && <Clock className="w-3 h-3 inline mr-1" />}
-                  {status === "failed" ? "Paiement échoué" : 
-                   order?.statusPayment === "échec" ? order.etatTraitement : 
-                   order.statusLivraison === "annulé" ? order.statusLivraison : 
-                   status === "succeeded" ? "Confirmé" : order.statusLivraison}
+                  {status === "failed" ? "Paiement échoué" :
+                    order?.statusPayment === "échec" ? order.etatTraitement :
+                      order.statusLivraison === "annulé" ? order.statusLivraison :
+                        status === "succeeded" ? "Confirmé" : order.statusLivraison}
                 </span>
               </div>
               <div className="text-sm text-gray-600">
@@ -587,27 +582,25 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <p className="font-medium">Status du paiement</p>
-                      <p className={`${
-                        status === "failed" || order.statusPayment === "échec"
-                          ? "text-red-600"
-                          : status === "succeeded" || order.statusPayment === "payé" || order.statusPayment === "payé à la livraison"
+                      <p className={`${status === "failed" || order.statusPayment === "échec"
+                        ? "text-red-600"
+                        : status === "succeeded" || order.statusPayment === "payé" || order.statusPayment === "payé à la livraison"
                           ? "text-green-600"
                           : "text-gray-600"
-                      }`}>
-                        {status === "failed" ? "Échec" : 
-                         status === "succeeded" ? "Payé" : 
-                         order.statusPayment}
+                        }`}>
+                        {status === "failed" ? "Échec" :
+                          status === "succeeded" ? "Payé" :
+                            order.statusPayment}
                       </p>
                     </div>
                     <div>
                       <p className="font-medium">Status de la livraison</p>
-                      <p className={`${
-                        order.statusLivraison === "annulé"
-                          ? "text-red-600"
-                          : order.statusLivraison === "livré"
+                      <p className={`${order.statusLivraison === "annulé"
+                        ? "text-red-600"
+                        : order.statusLivraison === "livré"
                           ? "text-green-600"
                           : "text-gray-600"
-                      }`}>
+                        }`}>
                         {order.statusLivraison}
                       </p>
                     </div>
@@ -634,14 +627,13 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                     </div>
                     <div>
                       <p className="font-medium">Statut de la transaction</p>
-                      <p className={`font-medium ${
-                        status === "succeeded" ? "text-green-600" : 
-                        status === "failed" ? "text-red-600" : 
-                        "text-yellow-600"
-                      }`}>
-                        {status === "succeeded" ? "Réussi" : 
-                         status === "failed" ? "Échoué" : 
-                         status}
+                      <p className={`font-medium ${status === "succeeded" ? "text-green-600" :
+                        status === "failed" ? "text-red-600" :
+                          "text-yellow-600"
+                        }`}>
+                        {status === "succeeded" ? "Réussi" :
+                          status === "failed" ? "Échoué" :
+                            status}
                       </p>
                     </div>
                     {amount && (
@@ -695,7 +687,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                       {orderType === "failed" ? "Paiement non traité" : "Commande annulée"}
                     </p>
                     <p className="text-red-600 text-sm mt-1">
-                      {orderType === "failed" ? 
+                      {orderType === "failed" ?
                         "Le paiement n'a pas pu être traité. Les raisons possibles incluent :" :
                         "Cette commande a été annulée. Les raisons possibles incluent :"}
                     </p>
@@ -743,11 +735,10 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full ${
-                    status === "succeeded" ? "bg-green-600" : 
-                    status === "failed" ? "bg-red-600" : 
-                    "bg-yellow-600"
-                  }`}></div>
+                  <div className={`w-2 h-2 rounded-full ${status === "succeeded" ? "bg-green-600" :
+                    status === "failed" ? "bg-red-600" :
+                      "bg-yellow-600"
+                    }`}></div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900">
                       Traitement du paiement
@@ -774,19 +765,19 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                 )}
 
                 <div className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full ${
-                    orderType === "cancelled" || orderType === "failed"
-                      ? "bg-red-600"
-                      : orderType === "completed"
+                  <div className={`w-2 h-2 rounded-full ${orderType === "cancelled" || orderType === "failed"
+                    ? "bg-red-600"
+                    : orderType === "completed"
                       ? "bg-green-600"
                       : "bg-yellow-600"
-                  }`}></div>
+                    }`}></div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900">
                       Statut actuel : {order.etatTraitement}
                     </p>
                     <p className="text-xs text-gray-500">
-                      Livraison : {order.statusLivraison} | Paiement : {status === "succeeded" ? "Payé" : status === "failed" ? "Échoué" : order.statusPayment}
+                      Livraison : {order.statusLivraison} | Paiement : {status === "succeeded" ? "Payé" : status === "failed" ? "Échoué": order.statusPayment === "payé par téléphone"
+      ? "Paiement assisté" : order.statusPayment}
                     </p>
                   </div>
                 </div>
@@ -826,7 +817,17 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                 </div>
 
                 <div className="text-sm text-gray-500 mt-2">
-                  <p>Mode de paiement : {status === "succeeded" ? "Payé en ligne" : status === "failed" ? "Paiement échoué" : order.statusPayment}</p>
+                  <p>
+                    Mode de paiement : {
+                      status === "succeeded"
+                        ? "Payé en ligne"
+                        : status === "failed"
+                          ? "Paiement échoué"
+                          : order.statusPayment === "payé par téléphone"
+                            ? "Paiement assisté"
+                            : order.statusPayment
+                    }
+                  </p>
                   <p>Référence commande : {order.reference}</p>
                   <p>Transaction ID : {transactionId}</p>
                   {amount && <p>Montant transaction : {formatPrice(amount)}</p>}

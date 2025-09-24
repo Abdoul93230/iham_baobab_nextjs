@@ -834,7 +834,7 @@ const ServicePage = () => {
                 info: "Démarrer une conversation",
                 desc: "Assistance en temps réel",
                 color: "from-purple-500 to-purple-600",
-                action: "/messagerie"
+                action: "/Messagerie"
               },
             ].map((contact, index) => (
               <Link
@@ -876,20 +876,33 @@ const ServicePage = () => {
                   <HelpCircle className="w-4 h-4 mr-2" />
                   FAQ Complète
                 </Link>
-                <Link
+                <p
+                  className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  Guide d&apos;utilisation
+                </p>
+                {/* <Link
                   href="/guide-utilisation"
                   className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                 >
                   <BookOpen className="w-4 h-4 mr-2" />
                   Guide d&apos;utilisation
-                </Link>
-                <Link
+                </Link> */}
+                <p
+                  
+                  className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  Politique de retour
+                </p>
+                {/* <Link
                   href="/politique-retour"
                   className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                 >
                   <Shield className="w-4 h-4 mr-2" />
                   Politique de retour
-                </Link>
+                </Link> */}
               </div>
             </div>
           </div>
