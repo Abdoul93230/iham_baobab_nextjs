@@ -1128,7 +1128,7 @@ const PanierPage: React.FC = () => {
                   if (acces === "non") {
                     handleWarning("Veuillez vous connecter d'abord");
                     setTimeout(() => {
-                      router.push("/Connexion?fromCart=true");
+                      router.push("/auth/login?fromCart=true&returnUrl=/order-confirmation");
                     }, 1000);
                   } else {
                     localStorage.setItem("orderShippingZone", JSON.stringify(selectedZone));
