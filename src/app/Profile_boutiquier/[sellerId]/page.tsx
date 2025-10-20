@@ -13,7 +13,7 @@ async function getSellerProfileData(sellerId: string) {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_Backend_Url || 'http://localhost:3001';
     
-    const sellerResponse = await fetch(`${baseUrl}/getSeller/${sellerId}`, {
+    const sellerResponse = await fetch(`${baseUrl}/getSellerClients/${sellerId}`, {
       next: { revalidate: 300 } // Cache pendant 5 minutes
     });
 

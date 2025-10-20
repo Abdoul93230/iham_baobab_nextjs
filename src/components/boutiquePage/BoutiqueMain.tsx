@@ -201,7 +201,7 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
   // Récupération des informations du vendeur
   const fetchSellerInfo = async () => {
     try {
-      const response = await axios.get(`${BackendUrl}/getSellerByName/${storeName}`);
+      const response = await axios.get(`${BackendUrl}/getSellerByNameClients/${storeName}`);
       setSellerInfo(response.data.data);
       setSocialStats({
         followersCount: response.data.data?.followersCount || 0,
@@ -217,7 +217,7 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
   // Récupération des produits
   const fetchProducts = async () => {
     try {
-      const response = await axios.get(`${BackendUrl}/searchProductBySupplier/${sellerId}`);
+      const response = await axios.get(`${BackendUrl}/searchProductBySupplierClients/${sellerId}`);
       const publishedProducts = response.data.data.filter(
         (product: any) => product.isPublished === "Published"
       );

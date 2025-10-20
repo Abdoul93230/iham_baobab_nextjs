@@ -173,7 +173,7 @@ const Login: React.FC<LoginProps> = ({ onSuccess }) => {
           } else if (returnUrl) {
             router.push(returnUrl);
           } else {
-            router.push("/dashboard");
+            router.push("/");
           }
         }
       }

@@ -75,12 +75,12 @@ export default function SellerProfile({ sellerId }: SellerProfileProps) {
         setLoading(true);
         // Récupérer les informations du vendeur
         const sellerResponse = await axios.get(
-          `${BackendUrl}/getSeller/${sellerId}`
+          `${BackendUrl}/getSellerClients/${sellerId}`
         );
 
         // Récupérer les produits du vendeur
         const productsResponse = await axios.get(
-          `${BackendUrl}/searchProductBySupplier/${sellerId}`
+          `${BackendUrl}/searchProductBySupplierClients/${sellerId}`
         );
 
         // Récupérer les statistiques sociales
@@ -504,7 +504,8 @@ export default function SellerProfile({ sellerId }: SellerProfileProps) {
               Connectez-vous pour laisser un avis
             </p>
             <button
-              onClick={() => router.push("/login")}
+              onClick={() => router.push(`/auth/login?returnUrl=/Profile_boutiquier/${sellerId}`)}
+
               className="bg-[#30A08B] text-white px-6 py-2 rounded-full inline-block hover:bg-opacity-90"
             >
               Se connecter

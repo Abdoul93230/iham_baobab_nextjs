@@ -1,0 +1,57 @@
+[
+  {
+    "id": "abdoul-razak",
+    "name": "Adamou Oumarou Abdoul Razak",
+    "role": "Cofondateur, Président-Directeur Général (PDG) / CTO",
+    "email": "abdoulrazak9323@gmail.com",
+    "phone": "+227 87727501",
+    "linkedin": "linkedin.com/in/abdoul-razak-adamou-79378a24b",
+    "description": "Visionnaire et responsable de la direction stratégique et technologique d'Ihambaobab. Il pilote la vision globale, la croissance, l'innovation et le développement des solutions numériques de la plateforme. Son expertise technique et sa capacité de leadership font de lui le moteur central du projet.",
+    "image": "/team/abdoul-razak.jpeg",
+    "department": "Direction & Technologie"
+  },
+  {
+    "id": "judicael-djidonou",
+    "name": "Djidonou Judicael",
+    "role": "Cofondateur, Directeur Général Marketing (DG Marketing)",
+    "email": "judicaeldjidonou3@gmail.com",
+    "phone": "+227 89640241",
+    "linkedin": "linkedin.com/in/judicael-djidonou",
+    "description": "Supervise la stratégie marketing globale d'Ihambaobab. Il coordonne les campagnes de communication, le positionnement de la marque, et les stratégies d'acquisition client. Avec une approche analytique et créative, il guide la croissance du projet sur le plan marketing et commercial.",
+    "image": "/team/judicael-djidonou.jpeg",
+    "department": "Marketing"
+  },
+  {
+    "id": "awalou-massaoudou",
+    "name": "Massaoudou Awalou",
+    "role": "Cofondateur, Directeur Général Adjoint (DGA) Marketing",
+    "email": "awaloumassaoudou@gmail.com",
+    "phone": "+227 98810787",
+    "linkedin": "linkedin.com/in/awalou-massaoudou-13b9901b6",
+    "description": "Appuie la direction marketing dans la mise en œuvre des stratégies commerciales et de communication. Il veille à la cohérence des actions menées, contribue à la coordination des équipes et au renforcement de la notoriété d'Ihambaobab. Son sens du management et de la planification font de lui un pilier opérationnel au sein de l'équipe.",
+    "image": "/team/awalou-massaoudou.jpeg",
+    "department": "Marketing"
+  },
+  {
+    "id": "garba-issa",
+    "name": "Garba Issa Garba",
+    "role": "Cofondateur, Département Marketing",
+    "email": "garbaissag10@gmail.com",
+    "phone": "+227 98963957",
+    "linkedin": "linkedin.com/in/garba-issa-garba-223446320",
+    "description": "Membre clé du département marketing, Garba participe activement à la conception, la coordination et la gestion des projets marketing d'Ihambaobab. Sa rigueur et son sens du détail garantissent la qualité et la cohérence des campagnes. Il contribue également à la réflexion stratégique et à la mise en œuvre des initiatives de communication et de développement.",
+    "image": "/team/garba-issa.jpeg",
+    "department": "Marketing"
+  },
+  {
+    "id": "abassa-soumana",
+    "name": "Delo Modibo Abassa Soumana",
+    "role": "Développeur Frontend",
+    "email": "delomodibo@gmail.com",
+    "phone": "+227 85822480",
+    "linkedin": "linkedin.com/in/abassa-soumana",
+    "description": "Spécialisé dans le développement des interfaces web et mobiles, il conçoit des expériences utilisateurs modernes et intuitives. Il veille à la performance, à l'ergonomie et à l'esthétique des plateformes Ihambaobab, tout en travaillant en étroite collaboration avec l'équipe technique et marketing.",
+    "image": "/team/abassa-soumana.jpeg",
+    "department": "Développement"
+  }
+]
