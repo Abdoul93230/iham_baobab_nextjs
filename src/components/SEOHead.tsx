@@ -12,15 +12,15 @@ interface SEOHeadProps {
 }
 
 export default function SEOHead({
-  title = "IhamBaobab - Marketplace Africaine",
-  description = "Votre marketplace de confiance pour vos achats en ligne au Niger et partout dans le monde",
-  keywords = "marketplace, e-commerce, Niger, achats en ligne, IhamBaobab",
+  title = process.env.NEXT_PUBLIC_SITE_NAME!,
+  description = process.env.NEXT_PUBLIC_SITE_DESCRIPTION!,
+  keywords = `marketplace, e-commerce, Niger, achats en ligne, ${process.env.NEXT_PUBLIC_SITE_NAME}`,
   image = "/logo.png",
   url = "",
   noIndex = false,
 }: SEOHeadProps) {
-  const siteName = process.env.NEXT_PUBLIC_SITE_NAME || "IhamBaobab";
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://ihambaobab.com";
+  const siteName = process.env.NEXT_PUBLIC_SITE_NAME;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
   const fullUrl = url ? `${siteUrl}${url}` : siteUrl;
   const fullImageUrl = image.startsWith('http') ? image : `${siteUrl}${image}`;
 

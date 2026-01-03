@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 
-const BackendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://ihambackend.onrender.com";
+const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 
 interface TabButtonProps {
   active: boolean;

@@ -7,24 +7,24 @@ import AuthChecker from "@/components/auth/AuthChecker";
 import DataLoader from "@/components/DataLoader";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
-  title: "IhamBaobab - Marketplace Africaine",
-  description: "Votre marketplace de confiance pour vos achats en ligne au Niger et partout dans le monde",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL!),
+  title: process.env.NEXT_PUBLIC_SITE_NAME,
+  description: process.env.NEXT_PUBLIC_SITE_DESCRIPTION!,
   keywords: ["marketplace", "e-commerce", "Niger", "Bénin", "Mobile Money", "achats en ligne"],
-  authors: [{ name: "IhamBaobab Team" }],
+  authors: [{ name: `${process.env.NEXT_PUBLIC_SITE_NAME} Team` }],
   
   // Open Graph pour les réseaux sociaux
   openGraph: {
-    title: "IhamBaobab - Marketplace Africaine",
-    description: "Votre marketplace de confiance pour vos achats en ligne au Niger et partout dans le monde",
+    title: process.env.NEXT_PUBLIC_SITE_NAME,
+    description: process.env.NEXT_PUBLIC_SITE_DESCRIPTION!,
     url: "/", // URL relative, sera combinée avec metadataBase
-    siteName: "IhamBaobab",
+    siteName: process.env.NEXT_PUBLIC_SITE_NAME,
     images: [
       {
         url: "/LogoText.png", // URL relative
         width: 1200,
         height: 630,
-        alt: "IhamBaobab - Marketplace Africaine",
+        alt: process.env.NEXT_PUBLIC_SITE_NAME,
       },
     ],
     locale: "fr_FR",
@@ -34,8 +34,8 @@ export const metadata: Metadata = {
   // Twitter Card
   twitter: {
     card: "summary_large_image",
-    title: "IhamBaobab - Marketplace Africaine",
-    description: "Votre marketplace de confiance pour vos achats en ligne",
+    title: process.env.NEXT_PUBLIC_SITE_NAME,
+    description: process.env.NEXT_PUBLIC_SITE_DESCRIPTION,
     images: ["/LogoText.png"],
   },
   

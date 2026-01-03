@@ -3,7 +3,7 @@ import axios from "axios";
 
 // Créer une instance axios avec la base URL
 const API = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_Backend_Url || "https://ihambackend.onrender.com",
+  baseURL: process.env.NEXT_PUBLIC_Backend_Url,
 });
 
 // Intercepteur pour ajouter le token JWT à chaque requête

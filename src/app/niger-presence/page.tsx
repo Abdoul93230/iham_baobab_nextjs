@@ -152,7 +152,7 @@ export default function NigerPresencePage() {
               "@type": "Organization",
               "name": "IhamBaobab Niger",
               "description": "Présence nationale d'IhamBaobab au Niger avec réseau de livraison et support local",
-              "url": process.env.NEXT_PUBLIC_SITE_URL || "",
+              "url": process.env.NEXT_PUBLIC_SITE_URL,
               "address": [
                 {
                   "@type": "PostalAddress",

@@ -196,7 +196,7 @@ export default function SuppliersPage() {
               "isPartOf": {
                 "@type": "WebSite",
                 "name": "IhamBaobab",
-                "url": process.env.NEXT_PUBLIC_SITE_URL || ""
+                "url": process.env.NEXT_PUBLIC_SITE_URL
               }
             }),
           }}

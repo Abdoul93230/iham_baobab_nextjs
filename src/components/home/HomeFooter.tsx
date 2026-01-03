@@ -167,7 +167,7 @@ const HomeFooter: React.FC = () => {
             <ul className="flex flex-wrap space-x-4">
               <li>
                 <a
-                  href="https://www.facebook.com/profile.php?id=61564475374925"
+                  href={process.env.NEXT_PUBLIC_FACEBOOK_PAGE!}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-emerald-300 transition duration-300 transform hover:scale-105"
@@ -182,7 +182,7 @@ const HomeFooter: React.FC = () => {
               </li>
               <li>
                 <a
-                  href="https://www.instagram.com/iham_baobab?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
+                  href={process.env.NEXT_PUBLIC_INSTAGRAM_PAGE}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-emerald-300 transition duration-300 transform hover:scale-105"
@@ -192,7 +192,7 @@ const HomeFooter: React.FC = () => {
               </li>
               <li>
                 <a
-                  href="https://www.instagram.com/iham_baobab?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
+                  href={process.env.NEXT_PUBLIC_INSTAGRAM_PAGE}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-emerald-300 transition duration-300 transform hover:scale-105"

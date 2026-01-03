@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const title = `${product.name} | ${category?.name || 'Produits'} | IHAM Baobab`;
 
   // URL canonique
-  const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/ProduitDetail/${id}`;
+  const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/ProduitDetail/${id}`;
 
   return {
     title,

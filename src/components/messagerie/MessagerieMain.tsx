@@ -48,7 +48,7 @@ interface MessageStatusProps {
   status: "sent" | "delivered" | "read";
 }
 
-const BackendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://ihambackend.onrender.com";
+const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 
 const MessagerieMain: React.FC = () => {
   const { user } = useAuth();

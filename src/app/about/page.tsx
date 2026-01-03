@@ -225,7 +225,7 @@ export default function AboutPage() {
               "@type": "Organization",
               "name": "IhamBaobab",
               "description": "Marketplace panafricaine révolutionnant le commerce électronique au Niger",
-              "url": process.env.NEXT_PUBLIC_SITE_URL || "",
+              "url": process.env.NEXT_PUBLIC_SITE_URL,
               "foundingDate": "2023",
               "location": {
                 "@type": "Place",

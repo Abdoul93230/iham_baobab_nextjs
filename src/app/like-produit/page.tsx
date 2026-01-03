@@ -4,7 +4,7 @@ import HomeHeader from "@/components/home/HomeHeader";
 
 // Fonction utilitaire pour construire les URLs complètes du site
 function getFullUrl(path: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL;
   return `${baseUrl}${path}`;
 }
 
@@ -18,7 +18,7 @@ function getImageUrl(imageUrl?: string) {
   }
   
   // Sinon, construire l'URL avec le backend
-  return `${process.env.NEXT_PUBLIC_Backend_Url || 'http://localhost:3001'}/uploads/${imageUrl}`;
+  return `${process.env.NEXT_PUBLIC_Backend_Url}/uploads/${imageUrl}`;
 }
 
 // Métadonnées SEO optimisées pour la page des favoris

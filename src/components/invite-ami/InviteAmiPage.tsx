@@ -22,7 +22,7 @@ import useAuth from "@/hooks/useAuth";
 
 const MAX_EMAIL_FIELDS = 5;
 const EMAIL_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://ihambaobab.onrender.com/";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL;
 
 interface EmailField {
   address: string;
@@ -66,7 +66,7 @@ ${name}`;
     try {
       if (user) {
         setUserName(user.name || "");
-        const response = await axios.get(`https://ihambackend.onrender.com/user`, {
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_Backend_Url}/user`, {
           params: { id: user.id },
         });
         setSenderEmail(response.data.user.email);
@@ -144,7 +144,7 @@ ${name}`;
               friendEmail,
               clientName: userName,
             };
-            await axios.post(`https://ihambackend.onrender.com/Send_email_freind`, emailData);
+            await axios.post(`${process.env.NEXT_PUBLIC_Backend_Url}/Send_email_freind`, emailData);
           }
           showNotification(
             `Invitation${validEmails.length > 1 ? "s" : ""} envoyée${

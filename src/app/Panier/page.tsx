@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     title: "Mon Panier - IhamBaobab",
     description: "Finalisez vos achats sur IhamBaobab, la marketplace africaine de confiance",
     type: "website",
-    siteName: "IhamBaobab",
+    siteName: process.env.NEXT_PUBLIC_SITE_NAME,
     images: [
       {
         url: "/logo.png",

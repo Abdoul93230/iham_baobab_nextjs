@@ -739,7 +739,7 @@ const DetailHomme: React.FC<DetailHommeProps> = ({
                   src={
                     ClefCate.image.startsWith('http://') || ClefCate.image.startsWith('https://') 
                       ? ClefCate.image 
-                      : `${process.env.NEXT_PUBLIC_Backend_Url || 'http://localhost:3001'}/uploads/${ClefCate.image}`
+                      : `${process.env.NEXT_PUBLIC_Backend_Url}/uploads/${ClefCate.image}`
                   }
                   alt={`Catégorie ${ClefCate.name}`}
                   width={120}

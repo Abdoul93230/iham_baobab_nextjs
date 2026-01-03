@@ -69,7 +69,7 @@ const orderConfirmationSEOConfig = {
     },
     {
       rel: "dns-prefetch",
-      href: process.env.NEXT_PUBLIC_Backend_Url || "https://ihambackend.onrender.com",
+      href: process.env.NEXT_PUBLIC_Backend_Url,
     },
   ],
 };
@@ -212,7 +212,7 @@ export default function OrderConfirmationPage() {
                 "isPartOf": {
                   "@type": "WebSite",
                   "name": "IhamBaobab",
-                  "url": process.env.NEXT_PUBLIC_SITE_URL || "/",
+                  "url": process.env.NEXT_PUBLIC_SITE_URL,
                   "description": "Plateforme e-commerce IhamBaobab au Niger"
                 },
                 "breadcrumb": {
@@ -222,7 +222,7 @@ export default function OrderConfirmationPage() {
                       "@type": "ListItem",
                       "position": 1,
                       "name": "Accueil",
-                      "item": process.env.NEXT_PUBLIC_SITE_URL || "/"
+                      "item": process.env.NEXT_PUBLIC_SITE_URL
                     },
                     {
                       "@type": "ListItem",
@@ -311,7 +311,7 @@ export default function OrderConfirmationPage() {
               "isPartOf": {
                 "@type": "WebSite",
                 "name": "IhamBaobab",
-                "url": process.env.NEXT_PUBLIC_SITE_URL || "/",
+                "url": process.env.NEXT_PUBLIC_SITE_URL,
                 "description": "Plateforme e-commerce au Niger"
               },
               "breadcrumb": {
@@ -321,7 +321,7 @@ export default function OrderConfirmationPage() {
                     "@type": "ListItem",
                     "position": 1,
                     "name": "Accueil",
-                    "item": process.env.NEXT_PUBLIC_SITE_URL || "/"
+                    "item": process.env.NEXT_PUBLIC_SITE_URL
                   },
                   {
                     "@type": "ListItem",

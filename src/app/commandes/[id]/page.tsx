@@ -119,7 +119,7 @@ export default function SuiviCommand() {
                     "@type": "ListItem",
                     "position": 1,
                     "name": "Accueil",
-                    "item": process.env.NEXT_PUBLIC_SITE_URL || "/"
+                    "item": process.env.NEXT_PUBLIC_SITE_URL
                   },
                   {
                     "@type": "ListItem",

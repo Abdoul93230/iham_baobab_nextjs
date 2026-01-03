@@ -27,7 +27,7 @@ const profileSEOConfig = {
         alt: "Page de profil IhamBaobab",
       },
     ],
-    site_name: "IhamBaobab",
+    site_name: process.env.NEXT_PUBLIC_SITE_NAME,
     locale: "fr_FR",
   },
   // Pas de Twitter pour le moment - sera ajouté plus tard
@@ -38,7 +38,7 @@ const profileSEOConfig = {
     },
     {
       name: "author",
-      content: "IhamBaobab",
+      content: process.env.NEXT_PUBLIC_SITE_NAME,
     },
     {
       name: "robots",
@@ -64,7 +64,7 @@ const profileSEOConfig = {
     },
     {
       rel: "dns-prefetch",
-      href: "https://ihambackend.onrender.com",
+      href: process.env.NEXT_PUBLIC_Backend_Url,
     },
   ],
 };
@@ -100,7 +100,7 @@ export default function ProfilePage() {
         <NextSeo {...profileSEOConfig} />
         <Head>
           <link rel="preload" href="/icon_user.png" as="image" />
-          <link rel="dns-prefetch" href="https://ihambackend.onrender.com" />
+          <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_Backend_Url} />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         </Head>
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -152,7 +152,7 @@ export default function ProfilePage() {
               "isPartOf": {
                 "@type": "WebSite",
                 "name": "IhamBaobab",
-                "url": process.env.NEXT_PUBLIC_SITE_URL || "/",
+                "url": process.env.NEXT_PUBLIC_SITE_URL,
                 "description": "Plateforme IhamBaobab au Niger"
               },
               "breadcrumb": {
@@ -162,7 +162,7 @@ export default function ProfilePage() {
                     "@type": "ListItem",
                     "position": 1,
                     "name": "Accueil",
-                    "item": process.env.NEXT_PUBLIC_SITE_URL || "/"
+                    "item": process.env.NEXT_PUBLIC_SITE_URL
                   },
                   {
                     "@type": "ListItem",

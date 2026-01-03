@@ -94,7 +94,7 @@ export const loginUser = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await fetch("https://ihambackend.onrender.com/login", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_Backend_Url}/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -138,7 +138,7 @@ export const registerUser = createAsyncThunk(
   ) => {
     try {
       // Étape 1: Inscription
-      const registerResponse = await fetch("https://ihambackend.onrender.com/user", {
+      const registerResponse = await fetch(`${process.env.NEXT_PUBLIC_Backend_Url}/user`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -153,7 +153,7 @@ export const registerUser = createAsyncThunk(
       }
 
       // Étape 2: Connexion automatique après inscription
-      const loginResponse = await fetch("https://ihambackend.onrender.com/login", {
+      const loginResponse = await fetch(`${process.env.NEXT_PUBLIC_Backend_Url}/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -193,7 +193,7 @@ export const registerUser = createAsyncThunk(
           </ul>
           <p>Cordialement,<br>L'équipe IhamBaobab</p>`;
 
-        fetch("https://ihambackend.onrender.com/sendMail", {
+        fetch(`${process.env.NEXT_PUBLIC_Backend_Url}/sendMail`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -222,7 +222,7 @@ export const forgotPassword = createAsyncThunk(
   "user/forgotPassword",
   async (email: string, { rejectWithValue }) => {
     try {
-      const response = await fetch("https://ihambackend.onrender.com/forgotPassword", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_Backend_Url}/forgotPassword`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -256,7 +256,7 @@ export const resetPassword = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await fetch("https://ihambackend.onrender.com/reset_password", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_Backend_Url}/reset_password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

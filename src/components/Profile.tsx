@@ -140,11 +140,11 @@ const Profile: React.FC = () => {
   const fetchUserData = useCallback(async (userId: string) => {
     try {
       const [userResponse, profileResponse] = await Promise.all([
-        axios.get(`https://ihambackend.onrender.com/user`, {
+        axios.get(`${process.env.NEXT_PUBLIC_Backend_Url}/user`, {
           params: { id: userId },
           timeout: 10000,
         }),
-        axios.get(`https://ihambackend.onrender.com/getUserProfile`, {
+        axios.get(`${process.env.NEXT_PUBLIC_Backend_Url}/getUserProfile`, {
           params: { id: userId },
           timeout: 10000,
         }),
@@ -264,7 +264,7 @@ const Profile: React.FC = () => {
       formData.append("id", user.id);
 
       await axios.post(
-        "https://ihambackend.onrender.com/createProfile",
+        `${process.env.NEXT_PUBLIC_Backend_Url}/createProfile`,
         formData,
         {
           timeout: 15000,
@@ -332,7 +332,7 @@ const Profile: React.FC = () => {
       formData.append("id", user.id);
 
       await axios.post(
-        "https://ihambackend.onrender.com/createProfile",
+        `${process.env.NEXT_PUBLIC_Backend_Url}/createProfile`,
         formData,
         {
           timeout: 10000,

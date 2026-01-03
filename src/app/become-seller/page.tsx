@@ -132,7 +132,7 @@ export default function BecomeSellerPage() {
               "provider": {
                 "@type": "Organization",
                 "name": "IhamBaobab",
-                "url": process.env.NEXT_PUBLIC_SITE_URL || ""
+                "url": process.env.NEXT_PUBLIC_SITE_URL
               },
               "areaServed": {
                 "@type": "Country",

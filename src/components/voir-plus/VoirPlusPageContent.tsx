@@ -52,7 +52,7 @@ export default function VoirPlusPageContent() {
               "isPartOf": {
                 "@type": "WebSite",
                 "name": "IhamBaobab",
-                "url": process.env.NEXT_PUBLIC_SITE_URL || "/",
+                "url": process.env.NEXT_PUBLIC_SITE_URL,
               },
               "breadcrumb": {
                 "@type": "BreadcrumbList",
@@ -61,7 +61,7 @@ export default function VoirPlusPageContent() {
                     "@type": "ListItem",
                     "position": 1,
                     "name": "Accueil",
-                    "item": process.env.NEXT_PUBLIC_SITE_URL || "/"
+                    "item": process.env.NEXT_PUBLIC_SITE_URL
                   },
                   {
                     "@type": "ListItem", 

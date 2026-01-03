@@ -25,7 +25,7 @@ const inviteAmiSEOConfig = {
         alt: "Inviter des amis sur IhamBaobab",
       },
     ],
-    site_name: "IhamBaobab",
+    site_name: process.env.NEXT_PUBLIC_SITE_NAME,
     locale: "fr_FR",
   },
   additionalMetaTags: [
@@ -35,7 +35,7 @@ const inviteAmiSEOConfig = {
     },
     {
       name: "author",
-      content: "IhamBaobab",
+      content: process.env.NEXT_PUBLIC_SITE_NAME,
     },
     {
       name: "robots",
@@ -101,7 +101,7 @@ export default function InviteAmiPageWrapper() {
               "isPartOf": {
                 "@type": "WebSite",
                 "name": "IhamBaobab",
-                "url": process.env.NEXT_PUBLIC_SITE_URL || "/",
+                "url": process.env.NEXT_PUBLIC_SITE_URL,
               },
             }),
           }}

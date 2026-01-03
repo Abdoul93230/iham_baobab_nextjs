@@ -11,7 +11,7 @@ interface PageProps {
 // Fonction pour récupérer les données côté serveur
 async function getSellerProfileData(sellerId: string) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_Backend_Url || 'http://localhost:3001';
+    const baseUrl = process.env.NEXT_PUBLIC_Backend_Url;
     
     const sellerResponse = await fetch(`${baseUrl}/getSellerClients/${sellerId}`, {
       next: { revalidate: 300 } // Cache pendant 5 minutes

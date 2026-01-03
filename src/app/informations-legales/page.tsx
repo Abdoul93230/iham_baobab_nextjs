@@ -89,7 +89,7 @@ export default function InformationsLegalesPageWrapper() {
               "isPartOf": {
                 "@type": "WebSite",
                 "name": "IhamBaobab",
-                "url": process.env.NEXT_PUBLIC_SITE_URL || "/",
+                "url": process.env.NEXT_PUBLIC_SITE_URL,
               },
             }),
           }}

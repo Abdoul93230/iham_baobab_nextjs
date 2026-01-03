@@ -35,7 +35,7 @@ async function getCategoryData(categoryName: string) {
   
   try {
     // Récupérer les données depuis l'API
-    const baseUrl = process.env.NEXT_PUBLIC_Backend_Url || 'http://localhost:3001';
+    const baseUrl = process.env.NEXT_PUBLIC_Backend_Url;
     
     const [categoriesRes, typesRes, productsRes] = await Promise.all([
       fetch(`${baseUrl}/getAllCategories`, { 
@@ -100,12 +100,12 @@ function getImageUrl(imageUrl: string | null | undefined) {
   }
   
   // Sinon, construire l'URL avec le backend
-  return `${process.env.NEXT_PUBLIC_Backend_Url || 'http://localhost:3001'}/uploads/${imageUrl}`;
+  return `${process.env.NEXT_PUBLIC_Backend_Url}/uploads/${imageUrl}`;
 }
 
 // Fonction utilitaire pour construire les URLs complètes du site
 function getFullUrl(path: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL;
   return `${baseUrl}${path}`;
 }
 

@@ -213,7 +213,7 @@ export default function AnniversaryPage() {
               "organizer": {
                 "@type": "Organization",
                 "name": "IhamBaobab",
-                "url": process.env.NEXT_PUBLIC_SITE_URL || ""
+                "url": process.env.NEXT_PUBLIC_SITE_URL
               }
             }),
           }}

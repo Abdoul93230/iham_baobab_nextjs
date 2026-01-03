@@ -35,12 +35,12 @@ const contactPageSEOConfig = {
         alt: "Contactez IhamBaobab au Niger",
       },
     ],
-    site_name: "IhamBaobab",
+    site_name: process.env.NEXT_PUBLIC_SITE_NAME,
     locale: "fr_FR",
   },
   twitter: {
-    handle: "@IhamBaobab", // À adapter selon vos réseaux sociaux
-    site: "@IhamBaobab",
+    handle: process.env.NEXT_PUBLIC_TWITTER_HANDLE!, // À adapter selon vos réseaux sociaux
+    site: process.env.NEXT_PUBLIC_TWITTER_HANDLE!,
     cardType: "summary_large_image",
   },
   additionalMetaTags: [
@@ -50,7 +50,7 @@ const contactPageSEOConfig = {
     },
     {
       name: "author",
-      content: "IhamBaobab",
+      content: process.env.NEXT_PUBLIC_SITE_NAME!,
     },
     {
       name: "robots",
@@ -266,7 +266,7 @@ export default function ContactPage() {
     "isPartOf": {
       "@type": "WebSite",
       "name": "IhamBaobab",
-      "url": process.env.NEXT_PUBLIC_SITE_URL || "/",
+      "url": process.env.NEXT_PUBLIC_SITE_URL,
       "description": "Plateforme e-commerce au Niger"
     },
     "breadcrumb": {
@@ -276,7 +276,7 @@ export default function ContactPage() {
           "@type": "ListItem",
           "position": 1,
           "name": "Accueil",
-          "item": process.env.NEXT_PUBLIC_SITE_URL || "/"
+          "item": process.env.NEXT_PUBLIC_SITE_URL
         },
         {
           "@type": "ListItem",
