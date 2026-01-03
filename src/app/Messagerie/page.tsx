@@ -25,7 +25,7 @@ const messagesSEOConfig = {
         alt: "Messagerie IhamBaobab",
       },
     ],
-    site_name: process.env.NEXT_PUBLIC_SITE_NAME,
+    site_name: process.env.NEXT_PUBLIC_SITE_NAME!,
     locale: "fr_FR",
   },
   additionalMetaTags: [
@@ -35,7 +35,7 @@ const messagesSEOConfig = {
     },
     {
       name: "author",
-      content: process.env.NEXT_PUBLIC_SITE_NAME,
+      content: process.env.NEXT_PUBLIC_SITE_NAME!,
     },
     {
       name: "robots",
@@ -58,7 +58,7 @@ const messagesSEOConfig = {
     },
     {
       rel: "dns-prefetch",
-      href: process.env.NEXT_PUBLIC_Backend_Url,
+      href: process.env.NEXT_PUBLIC_Backend_Url!,
     },
   ],
 };

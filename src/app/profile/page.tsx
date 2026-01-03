@@ -27,7 +27,7 @@ const profileSEOConfig = {
         alt: "Page de profil IhamBaobab",
       },
     ],
-    site_name: process.env.NEXT_PUBLIC_SITE_NAME,
+    site_name: process.env.NEXT_PUBLIC_SITE_NAME!,
     locale: "fr_FR",
   },
   // Pas de Twitter pour le moment - sera ajouté plus tard
@@ -38,7 +38,7 @@ const profileSEOConfig = {
     },
     {
       name: "author",
-      content: process.env.NEXT_PUBLIC_SITE_NAME,
+      content: process.env.NEXT_PUBLIC_SITE_NAME!,
     },
     {
       name: "robots",
@@ -64,7 +64,7 @@ const profileSEOConfig = {
     },
     {
       rel: "dns-prefetch",
-      href: process.env.NEXT_PUBLIC_Backend_Url,
+      href: process.env.NEXT_PUBLIC_Backend_Url!,
     },
   ],
 };

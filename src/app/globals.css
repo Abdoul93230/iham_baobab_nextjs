@@ -201,3 +201,43 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Styles personnalisés pour le carousel de bannières */
+.banner-swiper {
+  padding-bottom: 50px !important;
+}
+
+.banner-swiper .swiper-pagination {
+  bottom: 15px !important;
+}
+
+.banner-swiper .swiper-pagination-bullet {
+  width: 12px !important;
+  height: 12px !important;
+  background: #30A08B !important;
+  opacity: 0.4 !important;
+  margin: 0 6px !important;
+  transition: all 0.3s ease !important;
+}
+
+.banner-swiper .swiper-pagination-bullet-active {
+  width: 32px !important;
+  border-radius: 6px !important;
+  opacity: 1 !important;
+  background: #30A08B !important;
+}
+
+.banner-swiper .swiper-pagination-bullet:hover {
+  opacity: 0.7 !important;
+  transform: scale(1.1);
+}
+
+/* Masquer la scrollbar mais garder le scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE et Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari et Opera */
+}

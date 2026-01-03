@@ -69,6 +69,14 @@ const HomeMain: React.FC<HomeMainProps> = ({ isOpen }) => {
     return shuffledArray.slice(0, nbr);
   }
 
+  // Fonction pour obtenir 6 catégories : All en premier + 5 aléatoires
+  function getDisplayCategories(categories: Category[]): Category[] {
+    const allCategory = categories.find((cat) => cat.name === "all");
+    const otherCategories = categories.filter((cat) => cat.name !== "all");
+    const randomOthers = shuffle(otherCategories).slice(0, 5);
+    return allCategory ? [allCategory, ...randomOthers] : randomOthers.slice(0, 6);
+  }
+
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Main Content */}
@@ -84,29 +92,24 @@ const HomeMain: React.FC<HomeMainProps> = ({ isOpen }) => {
               Catégories
             </h2>
             <ul>
-              {DATA_Categories.map((category) => {
-                if (category.name === "all") {
-                  return null;
-                }
-                return (
-                  <li
-                    key={category._id}
-                    onClick={() => router.push(`/Categorie/${category.name}`)}
-                    className="mb-2"
-                  >
-                    <button className="w-full text-left py-2 px-4 rounded hover:bg-[#FFE9CC] transition-colors duration-200 flex items-center space-x-2">
-                      <Image
-                        src={category?.image}
-                        alt="loading"
-                        width={30}
-                        height={30}
-                        className="object-contain rounded-full"
-                      />
-                      <span>{category?.name}</span>
-                    </button>
-                  </li>
-                );
-              })}
+              {getDisplayCategories(DATA_Categories).map((category) => (
+                <li
+                  key={category._id}
+                  onClick={() => router.push(`/Categorie/${category.name}`)}
+                  className="mb-2"
+                >
+                  <button className="w-full text-left py-2 px-4 rounded hover:bg-[#FFE9CC] transition-colors duration-200 flex items-center space-x-2">
+                    <Image
+                      src={category?.image}
+                      alt="loading"
+                      width={30}
+                      height={30}
+                      className="object-contain rounded-full"
+                    />
+                    <span>{category?.name}</span>
+                  </button>
+                </li>
+              ))}
               <li className="mb-2" onClick={() => router.push("/voir-plus")}>
                 <button className="w-full text-left py-2 px-4 rounded hover:bg-[#FFE9CC] transition-colors duration-200 flex items-center space-x-2">
                   <span>➡️</span>
@@ -136,39 +139,49 @@ const HomeMain: React.FC<HomeMainProps> = ({ isOpen }) => {
           <div className="md:w-3/4">
             {/* Carousel */}
             <section className="my-6 relative">
-              <Swiper
-                ref={swiperRef}
-                modules={[Navigation, Pagination, Autoplay]}
-                spaceBetween={30}
-                slidesPerView={1}
-                pagination={{ clickable: true }}
-                autoplay={{ delay: 3000 }}
-                className="mb-8 rounded-lg overflow-hidden"
-              >
-                {DATA_Pubs.map((param: any, index: number) => (
-                  <SwiperSlide key={index}>
-                    <Image
-                      src={param.image}
-                      alt={`Slide ${index + 1}`}
-                      width={800}
-                      height={400}
-                      className="w-full h-[400px] object-cover"
-                    />
-                  </SwiperSlide>
-                ))}
-              </Swiper>
+              <div className="rounded-2xl overflow-hidden shadow-xl bg-white">
+                <Swiper
+                  ref={swiperRef}
+                  modules={[Navigation, Pagination, Autoplay]}
+                  spaceBetween={0}
+                  slidesPerView={1}
+                  pagination={{ 
+                    clickable: true,
+                    dynamicBullets: true,
+                    renderBullet: function (index, className) {
+                      return '<span class="' + className + '" style="background: #30A08B; width: 12px; height: 12px; margin: 0 6px; opacity: 0.5; transition: all 0.3s;"></span>';
+                    }
+                  }}
+                  autoplay={{ delay: 4000, disableOnInteraction: false }}
+                  loop={true}
+                  className="banner-swiper"
+                >
+                  {DATA_Pubs.map((param: any, index: number) => (
+                    <SwiperSlide key={index}>
+                      <Image
+                        src={param.image}
+                        alt={`Slide ${index + 1}`}
+                        width={1200}
+                        height={400}
+                        className="w-full h-auto"
+                        priority={index === 0}
+                      />
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+              </div>
               {/* Flèches personnalisées */}
               <div
-                className="absolute z-10 top-1/2 left-4 transform -translate-y-1/2 w-10 h-10 bg-[#30A08B] text-white rounded-full p-2 cursor-pointer flex items-center justify-center"
+                className="absolute z-10 top-1/2 left-4 transform -translate-y-1/2 w-12 h-12 bg-white/90 hover:bg-white text-[#30A08B] rounded-full shadow-lg cursor-pointer flex items-center justify-center transition-all duration-300 hover:scale-110"
                 onClick={() => swiperRef.current?.swiper.slidePrev()}
               >
-                <span className="text-lg">←</span>
+                <span className="text-2xl font-bold">‹</span>
               </div>
               <div
-                className="absolute z-10 top-1/2 right-4 transform -translate-y-1/2 w-10 h-10 bg-[#30A08B] text-white rounded-full p-2 cursor-pointer flex items-center justify-center"
+                className="absolute z-10 top-1/2 right-4 transform -translate-y-1/2 w-12 h-12 bg-white/90 hover:bg-white text-[#30A08B] rounded-full shadow-lg cursor-pointer flex items-center justify-center transition-all duration-300 hover:scale-110"
                 onClick={() => swiperRef.current?.swiper.slideNext()}
               >
-                <span className="text-lg">→</span>
+                <span className="text-2xl font-bold">›</span>
               </div>
             </section>
 

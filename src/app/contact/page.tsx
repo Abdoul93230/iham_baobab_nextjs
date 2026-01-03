@@ -35,7 +35,7 @@ const contactPageSEOConfig = {
         alt: "Contactez IhamBaobab au Niger",
       },
     ],
-    site_name: process.env.NEXT_PUBLIC_SITE_NAME,
+    site_name: process.env.NEXT_PUBLIC_SITE_NAME!,
     locale: "fr_FR",
   },
   twitter: {

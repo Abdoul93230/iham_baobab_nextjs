@@ -541,15 +541,14 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
             </button>
 
             <span
-              className="text-2xl w-24 h-16 font-extrabold text-amber-900 tracking-widest cursor-pointer"
+              className="text-2xl w-32 h-12 md:w-36 md:h-14 font-extrabold text-amber-900 tracking-widest cursor-pointer overflow-hidden rounded-lg"
               onClick={() => router.push("/")}
             >
               <Image
                 src="/LogoText.png"
                 alt="Logo IhamBaobab"
-                width={96}
-                height={64}
-                className="w-auto h-full object-contain cursor-pointer transition-opacity duration-300 hover:opacity-90"
+                fill
+                className="object-contain scale-[2.5] cursor-pointer transition-opacity duration-300 hover:opacity-90"
               />
             </span>
 

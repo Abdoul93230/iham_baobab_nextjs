@@ -69,7 +69,7 @@ const orderConfirmationSEOConfig = {
     },
     {
       rel: "dns-prefetch",
-      href: process.env.NEXT_PUBLIC_Backend_Url,
+      href: process.env.NEXT_PUBLIC_Backend_Url!,
     },
   ],
 };

@@ -25,7 +25,7 @@ const inviteAmiSEOConfig = {
         alt: "Inviter des amis sur IhamBaobab",
       },
     ],
-    site_name: process.env.NEXT_PUBLIC_SITE_NAME,
+    site_name: process.env.NEXT_PUBLIC_SITE_NAME!,
     locale: "fr_FR",
   },
   additionalMetaTags: [
@@ -35,7 +35,7 @@ const inviteAmiSEOConfig = {
     },
     {
       name: "author",
-      content: process.env.NEXT_PUBLIC_SITE_NAME,
+      content: process.env.NEXT_PUBLIC_SITE_NAME!,
     },
     {
       name: "robots",

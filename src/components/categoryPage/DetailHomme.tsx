@@ -98,6 +98,14 @@ const DetailHomme: React.FC<DetailHommeProps> = ({
     (type: any) => type.clefCategories === ClefCate?._id
   );
 
+  // Limiter et gérer l'affichage des types
+  const [showAllTypes, setShowAllTypes] = useState(false);
+  const MAX_VISIBLE_TYPES = 8; // Afficher 8 types par défaut
+  const displayedTypes = showAllTypes 
+    ? typeesInCategory 
+    : typeesInCategory?.slice(0, MAX_VISIBLE_TYPES);
+  const hasMoreTypes = typeesInCategory?.length > MAX_VISIBLE_TYPES;
+
   const filterComments =
     DATA_Commentes?.filter((comments: any) =>
       typeesInCategory?.some((type: any) => type._id === comments.clefType)
@@ -500,150 +508,120 @@ const DetailHomme: React.FC<DetailHommeProps> = ({
             Livraison gratuite pour toute commande supérieure ou égale à 30 000 F
           </div>
 
-      {/* Header */}
-      <header className="bg-gradient-to-r from-amber-100 to-amber-300 shadow-md sticky py-2 top-0 z-50">
+      {/* Header - Moderne avec couleurs de la marque */}
+      <header className="bg-gradient-to-r from-[#30A08B] to-[#B2905F] shadow-lg sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-20">
-            {/* Logo */}
-            <span
-              className="text-2xl w-24 h-16 font-extrabold text-amber-900 tracking-widest p-1
-             bg-gradient-to-r from-amber-100 to-amber-300 shadow-md rounded-xl cursor-pointer"
+            {/* Logo - Bien visible */}
+            <div
+              className="cursor-pointer group"
               onClick={() => router.push("/")}
             >
-              <Image
-                src="/LogoText.png"
-                className="w-auto h-full object-contain transition-opacity duration-300 hover:opacity-90"
-                alt="Logo"
-                width={96}
-                height={64}
-              />
-            </span>
+              <div className="relative w-32 h-12 md:w-36 md:h-14 bg-white rounded-lg overflow-hidden shadow-md group-hover:shadow-xl transition-all">
+                <Image
+                  src="/LogoText.png"
+                  className="w-full h-full object-contain scale-[2.5]"
+                  alt="IhamBaobab Logo"
+                  fill
+                />
+              </div>
+            </div>
 
-            {/* Desktop Navigation */}
-            <nav className="hidden md:flex space-x-4 lg:space-x-8">
-              <button
-                onClick={() => handleCategoryClick("all")}
-                className={`text-white-900 hover:text-[#30A08B] transition-colors text-sm lg:text-base ${
-                  activeCategory === "all"
-                    ? "font-bold text-[#30A08B]"
-                    : "text-[#B17236]"
-                }`}
-              >
-                Tous les produits
-              </button>
-
-              {DATA_Types?.filter(
-                (para: any) => para.clefCategories === ClefCate?._id
-              ).map((category: any) => (
-                <button
-                  key={category._id}
-                  onClick={() => handleCategoryClick(category._id)}
-                  className={`text-white-900 hover:text-[#30A08B] transition-colors text-sm lg:text-base ${
-                    activeCategory === category._id
-                      ? "font-bold text-[#30A08B]"
-                      : "text-[#B17236]"
-                  }`}
+            {/* Actions - Design moderne */}
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="hidden md:flex items-center gap-2 lg:gap-3">
+                <button 
+                  onClick={() => router.push("/NotificationHeader")}
+                  className="relative p-2.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all group"
+                  aria-label="Notifications"
                 >
-                  {category.name}
+                  <Bell className="h-5 w-5 text-white" />
+                  <span className="absolute top-0 right-0 bg-red-500 rounded-full w-5 h-5 text-xs text-white flex items-center justify-center font-bold border-2 border-white">
+                    0
+                  </span>
                 </button>
-              ))}
-            </nav>
-
-            {/* Actions */}
-            <div className="flex items-center">
-              <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
-                <button className="transition-colors rounded-full flex items-center justify-center text-white shadow-lg transform transition-transform duration-300 hover:scale-125 hover:shadow-2xl">
-                  <div
-                    className="relative text-amber-800 hover:text-[#30A08B]"
-                    aria-label="Notifications"
-                    onClick={() => router.push("/NotificationHeader")}
-                  >
-                    <Bell className="h-6 w-6" />
-                    <span className="absolute -top-1 -right-1 bg-[#30A08B] rounded-full w-4 h-4 text-xs text-white flex items-center justify-center">
-                      0
-                    </span>
-                  </div>
-                </button>
+                
                 <button
                   onClick={() => router.push("/like-produit")}
-                  className="transition-colors rounded-full flex items-center justify-center text-white shadow-lg transform transition-transform duration-300 hover:scale-125 hover:shadow-2xl"
+                  className="relative p-2.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all group"
+                  aria-label="Favoris"
                 >
-                  <div className="relative text-amber-800 hover:text-[#30A08B]">
-                    <Heart className="h-6 w-6" />
-                    <span className="absolute -top-2 -right-1 bg-[#30A08B] text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                      {likedProducts?.length || 0}
-                    </span>
-                  </div>
+                  <Heart className="h-5 w-5 text-white" />
+                  <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold border-2 border-white">
+                    {likedProducts?.length || 0}
+                  </span>
                 </button>
+                
                 <button
                   onClick={() => router.push("/Panier")}
-                  className="relative transition-colors rounded-full flex items-center justify-center text-white shadow-lg transform transition-transform duration-300 hover:scale-125 hover:shadow-2xl"
+                  className="relative p-2.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all group"
+                  aria-label="Panier"
                 >
-                  <ShoppingCart className="w-5 h-5 lg:w-6 lg:h-6 text-amber-800 hover:text-[#30A08B] transition-colors" />
-                  <span className="absolute -top-2 -right-1 bg-[#30A08B] text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                  <ShoppingCart className="h-5 w-5 text-white" />
+                  <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold border-2 border-white">
                     {panierCount || 0}
                   </span>
                 </button>
               </div>
+              
+              {/* Menu mobile */}
               <button
-                className="md:hidden ml-4"
+                className="md:hidden p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
+                aria-label="Menu"
               >
                 {isMenuOpen ? (
-                  <X className="w-6 h-6 text-[#30A08B]" />
+                  <X className="w-6 h-6 text-white" />
                 ) : (
-                  <Menu className="w-6 h-6 text-[#30A08B]" />
+                  <Menu className="w-6 h-6 text-white" />
                 )}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu - Design amélioré */}
         {isMenuOpen && (
-          <div className="md:hidden bg-white border-t">
-            <div className="px-4 py-2 space-y-1">
-              <button
-                onClick={() => {
-                  handleCategoryClick("all");
-                  setIsMenuOpen(false);
-                }}
-                className="block w-full text-left px-3 py-2 text-base hover:bg-gray-50 hover:text-[#30A08B] transition-colors"
-              >
-                Tous les produits
-              </button>
-              {DATA_Types?.filter(
-                (para: any) => para.clefCategories === ClefCate?._id
-              ).map((category: any) => (
-                <button
-                  key={category._id}
-                  onClick={() => {
-                    setActiveCategory(category._id);
-                    setIsMenuOpen(false);
-                  }}
-                  className="block w-full text-left px-3 py-2 text-base hover:bg-gray-50 hover:text-[#30A08B] transition-colors"
+          <div className="md:hidden bg-white/95 backdrop-blur-md border-t border-white/20">
+            <div className="px-4 py-4">
+              <div className="flex items-center justify-around gap-6">
+                <button 
+                  onClick={() => router.push("/NotificationHeader")}
+                  className="flex flex-col items-center gap-1.5 text-gray-700 hover:text-[#30A08B] transition-colors"
                 >
-                  {category.name}
+                  <div className="relative">
+                    <Bell className="w-6 h-6" />
+                    <span className="absolute -top-1 -right-1 bg-red-500 rounded-full w-4 h-4 text-xs text-white flex items-center justify-center font-bold">
+                      0
+                    </span>
+                  </div>
+                  <span className="text-xs font-medium">Notifications</span>
                 </button>
-              ))}
-              <div className="flex w-full items-center justify-around gap-4 py-4 border-t">
-                <button className="flex flex-col items-center text-gray-600">
-                  <User className="w-6 h-6" />
-                  <span className="text-xs mt-1">Compte</span>
-                </button>
+                
                 <button 
                   onClick={() => router.push("/like-produit")}
-                  className="flex flex-col items-center text-gray-600"
+                  className="flex flex-col items-center gap-1.5 text-gray-700 hover:text-[#30A08B] transition-colors"
                 >
-                  <Heart className="w-6 h-6" />
-                  <span className="text-xs mt-1">Favoris</span>
+                  <div className="relative">
+                    <Heart className="w-6 h-6" />
+                    <span className="absolute -top-1 -right-1 bg-red-500 rounded-full w-4 h-4 text-xs text-white flex items-center justify-center font-bold">
+                      {likedProducts?.length || 0}
+                    </span>
+                  </div>
+                  <span className="text-xs font-medium">Favoris</span>
                 </button>
+                
                 <button 
                   onClick={() => router.push("/Panier")}
-                  className="flex flex-col items-center text-gray-600"
+                  className="flex flex-col items-center gap-1.5 text-gray-700 hover:text-[#30A08B] transition-colors"
                 >
-                  <ShoppingCart className="w-6 h-6" />
-                  <span className="text-xs mt-1">Panier</span>
+                  <div className="relative">
+                    <ShoppingCart className="w-6 h-6" />
+                    <span className="absolute -top-1 -right-1 bg-red-500 rounded-full w-4 h-4 text-xs text-white flex items-center justify-center font-bold">
+                      {panierCount || 0}
+                    </span>
+                  </div>
+                  <span className="text-xs font-medium">Panier</span>
                 </button>
               </div>
             </div>
@@ -728,163 +706,84 @@ const DetailHomme: React.FC<DetailHommeProps> = ({
         </div>
       </div>
 
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-[#30A08B] to-[#B2905F] text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 lg:py-20">
-          <div className="text-center">
-            {/* Image de la catégorie si disponible */}
-            {ClefCate?.image && (
-              <div className="mb-6 flex justify-center">
-                <Image
-                  src={
-                    ClefCate.image.startsWith('http://') || ClefCate.image.startsWith('https://') 
-                      ? ClefCate.image 
-                      : `${process.env.NEXT_PUBLIC_Backend_Url}/uploads/${ClefCate.image}`
-                  }
-                  alt={`Catégorie ${ClefCate.name}`}
-                  width={120}
-                  height={120}
-                  className="rounded-full border-4 border-white shadow-lg object-cover"
-                  onError={(e) => {
-                    // En cas d'erreur, cacher l'image
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-              </div>
-            )}
+      {/* Hero Section - Image en arrière-plan */}
+      <div className="relative bg-gradient-to-br from-[#30A08B] via-[#2d9680] to-[#B2905F] overflow-hidden">
+        {/* Image de catégorie en arrière-plan */}
+        {ClefCate?.image && (
+          <>
+            <div className="absolute inset-0">
+              <Image
+                src={
+                  ClefCate.image.startsWith('http://') || ClefCate.image.startsWith('https://') 
+                    ? ClefCate.image 
+                    : `${process.env.NEXT_PUBLIC_Backend_Url}/uploads/${ClefCate.image}`
+                }
+                alt={ClefCate.name}
+                fill
+                className="object-cover opacity-40"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </div>
+            {/* Overlay gradient léger pour lisibilité */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/20"></div>
+          </>
+        )}
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
+          <div className="flex flex-col items-center text-center gap-6">
             
-            <h2 className="text-3xl md:text-4xl lg:text-4xl font-bold mb-4">
+            {/* Titre */}
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white drop-shadow-lg">
               {ClefCate?.name || "Collection"}
-            </h2>
-            <p className="text-lg md:text-xl mb-8 opacity-90">
-              Découvrez notre collection exclusive de {ClefCate?.name?.toLowerCase()}
-            </p>
+            </h1>
             
-            {/* Barre de recherche moderne */}
-            <div className="relative max-w-2xl mx-auto search-container">
-              <div className="relative group">
-                {/* Container principal avec gradient */}
-                <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-white/10 rounded-2xl blur-sm group-hover:blur-none transition-all duration-300"></div>
-                
-                {/* Input principal */}
-                <div className="relative bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-white/30 overflow-hidden">
-                  <div className="flex items-center">
-                    {/* Icône de recherche à gauche */}
-                    <div className="pl-6 pr-3">
-                      <Search className={`w-5 h-5 transition-all duration-300 ${
-                        isSearching 
-                          ? 'text-[#30A08B] animate-pulse' 
-                          : 'text-gray-400 group-hover:text-[#30A08B]'
-                      }`} />
-                    </div>
-                    
-                    {/* Input */}
-                    <input
-                      type="search"
-                      placeholder="Que recherchez-vous aujourd'hui ?"
-                      className="flex-1 py-4 pr-6 text-gray-800 placeholder-gray-500 bg-transparent border-none focus:outline-none focus:ring-0 text-base md:text-lg font-medium"
-                      value={testSearch}
-                      onChange={(e) => handleSearchChange(e.target.value)}
-                      onFocus={() => setShowSuggestions(searchSuggestions.length > 0)}
-                    />
-                    
-                    {/* Bouton de recherche */}
-                    {testSearch && (
-                      <div className="pr-3">
-                        <button
-                          onClick={() => {
-                            // Logique de recherche ici
-                            console.log("Recherche:", testSearch);
-                          }}
-                          className="bg-gradient-to-r from-[#30A08B] to-[#268070] text-white px-6 py-2 rounded-xl hover:shadow-lg transform hover:scale-105 transition-all duration-200 font-semibold"
-                        >
-                          Rechercher
-                        </button>
-                      </div>
-                    )}
-                    
-                    {/* Bouton clear */}
-                    {testSearch && (
-                      <div className="pr-3">
-                        <button
-                          onClick={() => setTextSearch("")}
-                          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Barre de progression sous l'input */}
-                  <div className="h-1 bg-gradient-to-r from-[#30A08B] via-[#B2905F] to-[#30A08B] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
+            {/* Barre de recherche - Très visible avec contraste fort */}
+            <div className="relative w-full max-w-xl">
+              <div className="relative">
+                <input
+                  type="search"
+                  placeholder="Rechercher un produit..."
+                  className="w-full py-3.5 px-5 pr-12 rounded-full text-gray-900 placeholder-gray-400 bg-white border-0 focus:outline-none focus:ring-4 focus:ring-white/40 shadow-2xl font-medium text-base"
+                  value={testSearch}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onFocus={() => setShowSuggestions(searchSuggestions.length > 0)}
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                  <Search className="w-5 h-5 text-[#30A08B]" />
                 </div>
               </div>
               
-              {/* Suggestions de recherche populaires */}
-              <div className="mt-4 flex flex-wrap justify-center gap-2">
-                <span className="text-white/80 text-sm">
-                  {dynamicKeywords.length > 0 ? 'Populaire dans cette catégorie:' : 'Recherche populaire:'}
-                </span>
-                {(dynamicKeywords.length > 0 ? dynamicKeywords : ['Chaussures', 'Sacs', 'Vêtements', 'Accessoires']).map((tag) => (
-                  <button
-                    key={tag}
-                    onClick={() => setTextSearch(tag)}
-                    className="px-3 py-1 bg-white/20 hover:bg-white/30 text-white text-sm rounded-full backdrop-blur-sm border border-white/30 hover:border-white/50 transition-all duration-200 hover:scale-105"
-                  >
-                    {tag}
-                  </button>
-                ))}
-              </div>
-              
-              {/* Suggestions de recherche dynamiques */}
+              {/* Suggestions de recherche */}
               {showSuggestions && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-white/30 overflow-hidden z-10">
-                  <div className="p-2">
-                    <div className="text-xs text-gray-600 font-semibold mb-2 px-2">
-                      Suggestions ({searchSuggestions.length})
-                    </div>
-                    {searchSuggestions.map((suggestion: any) => (
-                      <button
-                        key={suggestion.id}
-                        onClick={() => {
-                          router.push(`/ProduitDetail/${suggestion.id}`);
-                          setShowSuggestions(false);
-                        }}
-                        className="w-full flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors duration-200 text-left"
-                      >
-                        <Image
-                          src={suggestion.image}
-                          alt={suggestion.name}
-                          width={40}
-                          height={40}
-                          className="rounded-lg object-cover"
-                        />
-                        <div className="flex-1">
-                          <div className="font-medium text-gray-800 text-sm">
-                            {suggestion.name}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs">
-                            {suggestion.prixPromo ? (
-                              <>
-                                <span className="text-red-500 font-semibold">
-                                  {suggestion.prixPromo} F
-                                </span>
-                                <span className="text-gray-400 line-through">
-                                  {suggestion.prix} F
-                                </span>
-                              </>
-                            ) : (
-                              <span className="text-[#30A08B] font-semibold">
-                                {suggestion.prix} F
-                              </span>
-                            )}
-                          </div>
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl overflow-hidden z-10">
+                  {searchSuggestions.map((suggestion: any) => (
+                    <button
+                      key={suggestion.id}
+                      onClick={() => {
+                        router.push(`/ProduitDetail/${suggestion.id}`);
+                        setShowSuggestions(false);
+                      }}
+                      className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors text-left border-b last:border-b-0"
+                    >
+                      <Image
+                        src={suggestion.image}
+                        alt={suggestion.name}
+                        width={40}
+                        height={40}
+                        className="rounded-lg object-cover"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-800 text-sm truncate">
+                          {suggestion.name}
                         </div>
-                        <Search className="w-4 h-4 text-gray-400" />
-                      </button>
-                    ))}
-                  </div>
+                        <div className="text-[#30A08B] font-semibold text-xs">
+                          {suggestion.prixPromo || suggestion.prix} F
+                        </div>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
@@ -894,6 +793,103 @@ const DetailHomme: React.FC<DetailHommeProps> = ({
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        {/* Section des Types - Carrousel défilant */}
+        <div className="w-full bg-gradient-to-b from-gray-50 to-white rounded-xl py-4 mb-6 shadow-sm">
+          <div className="flex items-center justify-between mb-3 px-4">
+            <h2 className="text-lg font-bold text-gray-800">
+              Explorer par type
+            </h2>
+            {hasMoreTypes && !showAllTypes && (
+              <button
+                onClick={() => setShowAllTypes(true)}
+                className="text-[#30A08B] hover:text-[#B17236] font-semibold text-xs transition-colors"
+              >
+                Voir tout ({typeesInCategory?.length})
+              </button>
+            )}
+          </div>
+
+          <div className="relative">
+            {/* Categories container - Scroll horizontal */}
+            <div className="overflow-x-auto scrollbar-hide scroll-smooth px-4">
+              <div className="flex space-x-3">
+                {/* Bouton "Tous" */}
+                <button
+                  onClick={() => handleCategoryClick("all")}
+                  className={`flex-shrink-0 flex flex-col items-center justify-center w-[90px] h-[90px] rounded-xl transition-all duration-300 transform hover:scale-105 ${
+                    activeCategory === "all"
+                      ? "bg-gradient-to-br from-[#30A08B] to-[#268070] text-white shadow-xl"
+                      : "bg-white hover:bg-gray-50 text-gray-700 shadow-md hover:shadow-lg border border-gray-100"
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-1 transition-all ${
+                    activeCategory === "all" 
+                      ? "bg-white/20" 
+                      : "bg-[#30A08B]/10"
+                  }`}>
+                    <span className="text-2xl">📦</span>
+                  </div>
+                  <span className="text-xs font-semibold text-center px-1">
+                    Tous
+                  </span>
+                  {activeCategory === "all" && (
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-white/50 rounded-full"></div>
+                  )}
+                </button>
+
+                {/* Types dynamiques */}
+                {displayedTypes?.map((type: any, index: number) => {
+                  const emojis = ["🎯", "⭐", "🔥", "💎", "🎨", "🌟", "✨", "🎪", "🎭", "🎬"];
+                  const colors = [
+                    "from-blue-400 to-blue-600",
+                    "from-purple-400 to-purple-600",
+                    "from-pink-400 to-pink-600",
+                    "from-orange-400 to-orange-600",
+                    "from-teal-400 to-teal-600",
+                    "from-indigo-400 to-indigo-600",
+                  ];
+                  const colorClass = colors[index % colors.length];
+                  const emoji = emojis[index % emojis.length];
+                  
+                  return (
+                    <button
+                      key={type._id}
+                      onClick={() => handleCategoryClick(type._id)}
+                      className={`flex-shrink-0 flex flex-col items-center justify-center w-[90px] h-[90px] rounded-xl transition-all duration-300 transform hover:scale-105 relative ${
+                        activeCategory === type._id
+                          ? `bg-gradient-to-br ${colorClass} text-white shadow-xl`
+                          : "bg-white hover:bg-gray-50 text-gray-700 shadow-md hover:shadow-lg border border-gray-100"
+                      }`}
+                    >
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-1 transition-all ${
+                        activeCategory === type._id 
+                          ? "bg-white/20" 
+                          : `bg-gradient-to-br ${colorClass} bg-opacity-10`
+                      }`}>
+                        <span className="text-2xl">{emoji}</span>
+                      </div>
+                      <span className="text-xs font-semibold text-center px-1 line-clamp-2">
+                        {type.name}
+                      </span>
+                      {activeCategory === type._id && (
+                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-white/50 rounded-full"></div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Scroll indicator */}
+            <div className="flex justify-center mt-3">
+              <div
+                className="h-1 w-12 rounded-full opacity-50"
+                style={{ background: "linear-gradient(to right, #30A08B, #B2905F)" }}
+              />
+            </div>
+          </div>
+        </div>
+
         <div className="fixed bottom-50 left-3 flex flex-col gap-2 z-2">
           <button
             className="p-3 bg-gradient-to-r from-[#30A08B] to-[#B2905F] rounded-full shadow-lg animate-bounce"

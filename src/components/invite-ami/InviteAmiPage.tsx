@@ -22,7 +22,7 @@ import useAuth from "@/hooks/useAuth";
 
 const MAX_EMAIL_FIELDS = 5;
 const EMAIL_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL;
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL!;
 
 interface EmailField {
   address: string;
