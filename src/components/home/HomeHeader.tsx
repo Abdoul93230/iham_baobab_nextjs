@@ -527,10 +527,10 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
         ref={dropdownRef}
       >
         <div className="container mx-auto px-2 py-3 flex flex-wrap items-center justify-between">
-          <div className="relative flex items-center space-x-9 p-1 bg-gradient-to-r from-amber-100 to-amber-300 shadow-md rounded-xl">
+          <div className="relative flex items-center space-x-2 p-1 bg-gradient-to-r from-amber-100 to-amber-300 shadow-md rounded-xl">
             <button
               onClick={toggleMenu}
-              className="text-amber-800 hover:text-amber-900 md:hidden focus:outline-none transition-transform duration-300 transform hover:rotate-180"
+              className="text-amber-800 hover:text-amber-900 md:hidden focus:outline-none transition-transform duration-300 z-50 relative"
               aria-label="Toggle menu"
             >
               {isMenuOpen ? (
@@ -541,45 +541,44 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
             </button>
 
             <span
-              className="text-2xl w-32 h-12 md:w-36 md:h-14 font-extrabold text-amber-900 tracking-widest cursor-pointer overflow-hidden rounded-lg"
+              className="text-2xl w-32 h-12 md:w-36 md:h-14 font-extrabold text-amber-900 tracking-widest cursor-pointer relative overflow-hidden rounded-lg"
               onClick={() => router.push("/")}
             >
               <Image
                 src="/LogoText.png"
                 alt="Logo IhamBaobab"
                 fill
-                className="object-contain scale-[2.5] cursor-pointer transition-opacity duration-300 hover:opacity-90"
+                className="object-contain scale-[3] cursor-pointer transition-opacity duration-300 hover:opacity-90"
               />
             </span>
 
             {isMenuOpen && (
-              <div className="absolute top-full left-0 mt-2 flex space-x-1 p-1 bg-white border border-gray-200 rounded-full shadow-xl transition-all duration-500 ease-out z-40">
-                {/* Menu Button - Hidden on larger screens */}
+              <div className="fixed top-28 left-4 flex space-x-2 p-2 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-full shadow-2xl transition-all duration-500 ease-out z-50 animate-in slide-in-from-top-5">
+                {/* Menu Button - Opens Mobile Menu */}
                 <button
                   onClick={() => {
                     setIsMobileMenuOpen(true);
-                    setIsMenuOpen(false); // Fermer les 4 icônes
+                    setIsMenuOpen(false);
                   }}
-                  className="sm:hidden bg-green-900 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transform transition-transform duration-300 hover:scale-125 hover:shadow-2xl"
+                  className="bg-gradient-to-br from-green-800 to-green-900 w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg transform transition-all duration-300 hover:scale-110 hover:shadow-2xl active:scale-95"
                 >
                   <Menu className="w-5 h-5" />
                 </button>
 
                 {/* Wishlist Button */}
-                <button className="bg-red-500 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transform transition-transform duration-300 hover:scale-125 hover:shadow-2xl">
-                  <div
-                    className="relative text-amber-800 hover:text-amber-900"
-                    aria-label="Wishlist"
-                    onClick={() => {
-                      router.push("/like-produit");
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    <Heart className="h-4 w-4" />
-                    <span className="absolute -top-1 -right-1 bg-emerald-500 rounded-full w-3 h-3 text-[8px] text-white flex items-center justify-center">
+                <button 
+                  onClick={() => {
+                    router.push("/like-produit");
+                    setIsMenuOpen(false);
+                  }}
+                  className="bg-gradient-to-br from-red-500 to-red-600 w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg transform transition-all duration-300 hover:scale-110 hover:shadow-2xl active:scale-95 relative"
+                >
+                  <Heart className="h-5 w-5" />
+                  {likedProducts?.length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-emerald-500 rounded-full w-5 h-5 text-[10px] text-white flex items-center justify-center font-bold border-2 border-white">
                       {likedProducts?.length}
                     </span>
-                  </div>
+                  )}
                 </button>
 
                 {/* Shopping Cart Button */}
@@ -588,32 +587,30 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
                     router.push("/Panier");
                     setIsMenuOpen(false);
                   }} 
-                  className="relative bg-blue-500 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transform transition-transform duration-300 hover:scale-125 hover:shadow-2xl"
+                  className="bg-gradient-to-br from-blue-500 to-blue-600 w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg transform transition-all duration-300 hover:scale-110 hover:shadow-2xl active:scale-95 relative"
                 >
-                  <div className="bg-emerald-600 rounded-full z-10 w-3 h-3 flex items-center justify-center text-white text-[8px] font-bold absolute -top-1 -right-1">
-                    {panierCount || 0}
-                  </div>
-                  <ShoppingCart
-                    className="h-4 w-4 text-amber-800 hover:text-amber-900 cursor-pointer transition-transform transform hover:scale-110"
-                    aria-label="Panier"
-                  />
+                  <ShoppingCart className="h-5 w-5" />
+                  {panierCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-emerald-600 rounded-full w-5 h-5 text-[10px] text-white flex items-center justify-center font-bold border-2 border-white">
+                      {panierCount}
+                    </span>
+                  )}
                 </button>
 
                 {/* Message Button */}
-                <button className="bg-green-500 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transform transition-transform duration-300 hover:scale-125 hover:shadow-2xl">
-                  <div
-                    className="relative text-amber-800 hover:text-amber-900"
-                    aria-label="Messages"
-                    onClick={() => {
-                      router.push("/Messagerie");
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    <span className="absolute -top-1 -right-1 bg-red-500 rounded-full w-3 h-3 text-[8px] text-white flex items-center justify-center">
+                <button 
+                  onClick={() => {
+                    router.push("/Messagerie");
+                    setIsMenuOpen(false);
+                  }}
+                  className="bg-gradient-to-br from-green-500 to-green-600 w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg transform transition-all duration-300 hover:scale-110 hover:shadow-2xl active:scale-95 relative"
+                >
+                  <MessageCircle className="h-5 w-5" />
+                  {nbr > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 rounded-full w-5 h-5 text-[10px] text-white flex items-center justify-center font-bold border-2 border-white">
                       {nbr}
                     </span>
-                  </div>
+                  )}
                 </button>
               </div>
             )}
@@ -735,18 +732,19 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
       </header>
 
       {/* Promo banner */}
-      <div className="bg-gradient-to-r from-amber-300 to-amber-400 text-amber-900 py-3 px-5 text-base flex items-center justify-center animate-pulse shadow-lg">
-        <Gift className="h-6 w-6 mr-3 animate-bounce text-amber-700" />
-        <span className="font-bold">🎉 OFFRE CHOC !</span>
-        <span className="ml-2">
-          -20% sur votre première commande avec le code{" "}
-          <span className="bg-amber-200 px-2 py-1 rounded-md font-extrabold text-amber-900">
-            BIENVENUE20
-          </span>
-          <span className="bg-red-500 text-white px-2 py-1 rounded-md font-extrabold ml-2">
-            (remise max : 2000 F)
-          </span>
-        </span>
+      <div className="bg-gradient-to-r from-amber-300 to-amber-400 text-amber-900 py-2 px-2 md:px-5 shadow-lg overflow-hidden">
+        <div className="container mx-auto flex items-center justify-center animate-pulse text-center">
+          <Gift className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2 animate-bounce text-amber-700 flex-shrink-0" />
+          <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-xs md:text-sm leading-tight">
+            <span className="font-bold">🎉 -20% code</span>
+            <span className="bg-amber-200 px-2 py-0.5 rounded font-extrabold text-amber-900 shadow-sm">
+              BIENVENUE20
+            </span>
+            <span className="bg-red-500 text-white px-1.5 py-0.5 rounded text-[10px] md:text-xs font-semibold shadow-sm">
+              max 2000F
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Mobile menu */}

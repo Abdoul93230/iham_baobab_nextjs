@@ -139,7 +139,7 @@ const HomeMain: React.FC<HomeMainProps> = ({ isOpen }) => {
           <div className="md:w-3/4">
             {/* Carousel */}
             <section className="my-6 relative">
-              <div className="rounded-2xl overflow-hidden shadow-xl bg-white">
+              <div className="rounded-2xl overflow-hidden shadow-xl bg-white" >
                 <Swiper
                   ref={swiperRef}
                   modules={[Navigation, Pagination, Autoplay]}
@@ -155,6 +155,7 @@ const HomeMain: React.FC<HomeMainProps> = ({ isOpen }) => {
                   autoplay={{ delay: 4000, disableOnInteraction: false }}
                   loop={true}
                   className="banner-swiper"
+                  style={{border:"2px solid black"}}
                 >
                   {DATA_Pubs.map((param: any, index: number) => (
                     <SwiperSlide key={index}>
