@@ -36,6 +36,7 @@
     "next": "15.4.5",
     "next-seo": "^6.8.0",
     "next-sitemap": "^4.2.3",
+    "qrcode.react": "^4.2.0",
     "react": "19.1.0",
     "react-country-state-city": "^1.1.12",
     "react-dom": "19.1.0",

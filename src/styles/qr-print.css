@@ -1,0 +1,55 @@
+/* Styles d'impression pour les QR Codes */
+@media print {
+  /* Masquer les éléments inutiles */
+  header,
+  nav,
+  footer,
+  .no-print,
+  button:not(.print-show),
+  .print\\:hidden {
+    display: none !important;
+  }
+
+  /* Optimisation page */
+  @page {
+    margin: 1cm;
+    size: A4;
+  }
+
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* QR Code containers */
+  .qr-code-item {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Marges entre items */
+  .qr-code-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5cm;
+  }
+
+  /* Taille canvas QR */
+  canvas {
+    max-width: 5cm !important;
+    max-height: 5cm !important;
+    margin: 0 auto;
+  }
+
+  /* Texte lisible */
+  * {
+    color: black !important;
+    background: white !important;
+  }
+
+  /* Bordures légères */
+  .qr-code-item {
+    border: 1px solid #ddd !important;
+    padding: 0.5cm;
+  }
+}

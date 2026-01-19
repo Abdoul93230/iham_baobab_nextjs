@@ -376,16 +376,14 @@ export default function ProduitPromotion({ acces }: ProduitPromotionProps) {
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Logo */}
             <span
-              className="text-2xl w-24 h-16 font-extrabold text-amber-900 tracking-widest p-1
-           bg-gradient-to-r from-amber-100 to-amber-300 shadow-md rounded-xl cursor-pointer"
+              className="text-2xl w-32 h-12 md:w-36 md:h-14 font-extrabold text-amber-900 tracking-widest cursor-pointer relative overflow-hidden rounded-lg"
               onClick={() => router.push("/")}
             >
               <Image
                 src="/LogoText.png"
-                className="w-auto h-full object-contain transition-opacity duration-300 hover:opacity-90"
-                alt="Logo"
-                width={96}
-                height={64}
+                alt="Logo IhamBaobab"
+                fill
+                className="object-contain scale-[3] cursor-pointer transition-opacity duration-300 hover:opacity-90"
               />
             </span>
 

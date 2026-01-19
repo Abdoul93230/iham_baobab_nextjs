@@ -37,6 +37,7 @@ import Alert from "./Alert";
 import AppPromo from "./AppPromo";
 import { fetchUserLikes, toggleLike } from "@/redux/likesSlice";
 import { setProducts, Product, Variant } from "@/redux/productsSlice";
+import QRCodeGenerator from "@/components/QRCodeGenerator";
 
 // Fonction utilitaire pour combiner les classes CSS
 function cn(...classes: (string | undefined | boolean)[]): string {
@@ -1608,6 +1609,18 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
               <span className="text-sm">Partager</span>
               <ShareModal isOpen={isModalOpen} onClose={handleClose} />
             </div>
+
+            {/* QR Code Generator */}
+            {immediateProduct && (
+              <div className="flex flex-col items-center">
+                <QRCodeGenerator
+                  url={`${process.env.NEXT_PUBLIC_SITE_URL}/ProduitDetail/${immediateProduct._id}`}
+                  title={immediateProduct.name}
+                  description="Scannez pour voir ce produit"
+                  size={200}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -27,6 +27,7 @@ import {
   ThumbsDown,
 } from "lucide-react";
 import socialService from "./socialService"; // Vous devrez adapter ce service
+import QRCodeGenerator from "@/components/QRCodeGenerator";
 
 // Remplacez cette URL par votre URL backend réelle
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
@@ -822,6 +823,14 @@ export default function SellerProfile({ sellerId }: SellerProfileProps) {
                   <MessageCircle size={20} className="inline" />
                   <span>Contacter</span>
                 </button>
+
+                {/* QR Code Boutique */}
+                <QRCodeGenerator
+                  url={`${process.env.NEXT_PUBLIC_SITE_URL}/boutique/${encodeURIComponent(seller.storeName)}`}
+                  title={seller.storeName}
+                  description="Scannez pour voir cette boutique"
+                  size={200}
+                />
               </div>
             </div>
           </div>

@@ -60,6 +60,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/s
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchUserLikes, toggleLike } from "@/redux/likesSlice";
+import QRCodeGenerator from "@/components/QRCodeGenerator";
 // import socialService from "./socialService"; // Vous devrez adapter ce service
 
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
@@ -723,8 +724,8 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
               </div>
             </div>
 
-            {/* Bouton suivre centré sur mobile */}
-            <div className="flex justify-center sm:justify-end mb-4">
+            {/* Bouton suivre et QR code centrés sur mobile */}
+            <div className="flex flex-col sm:flex-row justify-center sm:justify-end items-center gap-3 mb-4">
               <Button
                 className={`rounded-full px-6 sm:px-8 py-2 sm:py-3 font-semibold transition-all text-sm sm:text-base ${
                   isFollowing
@@ -735,6 +736,14 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
               >
                 {isFollowing ? "✓ Suivi" : "Suivre"}
               </Button>
+              
+              {/* QR Code Boutique */}
+              <QRCodeGenerator
+                url={`${process.env.NEXT_PUBLIC_SITE_URL}/boutique/${encodeURIComponent(sellerInfo.storeName)}`}
+                title={sellerInfo.storeName}
+                description="Scannez pour voir cette boutique"
+                size={200}
+              />
             </div>
 
             {/* Informations de contact optimisées mobile */}
