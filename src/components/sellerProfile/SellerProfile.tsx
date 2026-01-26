@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import socialService from "./socialService"; // Vous devrez adapter ce service
 import QRCodeGenerator from "@/components/QRCodeGenerator";
+import QRCodeCard from "@/components/QRCodeCard";
 
 // Remplacez cette URL par votre URL backend réelle
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
@@ -830,6 +831,15 @@ export default function SellerProfile({ sellerId }: SellerProfileProps) {
                   title={seller.storeName}
                   description="Scannez pour voir cette boutique"
                   size={200}
+                />
+                
+                {/* Carte QR Design */}
+                <QRCodeCard
+                  type="boutique"
+                  url={`${process.env.NEXT_PUBLIC_SITE_URL}/boutique/${encodeURIComponent(seller.storeName)}`}
+                  title={seller.storeName}
+                  storeLogo={seller.logo}
+                  description={seller.storeDescription}
                 />
               </div>
             </div>

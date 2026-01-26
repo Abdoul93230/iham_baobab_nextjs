@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { Download, Share2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+// Import des fonctions html-to-image
+import { toPng, toBlob } from 'html-to-image';
 
 interface QRCodeGeneratorProps {
   url: string;
@@ -19,48 +21,56 @@ export default function QRCodeGenerator({
   size = 256,
 }: QRCodeGeneratorProps) {
   const [showQR, setShowQR] = useState(false);
+  // Ref pour cibler l'élément à capturer
+  const qrRef = useRef<HTMLDivElement>(null);
 
-  // Télécharger le QR code
-  const downloadQRCode = () => {
-    const canvas = document.getElementById("qr-code-canvas") as HTMLCanvasElement;
-    if (canvas) {
-      const pngUrl = canvas
-        .toDataURL("image/png")
-        .replace("image/png", "image/octet-stream");
-      const downloadLink = document.createElement("a");
-      downloadLink.href = pngUrl;
-      downloadLink.download = `qr-code-${title.replace(/\s+/g, "-").toLowerCase()}.png`;
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
+  // Télécharger le QR code avec html-to-image
+  const downloadQRCode = async () => {
+    if (!qrRef.current) return;
+    try {
+      const dataUrl = await toPng(qrRef.current, {
+        cacheBust: true,
+        quality: 1,
+      });
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = `qr-code-${title.replace(/\s+/g, "-").toLowerCase()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Erreur téléchargement:", error);
     }
   };
 
-  // Partager le QR code
+  // Partager le QR code avec html-to-image
   const shareQRCode = async () => {
-    const canvas = document.getElementById("qr-code-canvas") as HTMLCanvasElement;
-    if (canvas) {
-      try {
-        const blob = await new Promise<Blob>((resolve) => {
-          canvas.toBlob((blob) => resolve(blob!), "image/png");
+    if (!qrRef.current) return;
+    try {
+      // toBlob convertit directement l'élément en fichier binaire (Blob)
+      const blob = await toBlob(qrRef.current, {
+        cacheBust: true,
+        quality: 1,
+      });
+
+      if (!blob) return;
+
+      const file = new File([blob], `qr-code-${title}.png`, { type: "image/png" });
+      
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: title,
+          text: description || `Scannez ce QR code pour accéder à ${title}`,
+          files: [file],
         });
-        
-        const file = new File([blob], `qr-code-${title}.png`, { type: "image/png" });
-        
-        if (navigator.share && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: title,
-            text: description || `Scannez ce QR code pour accéder à ${title}`,
-            files: [file],
-          });
-        } else {
-          // Fallback : copier l'URL
-          await navigator.clipboard.writeText(url);
-          alert("Lien copié dans le presse-papiers !");
-        }
-      } catch (error) {
-        console.error("Erreur lors du partage:", error);
+      } else {
+        // Fallback : copier l'URL
+        await navigator.clipboard.writeText(url);
+        alert("Lien copié dans le presse-papiers !");
       }
+    } catch (error) {
+      console.error("Erreur lors du partage:", error);
+      // En cas d'annulation de l'utilisateur ou autre erreur
     }
   };
 
@@ -95,7 +105,7 @@ export default function QRCodeGenerator({
       {/* Modal QR Code */}
       {showQR && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative animate-in fade-in zoom-in duration-300">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 relative animate-in fade-in zoom-in duration-300">
             {/* Bouton fermer */}
             <button
               onClick={() => setShowQR(false)}
@@ -112,34 +122,36 @@ export default function QRCodeGenerator({
               )}
             </div>
 
-            {/* QR Code */}
-            <div className="flex justify-center mb-6 bg-white p-6 rounded-xl border-2 border-gray-200">
+            {/* QR Code - Le ref est ici pour la capture */}
+            <div 
+              ref={qrRef} 
+              className="flex justify-center mb-6 bg-white p-8 rounded-3xl border-2 border-gray-200 shadow-inner"
+            >
               <QRCodeCanvas
-                id="qr-code-canvas"
                 value={url}
                 size={size}
                 level="H"
-                includeMargin={true}
+                includeMargin={false}
                 imageSettings={{
                   src: "/LogoText.png",
-                  height: 40,
-                  width: 40,
+                  height: 50,
+                  width: 50,
                   excavate: true,
                 }}
               />
             </div>
 
             {/* URL */}
-            <div className="mb-6 p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">Lien de redirection :</p>
-              <p className="text-sm text-gray-700 break-all font-mono">{url}</p>
+            <div className="mb-6 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+              <p className="text-xs text-gray-500 mb-1 font-semibold uppercase tracking-wider">Lien de redirection</p>
+              <p className="text-sm text-gray-800 break-all font-medium">{url}</p>
             </div>
 
             {/* Actions */}
             <div className="flex gap-3">
               <Button
                 onClick={downloadQRCode}
-                className="flex-1 bg-gradient-to-r from-[#30A08B] to-[#258c78] hover:from-[#258c78] hover:to-[#1f7766] text-white"
+                className="flex-1 bg-gradient-to-r from-[#30A08B] to-[#B17236] hover:opacity-90 text-white shadow-md"
               >
                 <Download className="w-4 h-4 mr-2" />
                 Télécharger
@@ -147,7 +159,7 @@ export default function QRCodeGenerator({
               <Button
                 onClick={shareQRCode}
                 variant="outline"
-                className="flex-1"
+                className="flex-1 border-gray-300 hover:bg-gray-50"
               >
                 <Share2 className="w-4 h-4 mr-2" />
                 Partager
@@ -155,9 +167,9 @@ export default function QRCodeGenerator({
             </div>
 
             {/* Info */}
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-xs text-blue-800 text-center">
-                📱 Scannez ce QR code avec votre téléphone pour accéder directement à cette page
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-100 rounded-2xl">
+              <p className="text-xs text-blue-800 text-center leading-relaxed">
+                📱 Scannez ce QR code avec votre téléphone pour accéder directement à la page
               </p>
             </div>
           </div>

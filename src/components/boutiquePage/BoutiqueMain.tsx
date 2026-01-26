@@ -61,6 +61,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchUserLikes, toggleLike } from "@/redux/likesSlice";
 import QRCodeGenerator from "@/components/QRCodeGenerator";
+import QRCodeCard from "@/components/QRCodeCard";
 // import socialService from "./socialService"; // Vous devrez adapter ce service
 
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
@@ -724,8 +725,8 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
               </div>
             </div>
 
-            {/* Bouton suivre et QR code centrés sur mobile */}
-            <div className="flex flex-col sm:flex-row justify-center sm:justify-end items-center gap-3 mb-4">
+            {/* Bouton suivre centré sur mobile */}
+            <div className="flex justify-center sm:justify-end items-center mb-4">
               <Button
                 className={`rounded-full px-6 sm:px-8 py-2 sm:py-3 font-semibold transition-all text-sm sm:text-base ${
                   isFollowing
@@ -736,14 +737,27 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
               >
                 {isFollowing ? "✓ Suivi" : "Suivre"}
               </Button>
-              
-              {/* QR Code Boutique */}
-              <QRCodeGenerator
-                url={`${process.env.NEXT_PUBLIC_SITE_URL}/boutique/${encodeURIComponent(sellerInfo.storeName)}`}
-                title={sellerInfo.storeName}
-                description="Scannez pour voir cette boutique"
-                size={200}
-              />
+            </div>
+            
+            {/* Section QR Codes séparée */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3 text-center sm:text-left">Codes QR de la boutique</h3>
+              <div className="flex flex-wrap justify-center sm:justify-start items-center gap-3">
+                <QRCodeGenerator
+                  url={`${process.env.NEXT_PUBLIC_SITE_URL}/boutique/${encodeURIComponent(sellerInfo.storeName)}`}
+                  title={sellerInfo.storeName}
+                  description="Scannez pour voir cette boutique"
+                  size={200}
+                />
+                
+                <QRCodeCard
+                  type="boutique"
+                  url={`${process.env.NEXT_PUBLIC_SITE_URL}/boutique/${encodeURIComponent(sellerInfo.storeName)}`}
+                  title={sellerInfo.storeName}
+                  storeLogo={sellerInfo.logo}
+                  description={sellerInfo.storeDescription}
+                />
+              </div>
             </div>
 
             {/* Informations de contact optimisées mobile */}

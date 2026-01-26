@@ -38,6 +38,7 @@ import AppPromo from "./AppPromo";
 import { fetchUserLikes, toggleLike } from "@/redux/likesSlice";
 import { setProducts, Product, Variant } from "@/redux/productsSlice";
 import QRCodeGenerator from "@/components/QRCodeGenerator";
+import QRCodeCard from "@/components/QRCodeCard";
 
 // Fonction utilitaire pour combiner les classes CSS
 function cn(...classes: (string | undefined | boolean)[]): string {
@@ -1609,19 +1610,33 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
               <span className="text-sm">Partager</span>
               <ShareModal isOpen={isModalOpen} onClose={handleClose} />
             </div>
-
-            {/* QR Code Generator */}
-            {immediateProduct && (
-              <div className="flex flex-col items-center">
+          </div>
+          
+          {/* Section QR Codes - Séparée et bien visible */}
+          {immediateProduct && (
+            <div className="mt-4 pt-4 border-t">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3 text-center">Codes QR du produit</h3>
+              <div className="flex flex-wrap justify-center items-center gap-3">
                 <QRCodeGenerator
                   url={`${process.env.NEXT_PUBLIC_SITE_URL}/ProduitDetail/${immediateProduct._id}`}
                   title={immediateProduct.name}
                   description="Scannez pour voir ce produit"
                   size={200}
                 />
+                <QRCodeCard
+                  type="produit"
+                  url={`${process.env.NEXT_PUBLIC_SITE_URL}/ProduitDetail/${immediateProduct._id}`}
+                  title={immediateProduct.name}
+                  image={immediateProduct.image1}
+                  price={immediateProduct.prix}
+                  promoPrice={immediateProduct.prixPromo}
+                  storeName={immediateProduct.Clefournisseur?.storeName || "IhamBaobab"}
+                  storeLogo={immediateProduct.Clefournisseur?.logo}
+                  description={immediateProduct.description?.substring(0, 100)}
+                />
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
