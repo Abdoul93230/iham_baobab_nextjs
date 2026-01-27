@@ -44,7 +44,7 @@ async function getCategoryData(categoryName: string) {
       fetch(`${baseUrl}/getAllType`, { 
         next: { revalidate: 3600 }
       }),
-      fetch(`${baseUrl}/products`, { 
+      fetch(`${baseUrl}/ProductsClients`, { 
         next: { revalidate: 1800 } // Cache pendant 30 minutes
       })
     ]);

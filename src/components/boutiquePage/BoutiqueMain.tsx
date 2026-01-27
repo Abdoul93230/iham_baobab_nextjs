@@ -61,8 +61,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchUserLikes, toggleLike } from "@/redux/likesSlice";
 import QRCodeGenerator from "@/components/QRCodeGenerator";
-import QRCodeCard from "@/components/QRCodeCard";
-// import socialService from "./socialService"; // Vous devrez adapter ce service
+import QRCodeCardBoutique from "@/components/QRCodeCardBoutique";
 
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 
@@ -78,7 +77,6 @@ interface BoutiqueMainProps {
 const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeName }) => {
   const router = useRouter();
   const { toast } = useToast();
-  // console.log({sellerId,storeName});
 
   // États principaux
   const [activeTab, setActiveTab] = useState("home");
@@ -114,8 +112,8 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
   const [notificationType, setNotificationType] = useState("success");
   const dispatch = useAppDispatch();
   const likedProducts = useAppSelector((state: any) => state.likes.likedProducts);
-  const userId = typeof window !== 'undefined' 
-    ? JSON.parse(localStorage.getItem("userEcomme") || '{}')?.id 
+  const userId = typeof window !== 'undefined'
+    ? JSON.parse(localStorage.getItem("userEcomme") || '{}')?.id
     : null;
 
   useEffect(() => {
@@ -136,8 +134,8 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
 
   // Vérification de l'authentification
   useEffect(() => {
-    const token = typeof window !== 'undefined' 
-      ? JSON.parse(localStorage.getItem("userEcomme") || '{}')?.token 
+    const token = typeof window !== 'undefined'
+      ? JSON.parse(localStorage.getItem("userEcomme") || '{}')?.token
       : null;
     setIsAuthenticated(!!token);
   }, []);
@@ -280,15 +278,11 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
   };
 
   const fetchSuivi = async () => {
+    // Cette fonction nécessitera l'adaptation de votre socialService
     try {
-      // Cette fonction nécessitera l'adaptation de votre socialService
-      // const followersResponse = await socialService.getSellerFollowers(sellerId);
-      // const isUserFollowing = followersResponse.data.followers.some(
-      //   (follower: any) => follower._id === userId
-      // );
-      // setIsFollowing(isUserFollowing);
+      // Placeholder logic
     } catch (error) {
-      console.error("Erreur lors de la récupération de suivi:", error);
+      console.error("Erreur lors du suivi:", error);
     }
   };
 
@@ -305,7 +299,6 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
 
     try {
       if (isFollowing) {
-        // await socialService.unfollowSeller(sellerId);
         setIsFollowing(false);
         setSocialStats({
           ...socialStats,
@@ -313,7 +306,6 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
         });
         showToast("Vous ne suivez plus ce vendeur", "success");
       } else {
-        // await socialService.followSeller(sellerId);
         setIsFollowing(true);
         setSocialStats({
           ...socialStats,
@@ -399,18 +391,17 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
   };
 
   // Composant bouton d'onglet
-  const TabButton = ({ isActive, onClick, children }: { 
-    isActive: boolean; 
-    onClick: () => void; 
-    children: React.ReactNode; 
+  const TabButton = ({ isActive, onClick, children }: {
+    isActive: boolean;
+    onClick: () => void;
+    children: React.ReactNode;
   }) => (
     <button
       onClick={onClick}
-      className={`flex-1 sm:flex-none px-2 sm:px-4 py-3 text-xs sm:text-sm font-medium transition-all border-b-2 relative whitespace-nowrap ${
-        isActive
+      className={`flex-1 sm:flex-none px-2 sm:px-4 py-3 text-xs sm:text-sm font-medium transition-all border-b-2 relative whitespace-nowrap ${isActive
           ? "border-red-500 text-red-600 bg-red-50"
           : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
-      }`}
+        }`}
     >
       <span className="block sm:inline">{children}</span>
       {isActive && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500"></div>}
@@ -428,9 +419,8 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
 
     return (
       <Card
-        className={`group hover:shadow-xl transition-all duration-300 cursor-pointer border-0 shadow-md hover:scale-[1.02] ${
-          isCompact ? 'w-full' : ''
-        }`}
+        className={`group hover:shadow-xl transition-all duration-300 cursor-pointer border-0 shadow-md hover:scale-[1.02] ${isCompact ? 'w-full' : ''
+          }`}
         onClick={() => handleProductClick(product._id)}
       >
         <CardContent className="p-0">
@@ -438,13 +428,12 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
             <Image
               src={product.image1 || product.image}
               alt={product.name}
-              className={`w-full object-cover transition-transform duration-300 group-hover:scale-105 ${
-                isCompact ? 'h-24' : 'h-40 sm:h-48'
-              }`}
+              className={`w-full object-cover transition-transform duration-300 group-hover:scale-105 ${isCompact ? 'h-24' : 'h-40 sm:h-48'
+                }`}
               width={400}
               height={isCompact ? 96 : 192}
             />
-            
+
             {/* Badges */}
             <div className="absolute top-1 sm:top-2 left-1 sm:left-2 flex flex-col gap-1">
               {showRanking && (
@@ -473,11 +462,10 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
                 onClick={(e) => handleLikeClick(product, e)}
               >
                 <Heart
-                  className={`h-3 w-3 sm:h-4 sm:w-4 transition-colors ${
-                    likedProducts.includes(product._id) 
-                      ? "fill-red-500 text-red-500" 
+                  className={`h-3 w-3 sm:h-4 sm:w-4 transition-colors ${likedProducts.includes(product._id)
+                      ? "fill-red-500 text-red-500"
                       : "text-slate-600 hover:text-red-500"
-                  }`}
+                    }`}
                 />
               </Button>
             )}
@@ -511,9 +499,8 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
             )}
 
             {/* Nom du produit */}
-            <h3 className={`font-medium text-slate-800 line-clamp-2 leading-tight ${
-              isCompact ? 'text-sm' : 'text-sm sm:text-base'
-            }`}>
+            <h3 className={`font-medium text-slate-800 line-clamp-2 leading-tight ${isCompact ? 'text-sm' : 'text-sm sm:text-base'
+              }`}>
               {product.name}
             </h3>
 
@@ -550,8 +537,8 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
                   <div
                     key={idx}
                     className="w-3 h-3 sm:w-4 sm:h-4 rounded-full border border-slate-300 shadow-sm"
-                    style={{ 
-                      backgroundColor: variant.colorCode?.replace(/`/g, '') || variant.color 
+                    style={{
+                      backgroundColor: variant.colorCode?.replace(/`/g, '') || variant.color
                     }}
                     title={variant.color}
                   />
@@ -576,11 +563,10 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
   }) => (
     <button
       onClick={onClick}
-      className={`px-2 sm:px-4 py-2 text-xs sm:text-sm rounded-lg transition-all flex items-center gap-1 sm:gap-2 whitespace-nowrap ${
-        isActive
+      className={`px-2 sm:px-4 py-2 text-xs sm:text-sm rounded-lg transition-all flex items-center gap-1 sm:gap-2 whitespace-nowrap ${isActive
           ? "bg-red-500 text-white shadow-lg"
           : "text-slate-600 hover:bg-slate-100 border border-slate-200"
-      }`}
+        }`}
     >
       {icon}
       <span className="hidden sm:inline">{children}</span>
@@ -728,37 +714,64 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
             {/* Bouton suivre centré sur mobile */}
             <div className="flex justify-center sm:justify-end items-center mb-4">
               <Button
-                className={`rounded-full px-6 sm:px-8 py-2 sm:py-3 font-semibold transition-all text-sm sm:text-base ${
-                  isFollowing
+                className={`rounded-full px-6 sm:px-8 py-2 sm:py-3 font-semibold transition-all text-sm sm:text-base ${isFollowing
                     ? "bg-slate-200 text-slate-700 hover:bg-slate-300"
                     : "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg hover:shadow-xl"
-                }`}
+                  }`}
                 onClick={handleFollowToggle}
               >
                 {isFollowing ? "✓ Suivi" : "Suivre"}
               </Button>
             </div>
-            
-            {/* Section QR Codes séparée */}
+
+            {/* --- SECTION OUTILS DE PROMOTION (QR / FLYER) --- */}
+            {/* --- SECTION OUTILS DE PROMOTION --- */}
             <div className="border-t pt-4 mt-4">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3 text-center sm:text-left">Codes QR de la boutique</h3>
-              <div className="flex flex-wrap justify-center sm:justify-start items-center gap-3">
-                <QRCodeGenerator
-                  url={`${process.env.NEXT_PUBLIC_SITE_URL}/boutique/${encodeURIComponent(sellerInfo.storeName)}`}
-                  title={sellerInfo.storeName}
-                  description="Scannez pour voir cette boutique"
-                  size={200}
-                />
-                
-                <QRCodeCard
-                  type="boutique"
-                  url={`${process.env.NEXT_PUBLIC_SITE_URL}/boutique/${encodeURIComponent(sellerInfo.storeName)}`}
-                  title={sellerInfo.storeName}
-                  storeLogo={sellerInfo.logo}
-                  description={sellerInfo.storeDescription}
-                />
+              <div className="flex items-center gap-2 mb-3">
+                <Share2 className="text-red-500 h-4 w-4" />
+                <h3 className="text-sm font-semibold text-slate-700">Outils de promotion</h3>
+              </div>
+
+              <div className="space-y-4">
+                {/* Flyer Boutique Pro (On passe l'objet seller complet) */}
+                <div className="bg-gradient-to-br from-[#30A08B]/5 to-[#B17236]/5 border border-[#30A08B]/20 rounded-xl p-4 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-slate-800 uppercase tracking-wide">Flyer Complet</p>
+                      <p className="text-xs text-slate-500">Inclut: Contact, Horaires, Réseaux</p>
+                    </div>
+                    <div className="bg-white p-2 rounded-full shadow-sm">
+                      <Award className="text-[#30A08B] h-4 w-4" />
+                    </div>
+                  </div>
+
+                  <QRCodeCardBoutique
+                    seller={sellerInfo}
+                    url={`${process.env.NEXT_PUBLIC_SITE_URL}/boutique/${encodeURIComponent(sellerInfo.storeName)}`}
+                  />
+                </div>
+
+                {/* QR Rapide si besoin */}
+                <div className="bg-slate-50 rounded-xl p-4 flex items-center gap-4 border border-slate-100">
+                  <div className="bg-white p-2 rounded-lg shadow-sm border border-slate-200">
+                    <QRCodeGenerator
+                      url={`${process.env.NEXT_PUBLIC_SITE_URL}/boutique/${encodeURIComponent(sellerInfo.storeName)}`}
+                      title={sellerInfo.storeName}
+                      description="Scannez pour voir cette boutique"
+                      size={100}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-slate-800">QR Code Simple</p>
+                    <p className="text-xs text-slate-500 mb-2">Pour usage web rapide</p>
+                    <Button size="sm" variant="ghost" className="h-7 text-xs px-2 text-red-600 hover:bg-red-50">
+                      Télécharger
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
+            {/* --- FIN SECTION PROMOTION --- */}
 
             {/* Informations de contact optimisées mobile */}
             <div className="pt-4 border-t border-slate-200">
@@ -879,11 +892,10 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
                     {banners.map((banner, index) => (
                       <div
                         key={index}
-                        className={`absolute inset-0 transition-all duration-500 ease-in-out ${
-                          index === currentBannerIndex
+                        className={`absolute inset-0 transition-all duration-500 ease-in-out ${index === currentBannerIndex
                             ? 'opacity-100 scale-100'
                             : 'opacity-0 scale-105'
-                        }`}
+                          }`}
                       >
                         <Image
                           src={banner?.image}
@@ -922,11 +934,10 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
                         <button
                           key={index}
                           onClick={() => setCurrentBannerIndex(index)}
-                          className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all ${
-                            index === currentBannerIndex
+                          className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all ${index === currentBannerIndex
                               ? 'bg-white scale-110'
                               : 'bg-white/50 hover:bg-white/75'
-                          }`}
+                            }`}
                         />
                       ))}
                     </div>
@@ -1250,11 +1261,10 @@ const AdvancedECommercePage: React.FC<BoutiqueMainProps> = ({ sellerId, storeNam
                                 onClick={(e) => handleLikeClick(product, e)}
                               >
                                 <Heart
-                                  className={`h-4 w-4 sm:h-5 sm:w-5 transition-colors ${
-                                    likedProducts.includes(product._id)
+                                  className={`h-4 w-4 sm:h-5 sm:w-5 transition-colors ${likedProducts.includes(product._id)
                                       ? "fill-red-500 text-red-500"
                                       : "text-slate-400 hover:text-red-500"
-                                  }`}
+                                    }`}
                                 />
                               </Button>
                             </div>

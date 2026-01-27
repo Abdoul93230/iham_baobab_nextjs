@@ -81,7 +81,7 @@ export async function getServerPageData(productId: string): Promise<ServerPageDa
       categoriesResponse,
       commentsResponse
     ] = await Promise.allSettled([
-      axios.get(`${BackendUrl}/products`),
+      axios.get(`${BackendUrl}/ProductsClients`),
       axios.get(`${BackendUrl}/getAllType`),
       axios.get(`${BackendUrl}/getAllCategories`),
       axios.get(`${BackendUrl}/getAllCommenteProduitById/${productId}`)
