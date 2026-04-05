@@ -177,6 +177,42 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
       timeout: 20000,
     });
 
+    socketRef.current = socket;
+
+    const handleConnect = () => {
+      socket.emit("payment:join", { reference: order.reference });
+    };
+
+    const handlePaymentStatus = (event: any) => {
+      const eventReference = event?.reference || event?.externalReference;
+      if (eventReference !== order.reference) {
+        return;
+      }
+
+      if (handledPaymentRef.current === order.reference) {
+        return;
+      }
+
+      handledPaymentRef.current = order.reference;
+      const nextStatus = event?.status === "succeeded" ? "succeeded" : event?.status === "failed" ? "failed" : liveStatus;
+      setLiveStatus(nextStatus);
+
+      if (typeof window !== "undefined" && typeof (window as any).onCloseIpayCheckout === "function") {
+        (window as any).onCloseIpayCheckout();
+      }
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on("payment:status", handlePaymentStatus);
+
+    return () => {
+      socket.emit("payment:leave", { reference: order.reference });
+      socket.off("connect", handleConnect);
+      socket.off("payment:status", handlePaymentStatus);
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [order?.reference, liveStatus]);
 
   useEffect(() => {
     if (!BackendUrl || !order?.reference) {
@@ -228,43 +264,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [BackendUrl, order?.reference, liveStatus]);
-    socketRef.current = socket;
-
-    const handleConnect = () => {
-      socket.emit("payment:join", { reference: order.reference });
-    };
-
-    const handlePaymentStatus = (event: any) => {
-      const eventReference = event?.reference || event?.externalReference;
-      if (eventReference !== order.reference) {
-        return;
-      }
-
-      if (handledPaymentRef.current === order.reference) {
-        return;
-      }
-
-      handledPaymentRef.current = order.reference;
-      const nextStatus = event?.status === "succeeded" ? "succeeded" : event?.status === "failed" ? "failed" : liveStatus;
-      setLiveStatus(nextStatus);
-
-      if (typeof window !== "undefined" && typeof (window as any).onCloseIpayCheckout === "function") {
-        (window as any).onCloseIpayCheckout();
-      }
-    };
-
-    socket.on("connect", handleConnect);
-    socket.on("payment:status", handlePaymentStatus);
-
-    return () => {
-      socket.emit("payment:leave", { reference: order.reference });
-      socket.off("connect", handleConnect);
-      socket.off("payment:status", handlePaymentStatus);
-      socket.disconnect();
-      socketRef.current = null;
-    };
-  }, [order?.reference, status, liveStatus]);
+  }, [order?.reference, liveStatus]);
 
   // Fonction pour déterminer le type de commande en tenant compte du statut de transaction
   const getOrderType = (): string => {
@@ -916,7 +916,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                 <div className="text-sm text-gray-500 mt-2">
                   <p>
                     Mode de paiement : {
-                      {liveStatus === "succeeded"
+                      liveStatus === "succeeded"
                         ? "Payé en ligne"
                           : liveStatus === "failed"
                           ? "Paiement échoué"
