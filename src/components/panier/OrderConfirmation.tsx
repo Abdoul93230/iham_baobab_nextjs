@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { AlertCircle, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import axios from "axios";
+import { io, Socket } from "socket.io-client";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import PaiementPage from "./PaiementPage";
 
@@ -157,6 +158,20 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
     }
     return 0;
   });
+  const [orderSubtotal, setOrderSubtotal] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedSubtotal = localStorage.getItem("orderSubtotal");
+      return savedSubtotal ? parseFloat(savedSubtotal) : 0;
+    }
+    return 0;
+  });
+  const [orderShippingCost, setOrderShippingCost] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedShipping = localStorage.getItem("orderShippingCost");
+      return savedShipping ? parseFloat(savedShipping) : 0;
+    }
+    return 0;
+  });
   const [orderCodeP, setOrderCodeP] = useState(() => {
     if (typeof window !== 'undefined') {
       const savedCodeP = localStorage.getItem("orderCodeP");
@@ -195,6 +210,8 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
     success: false,
   });
   const [paiementProduit, setPaiementProduit] = useState(false);
+  const [trackedTransactionId, setTrackedTransactionId] = useState<string | null>(null);
+  const handledPaymentRef = useRef<string | null>(null);
 
   const spinnerStyle = {
     border: "4px solid rgba(0, 0, 0, 0.1)",
@@ -205,6 +222,34 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
     animation: "spin 1s linear infinite",
     margin: "auto",
   };
+
+  const clearSuccessfulPaymentState = useCallback(async (transactionId: string) => {
+    if (handledPaymentRef.current === transactionId) {
+      return;
+    }
+
+    handledPaymentRef.current = transactionId;
+
+    ["panier", "orderTotal", "paymentInfo", "pendingOrder", "orderShippingZone", "orderCodeP", "paymentInitiated"].forEach((key) =>
+      localStorage.removeItem(key)
+    );
+
+    if (orderCodeP?.isValide) {
+      await axios.put(`${BackendUrl}/updateCodePromo`, {
+        codePromoId: orderCodeP._id,
+        isValide: false,
+      });
+      localStorage.removeItem("orderCodeP");
+    }
+
+    setSubmitStatus({
+      loading: false,
+      error: "Paiement confirmé par iPay",
+      success: true,
+    });
+    setPaiementProduit(true);
+    setOnSubmit(false);
+  }, [orderCodeP]);
 
   // Récupération utilisateur avec vérification côté client
   const [user, setUser] = useState<any>(null);
@@ -461,120 +506,120 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
     }
 
     // Démarrer la vérification progressive
-    startProgressiveChecks(transactionId);
+    // startProgressiveChecks(transactionId);
 
     return response;
   };
 
-  const startProgressiveChecks = (transactionId: string) => {
-    let checkCount = 0;
-    const maxChecks = 10;
-    const initialDelay = 10000;
+  // const startProgressiveChecks = (transactionId: string) => {
+  //   let checkCount = 0;
+  //   const maxChecks = 10;
+  //   const initialDelay = 10000;
 
-    const progressiveCheck = async () => {
-      try {
-        if (typeof window === 'undefined') return;
+  //   const progressiveCheck = async () => {
+  //     try {
+  //       if (typeof window === 'undefined') return;
 
-        const transactionInfo = JSON.parse(
-          localStorage.getItem("currentTransaction") || "{}"
-        );
-        if (!transactionInfo || transactionInfo.id !== transactionId) return;
+  //       const transactionInfo = JSON.parse(
+  //         localStorage.getItem("currentTransaction") || "{}"
+  //       );
+  //       if (!transactionInfo || transactionInfo.id !== transactionId) return;
 
-        checkCount++;
-        const status = await checkTransactionStatus(transactionId);
+  //       checkCount++;
+  //       const status = await checkTransactionStatus(transactionId);
 
-        if (status.isCompleted) {
-          if (status.isSuccessful) {
-            await handlePaymentCallback("success", transactionId);
-            setSubmitStatus({
-              loading: false,
-              error: null,
-              success: true,
-            });
-          } else {
-            setSubmitStatus({
-              loading: false,
-              error: "Le paiement n'a pas été complété",
-              success: false,
-            });
-          }
-          localStorage.removeItem("currentTransaction");
-          return;
-        }
+  //       if (status.isCompleted) {
+  //         if (status.isSuccessful) {
+  //           await handlePaymentCallback("success", transactionId);
+  //           setSubmitStatus({
+  //             loading: false,
+  //             error: null,
+  //             success: true,
+  //           });
+  //         } else {
+  //           setSubmitStatus({
+  //             loading: false,
+  //             error: "Le paiement n'a pas été complété",
+  //             success: false,
+  //           });
+  //         }
+  //         localStorage.removeItem("currentTransaction");
+  //         return;
+  //       }
 
-        if (checkCount < maxChecks) {
-          const nextDelay = initialDelay * Math.pow(1.5, checkCount - 1);
-          setTimeout(progressiveCheck, nextDelay);
-        }
-      } catch (error) {
-        console.error("Erreur lors de la vérification:", error);
-      }
-    };
+  //       if (checkCount < maxChecks) {
+  //         const nextDelay = initialDelay * Math.pow(1.5, checkCount - 1);
+  //         setTimeout(progressiveCheck, nextDelay);
+  //       }
+  //     } catch (error) {
+  //       console.error("Erreur lors de la vérification:", error);
+  //     }
+  //   };
 
-    setTimeout(progressiveCheck, initialDelay);
-  };
+  //   setTimeout(progressiveCheck, initialDelay);
+  // };
 
   // Effet pour gérer le retour de l'application mobile
-  useEffect(() => {
-    const handleVisibilityChange = async () => {
-      if (typeof window === 'undefined') return;
+  // useEffect(() => {
+  //   const handleVisibilityChange = async () => {
+  //     if (typeof window === 'undefined') return;
 
-      if (!document.hidden) {
-        const transactionInfo = JSON.parse(
-          localStorage.getItem("currentTransaction") || "{}"
-        );
-        if (!transactionInfo) return;
+  //     if (!document.hidden) {
+  //       const transactionInfo = JSON.parse(
+  //         localStorage.getItem("currentTransaction") || "{}"
+  //       );
+  //       if (!transactionInfo) return;
 
-        const timeElapsed = Date.now() - transactionInfo.startTime;
-        if (timeElapsed > 900000) {
-          localStorage.removeItem("currentTransaction");
-          setSubmitStatus({
-            loading: false,
-            error: "Le délai de paiement a expiré",
-            success: false,
-          });
-          return;
-        }
+  //       const timeElapsed = Date.now() - transactionInfo.startTime;
+  //       if (timeElapsed > 900000) {
+  //         localStorage.removeItem("currentTransaction");
+  //         setSubmitStatus({
+  //           loading: false,
+  //           error: "Le délai de paiement a expiré",
+  //           success: false,
+  //         });
+  //         return;
+  //       }
 
-        const timeSinceLastCheck = Date.now() - transactionInfo.lastCheckTime;
-        if (timeSinceLastCheck < 5000) return;
+  //       const timeSinceLastCheck = Date.now() - transactionInfo.lastCheckTime;
+  //       if (timeSinceLastCheck < 5000) return;
 
-        try {
-          const status = await checkTransactionStatus(transactionInfo.id);
-          transactionInfo.lastCheckTime = Date.now();
-          localStorage.setItem(
-            "currentTransaction",
-            JSON.stringify(transactionInfo)
-          );
+  //       try {
+  //         const status = await checkTransactionStatus(transactionInfo.id);
+  //         transactionInfo.lastCheckTime = Date.now();
+  //         localStorage.setItem(
+  //           "currentTransaction",
+  //           JSON.stringify(transactionInfo)
+  //         );
 
-          if (status.isCompleted) {
-            if (status.isSuccessful) {
-              await handlePaymentCallback("success", transactionInfo.id);
-              setSubmitStatus({
-                loading: false,
-                error: null,
-                success: true,
-              });
-            } else {
-              setSubmitStatus({
-                loading: false,
-                error: "Le paiement n'a pas été complété",
-                success: false,
-              });
-            }
-            localStorage.removeItem("currentTransaction");
-          }
-        } catch (error) {
-          console.error("Erreur lors de la vérification au retour:", error);
-        }
-      }
-    };
+  //         if (status.isCompleted) {
+  //           if (status.isSuccessful) {
+  //             await handlePaymentCallback("success", transactionInfo.id);
+  //             setSubmitStatus({
+  //               loading: false,
+  //               error: null,
+  //               success: true,
+  //             });
+  //           } else {
+  //             setSubmitStatus({
+  //               loading: false,
+  //               error: "Le paiement n'a pas été complété",
+  //               success: false,
+  //             });
+  //           }
+  //           localStorage.removeItem("currentTransaction");
+  //         }
+  //       } catch (error) {
+  //         console.error("Erreur lors de la vérification au retour:", error);
+  //       }
+  //     }
+  //   };
 
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, []);
+  //   document.addEventListener("visibilitychange", handleVisibilityChange);
+  //   return () => {
+  //     document.removeEventListener("visibilitychange", handleVisibilityChange);
+  //   };
+  // }, []);
 
   // Service pour la gestion des messages
   const AlertService = {
@@ -588,57 +633,17 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
     },
   };
 
-  // Service pour la gestion des codes promo
+  // Service pour la gestion des codes promo (V2 — le backend gère tout)
   const PromoCodeService = {
-    async validateAndApply(codePromo: any, orderTotal: number, setSubmitStatus: any) {
-      if (!codePromo?.isValide) return orderTotal;
-
-      try {
-        const response = await axios.get(
-          `${BackendUrl}/getCodePromoById/${codePromo._id}`
-        );
-        const promoDetails = response.data.data;
-
-        if (
-          !promoDetails.isValide ||
-          new Date(promoDetails.dateExpirate) < new Date()
-        ) {
-          AlertService.showAlert(
-            setSubmitStatus,
-            "Code promo expiré ou invalide"
-          );
-          return orderTotal;
-        }
-        if (promoDetails?.isWelcomeCode === true) {
-          const reduction = (orderTotal * promoDetails?.prixReduiction) / 100;
-          return orderTotal - reduction;
-        }
-
-        return orderTotal - promoDetails.prixReduiction;
-      } catch (error) {
-        console.error("Erreur validation code promo:", error);
-        AlertService.showAlert(
-          setSubmitStatus,
-          "Erreur lors de la validation du code promo"
-        );
-        return orderTotal;
-      }
+    getDiscount() {
+      // La réduction a déjà été calculée côté serveur lors de la validation dans le panier
+      if (!orderCodeP?.isValide) return 0;
+      return orderCodeP.discount || 0;
     },
 
-    async invalidatePromoCode(codePromoId: string) {
-      if (!codePromoId) return;
-
-      try {
-        await axios.put(`${BackendUrl}/updateCodePromo`, {
-          codePromoId,
-          isValide: false,
-        });
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem("orderCodeP");
-        }
-      } catch (error) {
-        console.error("Erreur invalidation code promo:", error);
-      }
+    getPromoCodeId() {
+      if (!orderCodeP?.isValide) return null;
+      return orderCodeP._id || null;
     },
   };
 
@@ -731,18 +736,21 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
     }
 
     try {
-      // 3. Application du code promo
-      const finalOrderTotal = await PromoCodeService.validateAndApply(
-        orderCodeP,
-        orderTotal,
-        setSubmitStatus
-      );
+      // 3. Le backend recalcule la réduction, on envoie juste le promoCodeId
+      const promoDiscount = PromoCodeService.getDiscount();
+      const promoCodeId = PromoCodeService.getPromoCodeId();
+      
+      // AVANT FIX: const finalOrderTotal = orderTotal - promoDiscount; // orderTotal already has discount, so this was a double subtraction
+      // FIX: orderTotal is already (Subtotal - Reduction + Shipping)
+      const finalOrderTotal = orderTotal; 
 
       // 4. Création ou mise à jour de la commande
       const existingOrder = JSON.parse(localStorage.getItem("pendingOrder") || "null");
       const transactionId = generateUniqueID();
+      handledPaymentRef.current = null;
+      setTrackedTransactionId(transactionId);
 
-      const orderData = {
+      const orderData: any = {
         clefUser: userId,
         nbrProduits: panier.map((item: any) => ({
           produit: item._id,
@@ -750,7 +758,10 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
           tailles: item.sizes,
           couleurs: item.colors,
         })),
-        prix: finalOrderTotal,
+        prix: finalOrderTotal, // Total final à payer (incluant livraison et réduction)
+        prixTotal: orderSubtotal, // Sous-total des produits uniquement
+        fraisLivraison: orderShippingCost,
+        reduction: promoDiscount,
         statusPayment: PaymentMethods.CASH_ON_DELIVERY.includes(selectedPayment)
           ? "payé à la livraison" : PaymentMethods.ASSISTED_PAYMENT.includes(selectedPayment)
           ? "payé par téléphone"
@@ -765,9 +776,9 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
           description: deliveryInfo.description,
         },
         prod: panier,
-        ...(orderCodeP?.isValide && {
+        ...(promoCodeId && {
           codePro: true,
-          idCodePro: orderCodeP._id,
+          idCodePro: promoCodeId,
         }),
       };
 
@@ -799,45 +810,39 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
           transactionId,
           finalOrderTotal
         );
-        // if (!paymentStatus?.status || paymentStatus?.status !== "complete") {
-        //   AlertService.showAlert(
-        //     setSubmitStatus,
-        //     paymentStatus?.data?.message ||
-        //     paymentStatus?.response?.data?.message ||
-        //     "Le paiement a échoué. Veuillez réessayer."
-        //   );
-        //   return;
-        // }
 
         if (
           !paymentStatus ||
           typeof paymentStatus !== "object" ||
           !("status" in paymentStatus) 
-          // ||
-          // paymentStatus.status !== "complete"
         ) {
           AlertService.showAlert(
             setSubmitStatus,
-            // paymentStatus?.data?.message ||
-            // paymentStatus?.response?.data?.message ||
             "Le paiement a échoué. Veuillez réessayer."
           );
           return;
         }
-        return
+
+        // Appel de vérification (polling) pour les paiements électroniques
+        if (typeof window !== 'undefined') {
+          localStorage.setItem("paymentInitiated", JSON.stringify({
+             transactionId,
+             method: selectedPayment,
+             timestamp: Date.now()
+          }));
+        }
+        setTrackedTransactionId(transactionId);
+        handledPaymentRef.current = null;
+        checkPendingPayment2(transactionId);
+        return;
       }
 
-      checkPendingPayment2(transactionId);
-
-      // 6. Finalisation
-      await PromoCodeService.invalidatePromoCode(orderCodeP?._id);
-
-      // 7. Nettoyage
+      // 6. Nettoyage et succès IMMÉDIAT pour Paiement à la Livraison ou Assisté
       ["panier", "orderTotal", "paymentInfo", "pendingOrder", "orderShippingZone", "orderCodeP"].forEach((key) =>
         localStorage.removeItem(key)
       );
 
-      // 8. Succès
+      // 7. Succès
       setSubmitStatus({
         loading: false,
         error: null,
@@ -960,7 +965,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
           paymentWindow.location.href = response.data.redirectUrl;
         }
 
-        return checkTransactionStatus2(transactionId);
+        // return checkTransactionStatus2(transactionId);
       } catch (error) {
         this.handlePaymentError(
           error,
@@ -1138,64 +1143,44 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
       setSubmitStatus
     );
 
-  // Fonction utilitaire pour gérer les callbacks de paiement
-  const handlePaymentCallback = async (status: string, transactionId: string) => {
-    await axios.post(`${BackendUrl}/payment_callback`, {
-      status,
-      customerName: user?.name,
-      msisdn: deliveryInfo.countryCode + deliveryInfo.numero, // Numéro complet international
-      reference: "komipay",
-      publicReference: selectedPayment,
-      externalReference: transactionId,
-      amount: orderTotal,
-      paymentDate: Date.now(),
-    });
+  const normalizePaymentStatus = (rawStatus?: string) => {
+    const status = (rawStatus || "").toString().trim().toLowerCase();
+
+    if (
+      [
+        "payé",
+        "paye",
+        "paid",
+        "success",
+        "succeeded",
+        "completed",
+        "payé à la livraison",
+        "payé par téléphone",
+      ].includes(status)
+    ) {
+      return "succeeded";
+    }
+
+    if (["échec", "echec", "failed", "cancelled", "canceled", "rejected"].includes(status)) {
+      return "failed";
+    }
+
+    return "pending";
   };
 
-  // Fonction utilitaire pour vérifier le statut
   const checkTransactionStatus = async (transactionId: string) => {
     try {
-      const response = await axios.get(`${BackendUrl}/payment_status_card`, {
-        params: {
-          externalRef: transactionId,
-        },
-      });
+      const response = await axios.get(`${BackendUrl}/getCommandeByReference/${transactionId}`);
+      const order = response?.data?.commande;
+      const normalizedStatus = normalizePaymentStatus(order?.statusPayment);
 
-      if (
-        response?.data?.rawResponse?.code === 200 ||
-        response?.data?.rawResponse?.code === 201
-      ) {
-        await handlePaymentCallback("success", transactionId);
-        return { isCompleted: true, isSuccessful: true };
-      } else {
-        await handlePaymentCallback("échec", transactionId);
-        return { isCompleted: true, isSuccessful: false };
-      }
+      return {
+        isCompleted: normalizedStatus !== "pending",
+        isSuccessful: normalizedStatus === "succeeded",
+      };
     } catch (error) {
-      console.error("Erreur lors de la vérification du statut:", error);
+      console.error("Erreur lors de la vérification du statut de commande:", error);
       return { isCompleted: false, isSuccessful: false };
-    }
-  };
-
-  const checkTransactionStatus2 = async (transactionId: string) => {
-    try {
-      const response = await axios.get(`${BackendUrl}/payment_status_card`, {
-        params: {
-          externalRef: transactionId,
-        },
-      });
-
-      if (
-        response?.data?.rawResponse?.code === 200 ||
-        response?.data?.rawResponse?.code === 201
-      ) {
-        return { status: "complete", response };
-      } else {
-        return { status: "echec", response };
-      }
-    } catch (error) {
-      console.error("Erreur lors de la vérification du statut:", error);
-      return error;
     }
   };
 
@@ -1206,11 +1191,36 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
 
       const pendingPayment = localStorage.getItem("paymentInitiated");
       if (pendingPayment) {
+        const { transactionId, method } = JSON.parse(pendingPayment);
+        setTrackedTransactionId(transactionId);
+        handledPaymentRef.current = null;
+        
+        // NE PAS POLER si c'est un paiement manuel
+        if (PaymentMethods.CASH_ON_DELIVERY.includes(method) || PaymentMethods.ASSISTED_PAYMENT.includes(method)) {
+          localStorage.removeItem("paymentInitiated");
+          return;
+        }
+
         setSubmitStatus({ loading: true, error: null, success: false });
-        const { transactionId } = JSON.parse(pendingPayment);
         try {
           const status = await checkTransactionStatus(transactionId);
+          if (handledPaymentRef.current === transactionId) {
+            return;
+          }
+
+          if (!status.isCompleted) {
+            setSubmitStatus({
+              loading: false,
+              error: "Paiement en attente de confirmation iPay.",
+              success: false,
+            });
+            return;
+          }
+
           if (status.isCompleted && status.isSuccessful) {
+            if (typeof window !== 'undefined' && typeof (window as any).onCloseIpayCheckout === "function") {
+              (window as any).onCloseIpayCheckout();
+            }
             localStorage.removeItem("panier");
             localStorage.removeItem("orderTotal");
             localStorage.removeItem("paymentInfo");
@@ -1231,18 +1241,28 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
               success: true,
             });
             setPaiementProduit(true);
-            router.push("/commandes");
+            localStorage.removeItem("paymentInitiated");
+            router.push(`/commandesReference?transactionId=${transactionId}&status=succeeded&amount=${orderTotal}`);
           } else {
+            if (typeof window !== 'undefined' && typeof (window as any).onCloseIpayCheckout === "function") {
+              (window as any).onCloseIpayCheckout();
+            }
             setSubmitStatus({
               loading: false,
               error: "Le paiement a échoué. Veuillez réessayer.",
               success: false,
             });
             setOnSubmit(false);
+            localStorage.removeItem("paymentInitiated");
+            router.push(`/commandesReference?transactionId=${transactionId}&status=failed&amount=${orderTotal}`);
           }
-        } finally {
-          setSubmitStatus({ loading: false, error: null, success: false });
-          localStorage.removeItem("paymentInitiated");
+        } catch (error) {
+          console.error("Erreur lors de la reprise de vérification du paiement:", error);
+          setSubmitStatus({
+            loading: false,
+            error: "Impossible de vérifier le paiement pour le moment.",
+            success: false,
+          });
         }
       }
     };
@@ -1250,34 +1270,102 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
     checkPendingPayment();
   }, []);
 
+  useEffect(() => {
+    if (!BackendUrl || !trackedTransactionId || typeof window === "undefined") {
+      return;
+    }
+
+    const socket: Socket = io(BackendUrl, {
+      transports: ["websocket", "polling"],
+      timeout: 20000,
+    });
+
+    const handleConnect = () => {
+      socket.emit("payment:join", { reference: trackedTransactionId });
+    };
+
+    const handlePaymentStatus = async (event: any) => {
+      const eventReference = event?.externalReference || event?.reference;
+      if (eventReference !== trackedTransactionId) {
+        return;
+      }
+
+      if (handledPaymentRef.current === trackedTransactionId) {
+        return;
+      }
+
+      if (event?.status === "succeeded") {
+        if (typeof window !== 'undefined' && typeof (window as any).onCloseIpayCheckout === "function") {
+          (window as any).onCloseIpayCheckout();
+        }
+        await clearSuccessfulPaymentState(trackedTransactionId);
+        AlertService.showAlert(setSubmitStatus, "Paiement validé par le webhook", "success");
+        router.push(`/commandesReference?transactionId=${trackedTransactionId}&status=succeeded&amount=${orderTotal}`);
+      } else if (event?.status === "failed") {
+        handledPaymentRef.current = trackedTransactionId;
+        if (typeof window !== 'undefined' && typeof (window as any).onCloseIpayCheckout === "function") {
+          (window as any).onCloseIpayCheckout();
+        }
+        setSubmitStatus({
+          loading: false,
+          error: "Le paiement a échoué (confirmation reçue par webhook).",
+          success: false,
+        });
+        setOnSubmit(false);
+        router.push(`/commandesReference?transactionId=${trackedTransactionId}&status=failed&amount=${orderTotal}`);
+      }
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on("payment:status", handlePaymentStatus);
+
+    return () => {
+      socket.emit("payment:leave", { reference: trackedTransactionId });
+      socket.off("connect", handleConnect);
+      socket.off("payment:status", handlePaymentStatus);
+      socket.disconnect();
+    };
+  }, [BackendUrl, trackedTransactionId, clearSuccessfulPaymentState, router]);
+
   const checkPendingPayment2 = async (transactionId: string) => {
     setSubmitStatus({ loading: true, error: null, success: false });
     setMessage("vérification du paiement en cours");
     try {
       const status = await checkTransactionStatus(transactionId);
+      if (handledPaymentRef.current === transactionId) {
+        return;
+      }
       if (status.isCompleted && status.isSuccessful) {
+        if (typeof window !== 'undefined' && typeof (window as any).onCloseIpayCheckout === "function") {
+          (window as any).onCloseIpayCheckout();
+        }
         setSubmitStatus({
           loading: false,
           error: "Paiement effectué avec succès",
           success: true,
         });
         setPaiementProduit(true);
+        localStorage.removeItem("paymentInitiated");
+        router.push(`/commandesReference?transactionId=${transactionId}&status=succeeded&amount=${orderTotal}`);
       } else if (!status.isCompleted) {
-        setMessage(message + "paiement en attente veuillez valider d'abord!");
+        setMessage("Paiement en attente: veuillez valider sur iPay.");
+        setSubmitStatus({ loading: false, error: "Paiement en attente de confirmation iPay.", success: false });
         return;
       } else {
+        if (typeof window !== 'undefined' && typeof (window as any).onCloseIpayCheckout === "function") {
+          (window as any).onCloseIpayCheckout();
+        }
         setSubmitStatus({
           loading: false,
           error: "Le paiement a échoué. Veuillez réessayer.",
           success: false,
         });
         setOnSubmit(false);
+        localStorage.removeItem("paymentInitiated");
+        router.push(`/commandesReference?transactionId=${transactionId}&status=failed&amount=${orderTotal}`);
       }
     } finally {
-      setSubmitStatus({ loading: false, error: null, success: false });
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem("paymentInitiated");
-      }
+      setSubmitStatus((prev) => ({ ...prev, loading: false }));
     }
   };
 

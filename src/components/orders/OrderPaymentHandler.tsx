@@ -41,7 +41,7 @@ const OrderPaymentHandler: React.FC<OrderPaymentHandlerProps> = ({
           })
         );
 
-      if (pendingOrder !== null && id !== null)
+      if (pendingOrder !== null && id !== null) {
         localStorage.setItem(
           "paymentInitiated",
           JSON.stringify({
@@ -50,6 +50,15 @@ const OrderPaymentHandler: React.FC<OrderPaymentHandlerProps> = ({
             timestamp: new Date().getTime(),
           })
         );
+        
+        // Sauvegarder aussi les infos du code promo pour pré-remplissage
+        if (order.idCodePro) {
+          localStorage.setItem("idCodePro", order.idCodePro);
+          if (order.codePromo) {
+            localStorage.setItem("appliedPromoCode", order.codePromo);
+          }
+        }
+      }
 
       // Rediriger vers la page panier
       router.push("/Panier");

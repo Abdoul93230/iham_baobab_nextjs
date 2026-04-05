@@ -14,6 +14,7 @@ window.onCloseIpayCheckout = function onCloseIpayCheckout() {
 };
 
 window.addEventListener("message", function (message) {
+  console.log({data:message.data});
   if (message.data.type == "closeModal") onCloseIpayCheckout();
   if (message.data.type == "payment.response") {
     if (redirectUrl && message.data.other.status == "succeeded"){

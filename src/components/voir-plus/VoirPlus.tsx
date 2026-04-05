@@ -23,7 +23,7 @@ export default function VoirPlus() {
 
   const handleCategoryClick = (category: any) => {
     setSelectedCategory(category);
-    router.push(`/categorie/${category.name}`);
+    router.push(`/Categorie/${category.name}`);
   };
 
   return (

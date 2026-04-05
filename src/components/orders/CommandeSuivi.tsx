@@ -28,6 +28,7 @@ import axios from "axios";
 import OrderedItems from "./OrderedItems";
 import OrderPaymentHandler from "./OrderPaymentHandler";
 import OrderTracking from "./OrderTracking";
+import { formatCurrency } from "@/lib/utils";
 
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 
@@ -46,6 +47,9 @@ interface Order {
   idCodePro?: string;
   clefUser?: string;
   reduction?: number;
+  prixTotal?: number;
+  fraisLivraison?: number;
+  codePromo?: string;
   dateValidation?: string;
 }
 
@@ -77,7 +81,7 @@ const CommandeSuivi: React.FC = () => {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
-  
+
   const [activeTab, setActiveTab] = useState("details");
   const [showModal, setShowModal] = useState(false);
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
@@ -90,7 +94,7 @@ const CommandeSuivi: React.FC = () => {
   const [promoCode, setPromoCode] = useState<PromoCode | null>(null);
   const [reorderLoading, setReorderLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -114,7 +118,8 @@ const CommandeSuivi: React.FC = () => {
           `${BackendUrl}/getCommandesById/${id}`
         );
         setOrder(orderResponse.data.commande);
-        
+
+
         if (orderResponse.data.commande?.livraisonDetails) {
           setShippingAddress(orderResponse.data.commande?.livraisonDetails);
         } else {
@@ -168,7 +173,7 @@ const CommandeSuivi: React.FC = () => {
     return (
       orderType === "cancelled" ||
       order?.statusPayment === "échec" ||
-      (order?.statusPayment !== "payé à la livraison" && order?.statusPayment !== "payé" && order?.statusPayment !== "recu")
+      (order?.statusPayment !== "payé" && order?.statusPayment !== "recu")
     );
   };
 
@@ -201,9 +206,8 @@ const CommandeSuivi: React.FC = () => {
 
   const ChatMessage: React.FC<{ message: Message }> = ({ message }) => (
     <div
-      className={`flex ${
-        message.isDeliverer ? "justify-start" : "justify-end"
-      } mb-4`}
+      className={`flex ${message.isDeliverer ? "justify-start" : "justify-end"
+        } mb-4`}
     >
       <div className="max-w-[100%] sm:max-w-[70%] bg-gray-100 rounded-lg p-3">
         <div className="flex items-start gap-2">
@@ -214,9 +218,8 @@ const CommandeSuivi: React.FC = () => {
           )}
           <div className="flex-1">
             <p
-              className={`text-sm font-medium ${
-                message.isDeliverer ? "text-gray-800" : "text-teal-800"
-              }`}
+              className={`text-sm font-medium ${message.isDeliverer ? "text-gray-800" : "text-teal-800"
+                }`}
             >
               {message.isDeliverer ? "Livreur" : "Vous"}
             </p>
@@ -236,12 +239,8 @@ const CommandeSuivi: React.FC = () => {
     </div>
   );
 
-  const formatPrice = (price: number): string => {
-    return new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "XOF",
-    }).format(price);
-  };
+  // Utilisation du formateur global
+  const formatPrice = (price: number) => formatCurrency(price);
 
   if (loading) {
     return (
@@ -289,11 +288,10 @@ const CommandeSuivi: React.FC = () => {
         {/* Affichage conditionnel des onglets selon le type de commande */}
         <div className="flex mb-4 border-b">
           <button
-            className={`px-4 py-2 ${
-              activeTab === "details"
+            className={`px-4 py-2 ${activeTab === "details"
                 ? "border-b-2 border-teal text-teal"
                 : "text-gray-600"
-            }`}
+              }`}
             onClick={() => setActiveTab("details")}
           >
             Détails de la commande
@@ -302,11 +300,10 @@ const CommandeSuivi: React.FC = () => {
           {/* Masquer l'onglet carte pour les commandes annulées */}
           {orderType !== "cancelled" && (
             <button
-              className={`px-4 py-2 ${
-                activeTab === "map"
+              className={`px-4 py-2 ${activeTab === "map"
                   ? "border-b-2 border-teal text-teal"
                   : "text-gray-600"
-              }`}
+                }`}
               onClick={() => setActiveTab("map")}
             >
               Suivre sur la carte
@@ -320,7 +317,7 @@ const CommandeSuivi: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-4 mb-4 md:mb-0">
               {/* Gestion des paiements échoués */}
               {(order?.statusPayment === "échec" ||
-                (order?.statusPayment !== "payé à la livraison" && order?.statusPayment !== "recu" && 
+                (order?.statusPayment !== "recu" &&
                   order?.statusPayment !== "payé")) ? (
                 <OrderPaymentHandler
                   panier={order?.prod || null}
@@ -349,13 +346,12 @@ const CommandeSuivi: React.FC = () => {
                   Commande #{order?._id?.slice(0, 7) || "N/A"} ...
                 </h1>
                 <span
-                  className={`px-4 py-1 text-nowrap text-white rounded-full text-xs md:text-sm ${
-                    orderType === "cancelled"
+                  className={`px-4 py-1 text-nowrap text-white rounded-full text-xs md:text-sm ${orderType === "cancelled"
                       ? "bg-red-500"
                       : orderType === "completed"
-                      ? "bg-green-500"
-                      : "bg-teal-500"
-                  }`}
+                        ? "bg-green-500"
+                        : "bg-teal-500"
+                    }`}
                 >
                   {orderType === "cancelled" && <XCircle className="w-3 h-3 inline mr-1" />}
                   {orderType === "completed" && <CheckCircle className="w-3 h-3 inline mr-1" />}
@@ -401,40 +397,43 @@ const CommandeSuivi: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {shippingAddress && (
                     <>
-                      <div className="bg-white rounded-lg p-4 shadow">
-                        <p className="font-medium">Nom du client</p>
-                        <p className="text-gray-600">{shippingAddress.name || shippingAddress.customerName}</p>
-                      </div>
-                      <div className="bg-white rounded-lg p-4 shadow">
-                        <p className="font-medium">Email</p>
-                        <p className="text-gray-600">{shippingAddress.email}</p>
-                      </div>
-                      <div className="bg-white rounded-lg p-4 shadow">
-                        <p className="font-medium">Région</p>
-                        <p className="text-gray-600">
-                          {shippingAddress.region}
-                        </p>
-                      </div>
-                      <div className="bg-white rounded-lg p-4 shadow">
-                        <p className="font-medium">Quartier</p>
-                        <p className="text-gray-600">
-                          {shippingAddress.quartier}
-                        </p>
-                      </div>
-                      <div className="bg-white rounded-lg p-4 shadow">
-                        <p className="font-medium">Numéro de téléphone</p>
-                        <p className="text-gray-600">
-                          {shippingAddress.numero}
-                        </p>
-                      </div>
-                      {shippingAddress.description && (
-                        <div className="bg-white rounded-lg p-4 shadow">
-                          <p className="font-medium">Description</p>
-                          <p className="text-gray-600">
-                            {shippingAddress.description}
-                          </p>
+                      <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                        <div className="flex items-center gap-3 mb-2">
+                          <User className="w-5 h-5 text-teal-600" />
+                          <p className="font-semibold text-gray-900">Client</p>
                         </div>
-                      )}
+                        <p className="text-gray-700 font-medium">{shippingAddress.name || shippingAddress.customerName}</p>
+                        <p className="text-gray-500 text-sm">{shippingAddress.email}</p>
+                      </div>
+
+                      <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                        <div className="flex items-center gap-3 mb-2">
+                          <MapPin className="w-5 h-5 text-teal-600" />
+                          <p className="font-semibold text-gray-900">Destination</p>
+                        </div>
+                        <p className="text-gray-700 font-medium">{shippingAddress.region}</p>
+                        <p className="text-gray-500 text-sm">{shippingAddress.quartier}</p>
+                      </div>
+
+                      <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                        <div className="flex items-center gap-3 mb-2">
+                          <Phone className="w-5 h-5 text-teal-600" />
+                          <p className="font-semibold text-gray-900">Contact</p>
+                        </div>
+                        <p className="text-gray-700 font-medium">{shippingAddress.numero}</p>
+                        {shippingAddress.description && (
+                          <p className="text-gray-500 text-sm mt-1 line-clamp-2">{shippingAddress.description}</p>
+                        )}
+                      </div>
+
+                      <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                        <div className="flex items-center gap-3 mb-2">
+                          <Truck className="w-5 h-5 text-teal-600" />
+                          <p className="font-semibold text-gray-900">Livraison</p>
+                        </div>
+                        <p className="text-gray-700 font-medium">Frais: {formatPrice(order.fraisLivraison || 0)}</p>
+                        <p className="text-gray-500 text-sm">Pris en charge par notre livreur</p>
+                      </div>
                     </>
                   )}
                 </div>
@@ -453,27 +452,25 @@ const CommandeSuivi: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <p className="font-medium">Status du paiement</p>
-                      <p className={`${
-                        order.statusPayment === "échec"
+                      <p className={`${order.statusPayment === "échec"
                           ? "text-red-600"
                           : order.statusPayment === "payé" || order.statusPayment === "payé à la livraison"
-                          ? "text-green-600"
-                          : "text-gray-600"
-                      }`}>
+                            ? "text-green-600"
+                            : "text-gray-600"
+                        }`}>
                         {order.statusPayment === "payé par téléphone"
-                            ? "Paiement assisté"
-                            :order.statusPayment}
+                          ? "Paiement assisté"
+                          : order.statusPayment}
                       </p>
                     </div>
                     <div>
                       <p className="font-medium">Status de la livraison</p>
-                      <p className={`${
-                        order.statusLivraison === "annulé"
+                      <p className={`${order.statusLivraison === "annulé"
                           ? "text-red-600"
                           : order.statusLivraison === "livré"
-                          ? "text-green-600"
-                          : "text-gray-600"
-                      }`}>
+                            ? "text-green-600"
+                            : "text-gray-600"
+                        }`}>
                         {order.statusLivraison}
                       </p>
                     </div>
@@ -569,20 +566,19 @@ const CommandeSuivi: React.FC = () => {
                 )}
 
                 <div className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full ${
-                    orderType === "cancelled"
+                  <div className={`w-2 h-2 rounded-full ${orderType === "cancelled"
                       ? "bg-red-600"
                       : orderType === "completed"
-                      ? "bg-green-600"
-                      : "bg-yellow-600"
-                  }`}></div>
+                        ? "bg-green-600"
+                        : "bg-yellow-600"
+                    }`}></div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900">
                       Statut actuel : {order.etatTraitement}
                     </p>
                     <p className="text-xs text-gray-500">
-                      Livraison : {order.statusLivraison} | Paiement : { order.statusPayment === "payé par téléphone"
-      ? "Paiement assisté" :order.statusPayment}
+                      Livraison : {order.statusLivraison} | Paiement : {order.statusPayment === "payé par téléphone"
+                        ? "Paiement assisté" : order.statusPayment}
                     </p>
                   </div>
                 </div>
@@ -592,39 +588,67 @@ const CommandeSuivi: React.FC = () => {
 
           {/* Informations de facturation */}
           <div className="mt-8">
-            <h2 className="font-semibold text-lg mb-4">Résumé financier</h2>
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Sous-total</span>
-                  <span className="font-medium">{formatPrice(order.prix - (order.reduction || 0))}</span>
+            <h2 className="font-semibold text-xl text-gray-900 mb-6 flex items-center gap-2">
+              <Package className="w-6 h-6 text-teal-600" />
+              Résumé financier
+            </h2>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="p-6 space-y-4">
+                <div className="flex justify-between items-center text-gray-600">
+                  <span className="font-medium">Sous-total (articles)</span>
+                  <span className="font-semibold text-gray-900">
+                    {formatPrice(order.prixTotal || (order.prix - (order.fraisLivraison || 0) + (order.reduction || 0)))}
+                  </span>
                 </div>
 
-                {order.reduction && order.reduction > 0?  (
-                  <div className="flex justify-between items-center text-green-600">
-                    <span>Réduction</span>
-                    <span>-{formatPrice(order.reduction)}</span>
-                  </div>
-                ): null}
-
-                {promoCode ? (
-                  <div className="flex justify-between items-center text-green-600">
-                    <span>Code promo</span>
-                    <span>-{formatPrice(promoCode.prixReduiction)}</span>
-                  </div>
-                ): null}
-
-                <div className="border-t pt-3">
-                  <div className="flex justify-between items-center font-bold text-lg">
-                    <span>Total</span>
-                    <span>{formatPrice(order.prix)}</span>
-                  </div>
+                <div className="flex justify-between items-center text-gray-600">
+                  <span className="font-medium">Frais d'expédition</span>
+                  <span className="font-semibold text-gray-900">
+                    {order.fraisLivraison && order.fraisLivraison > 0 
+                      ? `+ ${formatPrice(order.fraisLivraison)}`
+                      : "Gratuit"}
+                  </span>
                 </div>
 
-                <div className="text-sm text-gray-500 mt-2">
-                  <p>Mode de paiement : {order.statusPayment === "payé par téléphone"
-                            ? "Paiement assisté" : order.statusPayment}</p>
-                  <p>Référence : {order.reference}</p>
+                {order.reduction && order.reduction > 0 ? (
+                  <div className="flex flex-col gap-1 bg-teal-50 px-3 py-2 rounded-lg">
+                    <div className="flex justify-between items-center text-teal-600">
+                      <span className="font-medium">Réduction appliquée</span>
+                      <span className="font-bold">-{formatPrice(order.reduction)}</span>
+                    </div>
+                    {order.codePromo && (
+                      <span className="text-[10px] text-teal-500 font-semibold uppercase tracking-wider">
+                        Code: {order.codePromo}
+                      </span>
+                    )}
+                  </div>
+                ) : null}
+
+                <div className="pt-4 border-t border-gray-100">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-lg font-bold text-gray-900">Total à payer</p>
+                      <p className="text-xs text-gray-500 mt-0.5">TVA incluse le cas échéant</p>
+                    </div>
+                    <span className="text-2xl font-extrabold text-teal-600">
+                      {formatPrice(order.prix)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 px-6 py-4 border-t border-gray-100">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 text-sm">
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <CreditCard className="w-4 h-4" />
+                    <span>Mode de paiement :</span>
+                    <span className="font-semibold text-gray-900 capitalize">
+                      {order.statusPayment === "payé par téléphone" ? "Paiement assisté" : order.statusPayment}
+                    </span>
+                  </div>
+                  <div className="text-gray-400">
+                    Réf : {order.reference}
+                  </div>
                 </div>
               </div>
             </div>

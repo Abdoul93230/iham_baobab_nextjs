@@ -14,6 +14,7 @@ import {
   XCircle,
 } from "lucide-react";
 import axios from "axios";
+import { formatCurrency } from "@/lib/utils";
 
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 
@@ -32,23 +33,20 @@ const TabButton: React.FC<TabButtonProps> = ({ active, icon: Icon, label, count,
       relative flex-shrink-0 flex items-center justify-center gap-2 sm:gap-3 
       py-2 sm:py-3 px-3 sm:px-6 min-w-fit mx-1
       rounded-lg transition-all duration-300 ease-in-out
-      ${
-        active
-          ? "bg-teal-50 border-2 border-teal-600"
-          : "bg-white text-gray-600 hover:bg-gray-50"
+      ${active
+        ? "bg-teal-50 border-2 border-teal-600"
+        : "bg-white text-gray-600 hover:bg-gray-50"
       }
       focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2
     `}
   >
     <Icon
-      className={`w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 transition-colors duration-300 ${
-        active ? "text-teal-600" : "text-gray-500"
-      }`}
+      className={`w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 transition-colors duration-300 ${active ? "text-teal-600" : "text-gray-500"
+        }`}
     />
     <span
-      className={`font-medium text-sm sm:text-base hidden sm:block ${
-        active ? "text-teal-600" : "text-gray-600"
-      }`}
+      className={`font-medium text-sm sm:text-base hidden sm:block ${active ? "text-teal-600" : "text-gray-600"
+        }`}
     >
       {label}
     </span>
@@ -96,10 +94,9 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isHovered, onHove
       className={`
         relative bg-white rounded-xl p-6 
         transition-all duration-300 ease-in-out 
-        ${
-          isHovered
-            ? "shadow-lg transform scale-[1.02]"
-            : "shadow-sm hover:shadow-md"
+        ${isHovered
+          ? "shadow-lg transform scale-[1.02]"
+          : "shadow-sm hover:shadow-md"
         }
         cursor-pointer
       `}
@@ -133,7 +130,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isHovered, onHove
             <div>
               <p className="text-sm font-medium text-gray-500">Total</p>
               <p className="text-lg font-semibold text-gray-900">
-                {order.prix || 0} F CFA
+                {formatCurrency(order.prix || 0)}
               </p>
             </div>
           </div>
@@ -235,6 +232,7 @@ const CommandePage: React.FC = () => {
           `${BackendUrl}/getCommandesByClefUser/${userEcomme.id}`
         );
         setOrders(response.data.commandes);
+
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -246,15 +244,22 @@ const CommandePage: React.FC = () => {
   }, []);
 
   const getOrderStatus = (order: Order): string => {
-    // Vérifier d'abord si la commande est annulée
-    if (order.statusLivraison === "annulé") {
+    const statusL = order.statusLivraison?.toLowerCase();
+    const etatT = order.etatTraitement?.toLowerCase();
+
+    // Vérifier d'abord si la commande est annulée (soit par livraison, soit par traitement admin)
+    if (statusL === "annulé" || etatT === "annulé" || etatT === "annulée") {
       return "cancelled";
     }
 
     // Ensuite vérifier si elle est en cours
+    // Une commande est "en cours" si elle n'est ni annulée ni "reçue/livrée"
     if (
-      order.statusLivraison === "en cours" ||
-      order.statusPayment === "en cours"
+      statusL === "en cours" ||
+      order.statusPayment === "en cours" ||
+      etatT === "en cours" ||
+      etatT === "en traitement" ||
+      etatT === "payée" // Payée mais pas encore livrée
     ) {
       return "inProgress";
     }
@@ -316,24 +321,24 @@ const CommandePage: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Mes Commandes</h1>
         </div>
 
-<div className="bg-gray-100 rounded-xl p-2 mb-8">
-  <div className="flex gap-1 sm:gap-2 overflow-x-auto scrollbar-hide px-1 pb-1 pt-1">
-    {tabs.map((tab) => (
-      <div key={tab.id} className="flex-shrink-0 min-w-fit">
-        <TabButton
-          active={activeTab === tab.id}
-          icon={tab.icon}
-          label={tab.label}
-          count={
-            orders.filter((order) => getOrderStatus(order) === tab.id)
-              .length
-          }
-          onClick={() => setActiveTab(tab.id)}
-        />
-      </div>
-    ))}
-  </div>
-</div>
+        <div className="bg-gray-100 rounded-xl p-2 mb-8">
+          <div className="flex gap-1 sm:gap-2 overflow-x-auto scrollbar-hide px-1 pb-1 pt-1">
+            {tabs.map((tab) => (
+              <div key={tab.id} className="flex-shrink-0 min-w-fit">
+                <TabButton
+                  active={activeTab === tab.id}
+                  icon={tab.icon}
+                  label={tab.label}
+                  count={
+                    orders.filter((order) => getOrderStatus(order) === tab.id)
+                      .length
+                  }
+                  onClick={() => setActiveTab(tab.id)}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
 
         {filteredOrders.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

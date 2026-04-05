@@ -25,11 +25,12 @@ import { Badge } from "../ui/badge";
 import { formatCurrency } from "../../lib/utils";
 import Alert from "../Alert";
 import { RootState } from "@/redux/store";
-import { 
-  selectPanierArticles, 
-  deletePanier, 
-  updateQuantity as updatePanierQuantity 
+import {
+  selectPanierArticles,
+  deletePanier,
+  updateQuantity as updatePanierQuantity
 } from "@/redux/panierSlice";
+import { AuthService } from "@/lib/auth";
 
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 
@@ -87,10 +88,10 @@ interface ShippingCalculation {
 const PanierPage: React.FC = () => {
   const router = useRouter();
   const dispatch = useDispatch();
-  
+
   // Utiliser localStorage directement au lieu de Redux pour éviter les conflits
   const [articles, setArticles] = useState<any[]>([]);
-  
+
   const [codePromo, setCodePromo] = useState("");
   const [reduction, setReduction] = useState(0);
   const [estAbonne, setEstAbonne] = useState(false);
@@ -109,18 +110,18 @@ const PanierPage: React.FC = () => {
         }
       }
     };
-    
+
     loadArticles();
-    
+
     // Écouter les changements du localStorage
     const handleStorageChange = () => {
       loadArticles();
     };
-    
+
     window.addEventListener('storage', handleStorageChange);
     // Vérifier périodiquement pour les changements dans le même onglet
     const interval = setInterval(loadArticles, 1000);
-    
+
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       clearInterval(interval);
@@ -138,7 +139,35 @@ const PanierPage: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [codeP, setCodeP] = useState<any>(null);
 
-  const { acces } = useSelector((state: RootState) => state.user);
+  const { acces, user } = useSelector((state: RootState) => state.user);
+
+  // Auto-appliquer le code promo si présent dans localStorage (relance de commande)
+  useEffect(() => {
+    const appliedCode = localStorage.getItem("appliedPromoCode");
+    const user = AuthService.getUserData();
+    if (appliedCode && articles.length > 0 && !codeP && user) {
+      console.log('🔄 Auto-application du code promo:', appliedCode);
+      setCodePromo(appliedCode);
+      // Attendre que le sous-total soit calculable
+      setTimeout(() => {
+        appliquerCodePromo(appliedCode, true);
+      }, 500);
+    }
+  }, [articles.length]);
+
+  // Surveiller les changements du panier pour recalculer le code promo si déjà appliqué
+  const articlesHash = useMemo(() => articles.map(a => `${a._id}-${a.quantity}`).join(','), [articles]);
+  
+  useEffect(() => {
+    const appliedCode = codeP?.code || localStorage.getItem("appliedPromoCode");
+    if (appliedCode && articles.length > 0) {
+      const delayDebounceFn = setTimeout(() => {
+        console.log('🔄 Recalcul du code promo suite au changement de panier...');
+        appliquerCodePromo(appliedCode, true);
+      }, 800);
+      return () => clearTimeout(delayDebounceFn);
+    }
+  }, [articlesHash]);
 
   // Fonction pour estimer le poids d'un produit (memoized) - DOIT ÊTRE DÉFINIE AVANT groupedByStore
   const calculateProductWeight = useMemo(() => (article: any) => {
@@ -151,7 +180,7 @@ const PanierPage: React.FC = () => {
         return Math.max(0.1, volume * 0.5); // Minimum 100g
       }
     }
-    
+
     // Poids par défaut selon la catégorie
     const categoryWeights: Record<string, number> = {
       'mode': 0.5,
@@ -159,7 +188,7 @@ const PanierPage: React.FC = () => {
       'maison': 2.0,
       'sport': 1.0,
     };
-    
+
     const category = article.ClefType || 'mode';
     return categoryWeights[category] || 0.5; // 500g par défaut
   }, []);
@@ -170,16 +199,16 @@ const PanierPage: React.FC = () => {
     if (article.stockVariante !== undefined) {
       return article.stockVariante;
     }
-    
+
     // Si l'article a des variantes dans ses données originales
     if (article.variants && article.variants.length > 0) {
       // Trouver la variante correspondant à la couleur sélectionnée
-      const variant = article.variants.find((v: any) => 
+      const variant = article.variants.find((v: any) =>
         v.color === article.colors?.[0]
       );
       return variant ? (variant.quantity || variant.stock || 0) : 0;
     }
-    
+
     // Pour les produits sans variantes, utiliser le stock général du produit
     return article.quantite || article.stock || article.quantity_in_stock || 0;
   };
@@ -187,7 +216,7 @@ const PanierPage: React.FC = () => {
   // Memoization des calculs coûteux pour améliorer les performances
   const groupedByStore = useMemo(() => {
     const storeGroups: Record<string, StoreGroup> = {};
-    
+
     articles.forEach((article, index) => {
       const storeId = article.Clefournisseur?._id || "unknown";
       const storeName = article.Clefournisseur?.storeName || article.Clefournisseur?.name || "Boutique inconnue";
@@ -225,11 +254,11 @@ const PanierPage: React.FC = () => {
       // Ajouter la variante au produit
       storeGroups[storeId].products[productId].variants.push(article);
       storeGroups[storeId].products[productId].totalQuantity += quantity;
-      
+
       // Calculer le prix de cette variante
       const variantPrice = (article.prixPromo || article.prix || article.price || 0);
       const variantTotalPrice = variantPrice * quantity;
-      
+
       storeGroups[storeId].products[productId].totalValue += variantTotalPrice;
 
       // Calculer le poids (estimation basée sur les dimensions ou poids par défaut)
@@ -248,7 +277,7 @@ const PanierPage: React.FC = () => {
   const calculateShippingForStore = async (storeId: string, storeInfo: any, totalWeight: number, customerZoneId: string) => {
     try {
       console.log(`Calcul expédition pour boutique ${storeId}:`, { storeInfo, totalWeight, customerZoneId });
-      
+
       const response = await axios.post(`${BackendUrl}/api/shipping2/calculate`, {
         sellerId: storeId,
         customerZoneId: customerZoneId,
@@ -272,9 +301,9 @@ const PanierPage: React.FC = () => {
           appliedPolicy: response.data.data.appliedPolicy || { zone: 'API Response', type: 'calculated' }
         };
       }
-      
+
       throw new Error('Réponse API invalide ou incomplète');
-      
+
     } catch (err) {
       const error = err as any; // Cast pour gérer les erreurs axios
       console.warn(`Erreur API boutique ${storeId}, utilisation du fallback:`, {
@@ -282,7 +311,7 @@ const PanierPage: React.FC = () => {
         status: error.response?.status,
         data: error.response?.data
       });
-      
+
       // Si l'API échoue, utiliser l'ancien système comme fallback
       return {
         success: false,
@@ -315,7 +344,7 @@ const PanierPage: React.FC = () => {
     for (const [storeId, storeGroup] of Object.entries(grouped)) {
       try {
         console.log(`Traitement boutique ${storeGroup.storeName} (${storeId})`);
-        
+
         const shippingResult = await calculateShippingForStore(
           storeId,
           storeGroup.storeInfo,
@@ -324,7 +353,7 @@ const PanierPage: React.FC = () => {
         );
 
         calculations[storeId] = shippingResult;
-        
+
         if (shippingResult.success) {
           successCount++;
           console.log(`✓ Expédition calculée pour ${storeGroup.storeName}: ${shippingResult.totalCost}`);
@@ -332,7 +361,7 @@ const PanierPage: React.FC = () => {
           errorCount++;
           console.warn(`⚠ Fallback utilisé pour ${storeGroup.storeName}: ${shippingResult.totalCost}`);
         }
-        
+
         // Si le calcul échoue complètement (coût = 0), marquer les produits comme indisponibles
         if (shippingResult.totalCost === 0) {
           Object.keys(storeGroup.products).forEach(productId => {
@@ -340,11 +369,11 @@ const PanierPage: React.FC = () => {
           });
           console.warn(`Produits de ${storeGroup.storeName} marqués comme indisponibles`);
         }
-        
+
       } catch (error) {
         errorCount++;
         console.error(`Erreur critique pour la boutique ${storeGroup.storeName}:`, error);
-        
+
         // Créer un calcul de fallback même en cas d'erreur critique
         calculations[storeId] = {
           success: false,
@@ -357,7 +386,7 @@ const PanierPage: React.FC = () => {
             type: 'emergency-fallback'
           }
         };
-        
+
         // Marquer tous les produits de cette boutique comme indisponibles
         Object.keys(storeGroup.products).forEach(productId => {
           unavailable.add(`${storeId}-${productId}`);
@@ -368,7 +397,7 @@ const PanierPage: React.FC = () => {
     console.log(`Calculs terminés: ${successCount} succès, ${errorCount} erreurs/fallbacks`);
     setShippingCalculations(calculations);
     setUnavailableProducts(unavailable);
-    
+
     // Les erreurs sont gérées silencieusement avec fallback
   };
 
@@ -390,16 +419,16 @@ const PanierPage: React.FC = () => {
   // Charger les articles et détecter la zone du client
   useEffect(() => {
     const panierItems = JSON.parse(localStorage.getItem("panier") || "[]");
-    
+
     const detecterZoneClient = async () => {
       setLoading(true);
       console.log('Début de la détection de zone client...');
-      
+
       try {
         // Détecter la localisation du client avec timeout
         console.log('Récupération IP client...');
         const ip = await axios.get("https://ifconfig.me/ip", { timeout: 5000 });
-        
+
         console.log('Récupération données de géolocalisation...');
         const response = await axios.get(`${BackendUrl}/proxy/ip-api`, {
           headers: {
@@ -407,7 +436,7 @@ const PanierPage: React.FC = () => {
           },
           timeout: 5000
         });
-        
+
         const region = response.data.regionName || "Niamey";
         const country = response.data.country || "Niger";
         console.log(`Localisation détectée: ${region}, ${country}`);
@@ -457,14 +486,14 @@ const PanierPage: React.FC = () => {
 
         setLoading(false);
         console.log('Détection de zone terminée avec succès');
-        
+
       } catch (error) {
         console.error("Erreur critique lors de la détection de zone:", error);
         setLoading(false);
-        
+
         // Fallback complet: continuer sans détection de zone
         // Les articles viennent automatiquement de Redux
-        
+
         showAlert("warning", "Impossible de détecter automatiquement votre zone. Veuillez la sélectionner manuellement.");
       }
     };
@@ -504,7 +533,7 @@ const PanierPage: React.FC = () => {
     const updatedArticles = articles.filter((_, index) => index !== articleIndex);
     setArticles(updatedArticles);
     localStorage.setItem("panier", JSON.stringify(updatedArticles));
-    
+
     // Les articles sont automatiquement regroupés via useMemo
     if (selectedZone) {
       // Recalculer après suppression avec un délai pour laisser l'état se mettre à jour
@@ -512,7 +541,7 @@ const PanierPage: React.FC = () => {
         recalculateAllShipping(groupedByStore, selectedZone);
       }, 100);
     }
-    
+
     handleSuccess("Article supprimé du panier");
   };
 
@@ -527,23 +556,23 @@ const PanierPage: React.FC = () => {
     const currentArticle = articles[articleIndex];
     if (currentArticle) {
       const availableStock = getAvailableStock(currentArticle);
-      
+
       if (newQuantity > availableStock) {
         // Silencieusement limiter à la quantité disponible
         newQuantity = availableStock;
       }
     }
 
-    const updatedArticles = articles.map((article, index) => 
-      index === articleIndex ? { 
-        ...article, 
+    const updatedArticles = articles.map((article, index) =>
+      index === articleIndex ? {
+        ...article,
         quantity: newQuantity
       } : article
     );
-    
+
     setArticles(updatedArticles);
     localStorage.setItem("panier", JSON.stringify(updatedArticles));
-    
+
     // Forcer le recalcul des frais d'expédition
     if (selectedZone) {
       // Recalculer après mise à jour avec un délai pour laisser l'état se mettre à jour
@@ -553,56 +582,83 @@ const PanierPage: React.FC = () => {
     }
   };
 
-  // Application du code promo
-  const appliquerCodePromo = async () => {
-    if (!codePromo.trim()) {
-      handleWarning("Veuillez entrer un code promo");
+  // Application du code promo (nouveau système V2)
+  const appliquerCodePromo = async (codeToApply?: string, silent = false) => {
+    const finalCode = typeof codeToApply === 'string' ? codeToApply : codePromo;
+    if (!finalCode || !finalCode.trim()) {
+      if (!silent) handleWarning("Veuillez entrer un code promo");
       return;
     }
 
-    setRond(true);
-    
+    if (!silent) setRond(true);
+
     try {
-      const userId = localStorage.getItem("userEcomId") || "";
+      const userData = AuthService.getUserData();
+      const userId = userData?.id;
       
-      const response = await axios.post(`${BackendUrl}/checkCodePromo`, {
-        code: codePromo,
-        welcom: codePromo === "BIENVENUE20",
-        id: userId,
+      if (!userId) {
+        if (!silent) handleWarning("Veuillez vous connecter pour utiliser un code promo.");
+        if (!silent) setRond(false);
+        return;
+      }
+
+      const orderAmount = calculerSousTotal();
+
+      // Récupérer les IDs des produits dans le panier
+      const productIds = articles.map((a: any) => a._id).filter(Boolean);
+
+      const response = await axios.post(`${BackendUrl}/api/promocodes/validate`, {
+        code: finalCode,
+        orderAmount,
+        userId: userId || undefined,
+        products: productIds,
       });
 
-      setRond(false);
+      if (!silent) setRond(false);
 
-      if (response.data.data.isValide) {
-        if (!codeP || codeP.code !== response.data.data.code) {
-          if (response.data.data?.isWelcomeCode === true) {
-            let reduction = (calculerSousTotal() * response.data.data?.prixReduiction) / 100;
-            reduction = Math.min(reduction, 2000);
-            setReduction(reduction);
-          } else {
-            setReduction(response.data.data?.prixReduiction);
-          }
+      if (response.data.valid) {
+        const { discount, finalAmount, promoCode } = response.data;
 
-          setCodeP(response.data.data);
-          localStorage.setItem("orderCodeP", JSON.stringify(response.data.data));
+        setReduction(discount);
+        setCodeP(response.data);
+        if (!codePromo) setCodePromo(promoCode.code);
+
+        // Stocker avec le format attendu par OrderConfirmation
+        localStorage.setItem("orderCodeP", JSON.stringify({
+          _id: promoCode.id,
+          code: promoCode.code,
+          type: promoCode.type,
+          value: promoCode.value,
+          discount,
+          finalAmount,
+          isValide: true,
+        }));
+
+        if (!silent) {
           setMessage("Code promo appliqué avec succès !");
-          setTimeout(() => calculerTotal(), 100);
-        } else {
-          setMessage("Ce code promo est déjà appliqué.");
         }
+        setTimeout(() => calculerTotal(), 100);
       } else {
-        handleWarning("Ce code a expiré.");
+        if (!silent) handleWarning(response.data.message || "Code promo invalide.");
         setReduction(0);
+        setCodeP(null);
+        setCodePromo("");
         localStorage.removeItem("orderCodeP");
+        localStorage.removeItem("appliedPromoCode"); // Nettoyer aussi ici
         calculerTotal();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      handleWarning("Ce code promo n'existe pas");
+      if (!silent) {
+        const errorMessage = error?.response?.data?.message || "Ce code promo n'existe pas";
+        handleWarning(errorMessage);
+      }
       setReduction(0);
+      setCodeP(null);
+      setCodePromo("");
       localStorage.removeItem("orderCodeP");
       calculerTotal();
-      setRond(false);
+      if (!silent) setRond(false);
     }
   };
 
@@ -630,22 +686,26 @@ const PanierPage: React.FC = () => {
   // Recalculer le total quand les données changent (avec protection contre les boucles)
   useEffect(() => {
     const newTotal = calculerTotal();
+    const subtotal = calculerSousTotal();
+    const shipping = calculerTotalFraisExpedition();
+
     if (newTotal !== total) {
       setTotal(newTotal);
       localStorage.setItem("orderTotal", newTotal.toString());
+      localStorage.setItem("orderSubtotal", subtotal.toString());
+      localStorage.setItem("orderShippingCost", shipping.toString());
     }
   }, [articles.length, reduction, Object.keys(shippingCalculations).length]);
 
   // Rendu d'une variante de produit
   const renderVariant = (variant: any, storeId: string, productId: string, articleIndex: number) => {
     const isUnavailable = unavailableProducts.has(`${storeId}-${productId}`);
-    
+
     return (
       <div
         key={`${variant._id}-${variant.colors?.[0]}-${variant.sizes?.[0]}`}
-        className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-0 sm:justify-between border-b pb-3 sm:pb-4 ${
-          isUnavailable ? 'opacity-50' : ''
-        }`}
+        className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-0 sm:justify-between border-b pb-3 sm:pb-4 ${isUnavailable ? 'opacity-50' : ''
+          }`}
       >
         <div className="flex items-center space-x-3 flex-1">
           {variant?.imageUrl && (
@@ -655,7 +715,7 @@ const PanierPage: React.FC = () => {
               className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded-md border flex-shrink-0"
             />
           )}
-          
+
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1">
               {variant.colors?.[0] && (
@@ -674,7 +734,7 @@ const PanierPage: React.FC = () => {
                 </Badge>
               )}
             </div>
-            
+
             {variant.prixPromo ? (
               <div className="flex items-center space-x-2">
                 <span className="font-medium text-red-600 text-sm sm:text-base">
@@ -719,7 +779,7 @@ const PanierPage: React.FC = () => {
               <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
           </div>
-          
+
           <Button
             variant="ghost"
             size="icon"
@@ -783,9 +843,9 @@ const PanierPage: React.FC = () => {
           <div className="p-2 sm:p-3 bg-gray-50 rounded space-y-2 sm:space-y-3 mt-2">
             {product.variants.map((variant, index) => {
               // Trouver l'index réel de cette variante dans le tableau articles original
-              const articleIndex = articles.findIndex(article => 
-                article._id === variant._id && 
-                article.colors?.[0] === variant.colors?.[0] && 
+              const articleIndex = articles.findIndex(article =>
+                article._id === variant._id &&
+                article.colors?.[0] === variant.colors?.[0] &&
                 article.sizes?.[0] === variant.sizes?.[0]
               );
               return renderVariant(variant, storeId, product.productId, articleIndex);
@@ -806,10 +866,9 @@ const PanierPage: React.FC = () => {
 
     return (
       <Card key={storeGroup.storeId} className="mb-4 sm:mb-6 shadow-sm">
-        <CardHeader 
-          className={`cursor-pointer hover:bg-gray-50 pb-2 sm:pb-3 ${
-            hasUnavailableProducts ? 'bg-red-50' : ''
-          }`}
+        <CardHeader
+          className={`cursor-pointer hover:bg-gray-50 pb-2 sm:pb-3 ${hasUnavailableProducts ? 'bg-red-50' : ''
+            }`}
           onClick={() => toggleStoreExpansion(storeGroup.storeId)}
         >
           <div className="flex items-center justify-between">
@@ -841,7 +900,7 @@ const PanierPage: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
               {hasUnavailableProducts && (
                 <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
@@ -850,7 +909,7 @@ const PanierPage: React.FC = () => {
                   <span className="sm:hidden">Limité</span>
                 </Badge>
               )}
-              
+
               {shippingCalc && (
                 <div className="text-right">
                   <div className="font-medium text-[#30A08B] text-xs sm:text-sm">
@@ -862,7 +921,7 @@ const PanierPage: React.FC = () => {
                   </div>
                 </div>
               )}
-              
+
               {isExpanded ? (
                 <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
               ) : (
@@ -893,7 +952,7 @@ const PanierPage: React.FC = () => {
                     </Badge>
                   )}
                 </div>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm">
                   <div className="flex justify-between sm:block">
                     <span className="text-gray-600">Coût fixe:</span>
@@ -903,7 +962,7 @@ const PanierPage: React.FC = () => {
                     <span className="text-gray-600">Coût poids:</span>
                     <span className="ml-2 font-medium">
                       {formatCurrency(
-                        shippingCalc.weightCost || 
+                        shippingCalc.weightCost ||
                         ((shippingCalc.costPerKg || 0) * storeGroup.totalWeight)
                       )}
                     </span>
@@ -1015,12 +1074,19 @@ const PanierPage: React.FC = () => {
                       <span>{formatCurrency(calculerSousTotal())}</span>
                     </div>
                     {reduction > 0 && (
-                      <div className="flex justify-between text-sm sm:text-base text-green-600">
-                        <span>Réduction</span>
-                        <span>-{formatCurrency(reduction)}</span>
+                      <div className="flex flex-col gap-1 border-b border-dashed pb-2">
+                        <div className="flex justify-between text-sm sm:text-base text-green-600 font-medium">
+                          <span>Réduction</span>
+                          <span>-{formatCurrency(reduction)}</span>
+                        </div>
+                        {codePromo && (
+                          <div className="text-[10px] text-green-500 font-bold uppercase tracking-widest pl-1 border-l-2 border-green-500">
+                            Code appliqué: {codePromo}
+                          </div>
+                        )}
                       </div>
                     )}
-                    
+
                     {/* Détail des frais d'expédition par boutique */}
                     {Object.keys(shippingCalculations).length > 0 && (
                       <div className="space-y-1 sm:space-y-2">
@@ -1040,7 +1106,7 @@ const PanierPage: React.FC = () => {
                         </div>
                       </div>
                     )}
-                    
+
                     <div className="pt-2 sm:pt-3 border-t">
                       <div className="flex justify-between font-bold text-base sm:text-lg text-[#30A08B]">
                         <span>Total</span>
@@ -1056,14 +1122,14 @@ const PanierPage: React.FC = () => {
                     </h3>
                     <div className="flex flex-col sm:flex-row gap-2">
                       <input
-                        className="flex-grow px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#30A08B] focus:border-transparent"
+                        className="flex-grow px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#30A08B] focus:border-transparent uppercase font-semibold tracking-wide"
                         type="text"
-                        placeholder="Entrer le code"
+                        placeholder="EX: BIENVENUE20"
                         value={codePromo}
-                        onChange={(e) => setCodePromo(e.target.value)}
+                        onChange={(e) => setCodePromo(e.target.value.toUpperCase().replace(/\s/g, ''))}
                       />
                       <Button
-                        onClick={appliquerCodePromo}
+                        onClick={() => appliquerCodePromo()}
                         disabled={rond}
                         className="bg-[#30A08B] hover:bg-[#30A08B]/90 w-full sm:w-auto"
                         size="sm"
@@ -1072,8 +1138,20 @@ const PanierPage: React.FC = () => {
                         {rond ? "..." : "Appliquer"}
                       </Button>
                     </div>
-                    {message && (
-                      <p className="text-xs sm:text-sm text-green-600 mt-2">{message}</p>
+                    {(message || codeP) && (
+                      <div className="mt-2">
+                        {message && <p className="text-xs sm:text-sm text-green-600 font-medium">{message}</p>}
+                        {codeP && (
+                          <div className="mt-1 flex flex-col gap-1">
+                            <p className="text-xs sm:text-sm font-semibold text-green-700">
+                              Réduction active: {codeP.promoCode?.type === 'percentage' ? `-${codeP.promoCode?.value}%` : `-${codeP.promoCode?.value} CFA`}
+                            </p>
+                            {codeP.promoCode?.description && (
+                              <p className="text-xs text-gray-500 italic">{codeP.promoCode.description}</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </CardContent>
@@ -1119,12 +1197,12 @@ const PanierPage: React.FC = () => {
               <Button
                 onClick={() => {
                   if (calculerTotal() === 0) return;
-                  
+
                   if (!selectedZone) {
                     handleWarning("Veuillez sélectionner votre zone de livraison");
                     return;
                   }
-                  
+
                   if (acces === "non") {
                     handleWarning("Veuillez vous connecter d'abord");
                     setTimeout(() => {
@@ -1144,19 +1222,19 @@ const PanierPage: React.FC = () => {
             </div>
           )}
         </div>
-        
+
         {/* Version desktop */}
         <div className="hidden xl:block">
           {calculerTotal() !== 0 && (
             <Button
               onClick={() => {
                 if (calculerTotal() === 0) return;
-                
+
                 if (!selectedZone) {
                   handleWarning("Veuillez sélectionner votre zone de livraison");
                   return;
                 }
-                
+
                 if (acces === "non") {
                   handleWarning("Veuillez vous connecter d'abord");
                   setTimeout(() => {

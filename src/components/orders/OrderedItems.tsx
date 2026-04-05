@@ -10,6 +10,7 @@ import {
   Truck,
 } from "lucide-react";
 import ShippingZonesDropdown from "@/components/panier/ShippingZonesDropdown";
+import { formatCurrency } from "@/lib/utils";
 
 interface OrderedItemsProps {
   items: any;
@@ -161,9 +162,12 @@ const OrderedItems: React.FC<OrderedItemsProps> = ({ items, totalPrice }) => {
   };
 
   const calculerTotal = (): number => {
+    // Si on a les valeurs stockées dans la commande, on les utilise
+    if (items?.prix !== undefined) return items.prix;
+
     const sousTotal = calculerSousTotal();
-    const totalAvecReduction = sousTotal - reduction;
-    const totalFinal = totalAvecReduction + calculerTotalFraisExpedition();
+    const totalAvecReduction = sousTotal - (items?.reduction || reduction);
+    const totalFinal = totalAvecReduction + (items?.fraisLivraison || calculerTotalFraisExpedition());
 
     return totalFinal;
   };
@@ -206,12 +210,12 @@ const OrderedItems: React.FC<OrderedItemsProps> = ({ items, totalPrice }) => {
             <div className="flex items-center text-sm text-gray-600">
               <Truck className="h-4 w-4 mr-2 text-[#30A08B]" />
               <span>
-                Frais d'expédition de base: {group.baseShippingFee} F CFA
+                Frais d'expédition de base: {formatCurrency(group.baseShippingFee)}
               </span>
             </div>
             <div className="flex items-center text-sm text-gray-600">
               <Tag className="h-4 w-4 mr-2 text-[#30A08B]" />
-              <span>Frais de poids total: {group.weightShippingFee} F CFA</span>
+              <span>Frais de poids total: {formatCurrency(group.weightShippingFee)}</span>
             </div>
             {/* Ajout du ShippingZonesDropdown */}
             <ShippingZonesDropdown zones={group.shipping?.zones} />
@@ -247,7 +251,7 @@ const OrderedItems: React.FC<OrderedItemsProps> = ({ items, totalPrice }) => {
                     </div>
                   </div>
                   <div className="text-[#30A08B] font-medium ml-3">
-                    {variant.price} F CFA
+                    {formatCurrency(variant.price)}
                   </div>
                 </div>
               </div>
@@ -294,7 +298,7 @@ const OrderedItems: React.FC<OrderedItemsProps> = ({ items, totalPrice }) => {
       <div className="mt-6 flex justify-between items-center bg-white rounded-lg shadow p-4">
         <span className="text-gray-600 font-medium">Total de la commande</span>
         <span className="text-xl font-semibold text-gray-800">
-          {totalPrice} F CFA
+          {formatCurrency(totalPrice)}
         </span>
       </div>
     </div>

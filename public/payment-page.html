@@ -134,7 +134,7 @@
         data-key="pk_f83a240bd0df4393b35a819925863e16"
         data-redirect-url="https://www.ihambaobab.com/commandesReference"
         data-cancel-url="https://www.ihambaobab.com/error"
-        data-callback-url="https://ihambackend.onrender.com/payment_callback"
+        data-callback-url="https://ihambackend.onrender.com/payment_callback2"
         >
         Procéder au paiement
       </button>
@@ -144,7 +144,8 @@
   <!-- <script src="https://i-pay.money/checkout.js"></script> -->
   <script src="./ipaymoney.js"></script>
   <script>
-    // data-callback-url="https://secoure.onrender.com/payment_callback"
+    // data-callback-url="https://secoure.onrender.com/payment_callback2"
+    const backendUrl = 'https://ihambackend.onrender.com';
     // Récupérer les informations de paiement du localStorage
     const paymentInfo = JSON.parse(localStorage.getItem('paymentInfo'));
     
@@ -155,8 +156,10 @@
 
     // Configurer le bouton iPay
     const button = document.querySelector('.ipaymoney-button');
-    // button.setAttribute('data-amount', paymentInfo.amount);
-    button.setAttribute('data-amount', 200);
+  // const amount = Number(paymentInfo.amount || 0);
+  const amount = Number(100);// Montant fixe pour les tests, à remplacer par paymentInfo.amount en production
+  const transactionId = paymentInfo.transactionId;
+  button.setAttribute('data-amount', amount);
     button.setAttribute('data-transaction-id', paymentInfo.transactionId);
     console.log({paymentInfo});
     
@@ -165,6 +168,76 @@
     button.addEventListener('click', function() {
       this.parentElement.classList.add('loading');
     });
+
+    const normalizePaymentStatus = (status) => {
+      const value = String(status || '').trim().toLowerCase();
+
+      if (["payé", "paye", "paid", "success", "succeeded", "completed", "payé à la livraison", "payé par téléphone"].includes(value)) {
+        return 'succeeded';
+      }
+
+      if (["échec", "echec", "failed", "cancelled", "canceled", "rejected"].includes(value)) {
+        return 'failed';
+      }
+
+      return 'pending';
+    };
+
+    const redirectToResult = (status) => {
+      if (typeof window.onCloseIpayCheckout === 'function') {
+        window.onCloseIpayCheckout();
+      }
+
+      window.location.href = `/commandesReference?transactionId=${encodeURIComponent(transactionId)}&status=${encodeURIComponent(status)}&amount=${encodeURIComponent(amount)}`;
+    };
+
+    const startOrderStatusPolling = () => {
+      let attempts = 0;
+      const maxAttempts = 120; // 10 minutes avec un intervalle de 5s
+
+      const poll = async () => {
+        attempts += 1;
+
+        try {
+          const response = await fetch(`${backendUrl}/getCommandeByReference/${encodeURIComponent(transactionId)}`);
+
+          if (!response.ok) {
+            return;
+          }
+
+          const data = await response.json();
+          const status = normalizePaymentStatus(data?.commande?.statusPayment);
+
+          if (status === 'succeeded') {
+            redirectToResult('succeeded');
+            return;
+          }
+
+          if (status === 'failed') {
+            redirectToResult('failed');
+            return;
+          }
+        } catch (error) {
+          console.error('Erreur polling paiement:', error);
+        }
+
+        if (attempts >= maxAttempts) {
+          window.location.href = `/commandesReference?transactionId=${encodeURIComponent(transactionId)}&status=pending&amount=${encodeURIComponent(amount)}`;
+        }
+      };
+
+      const timer = setInterval(async () => {
+        await poll();
+
+        if (attempts >= maxAttempts) {
+          clearInterval(timer);
+        }
+      }, 5000);
+
+      poll();
+    };
+
+    startOrderStatusPolling();
 
     // Nettoyer le localStorage après configuration
     localStorage.removeItem('paymentInfo');

@@ -28,9 +28,11 @@ import {
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import axios from "axios";
+import { io, Socket } from "socket.io-client";
 import OrderedItems from "./OrderedItems";
 import OrderPaymentHandler from "./OrderPaymentHandler";
 import OrderTracking from "./OrderTracking";
+import { formatCurrency } from "@/lib/utils";
 
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 
@@ -101,8 +103,11 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
   const [promoCode, setPromoCode] = useState<PromoCode | null>(null);
   const [reorderLoading, setReorderLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [liveStatus, setLiveStatus] = useState(status);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const socketRef = useRef<Socket | null>(null);
+  const handledPaymentRef = useRef<string | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -158,12 +163,115 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
     fetchOrderDetails();
   }, []);
 
+  useEffect(() => {
+    setLiveStatus(status);
+  }, [status]);
+
+  useEffect(() => {
+    if (!BackendUrl || !order?.reference) {
+      return;
+    }
+
+    const socket: Socket = io(BackendUrl, {
+      transports: ["websocket", "polling"],
+      timeout: 20000,
+    });
+
+
+  useEffect(() => {
+    if (!BackendUrl || !order?.reference) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const refreshOrderStatus = async () => {
+      try {
+        const response = await axios.get(`${BackendUrl}/getCommandeByReference/${order.reference}`);
+        const refreshedOrder = response?.data?.commande;
+
+        if (cancelled || !refreshedOrder) {
+          return;
+        }
+
+        setOrder(refreshedOrder);
+
+        if (refreshedOrder.statusPayment === "payé") {
+          setLiveStatus("succeeded");
+          if (typeof window !== "undefined" && typeof (window as any).onCloseIpayCheckout === "function") {
+            (window as any).onCloseIpayCheckout();
+          }
+          cancelled = true;
+          return;
+        }
+
+        if (refreshedOrder.statusPayment === "échec") {
+          setLiveStatus("failed");
+          if (typeof window !== "undefined" && typeof (window as any).onCloseIpayCheckout === "function") {
+            (window as any).onCloseIpayCheckout();
+          }
+          cancelled = true;
+        }
+      } catch (refreshError) {
+        console.log("Refresh payment status failed:", refreshError);
+      }
+    };
+
+    refreshOrderStatus();
+    const intervalId = window.setInterval(() => {
+      if (!cancelled && liveStatus !== "succeeded" && liveStatus !== "failed") {
+        refreshOrderStatus();
+      }
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [BackendUrl, order?.reference, liveStatus]);
+    socketRef.current = socket;
+
+    const handleConnect = () => {
+      socket.emit("payment:join", { reference: order.reference });
+    };
+
+    const handlePaymentStatus = (event: any) => {
+      const eventReference = event?.reference || event?.externalReference;
+      if (eventReference !== order.reference) {
+        return;
+      }
+
+      if (handledPaymentRef.current === order.reference) {
+        return;
+      }
+
+      handledPaymentRef.current = order.reference;
+      const nextStatus = event?.status === "succeeded" ? "succeeded" : event?.status === "failed" ? "failed" : liveStatus;
+      setLiveStatus(nextStatus);
+
+      if (typeof window !== "undefined" && typeof (window as any).onCloseIpayCheckout === "function") {
+        (window as any).onCloseIpayCheckout();
+      }
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on("payment:status", handlePaymentStatus);
+
+    return () => {
+      socket.emit("payment:leave", { reference: order.reference });
+      socket.off("connect", handleConnect);
+      socket.off("payment:status", handlePaymentStatus);
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [order?.reference, status, liveStatus]);
+
   // Fonction pour déterminer le type de commande en tenant compte du statut de transaction
   const getOrderType = (): string => {
     if (!order) return "unknown";
 
     // Si le statut de la transaction est failed, on considère la commande comme échouée
-    if (status === "failed") {
+    if (liveStatus === "failed") {
       return "failed";
     }
 
@@ -176,7 +284,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
     }
 
     // Si la transaction est réussie et que l'ordre est payé
-    if (status === "succeeded" && (order.statusPayment === "payé" || order.statusPayment === "payé à la livraison")) {
+    if (liveStatus === "succeeded" && (order.statusPayment === "payé" || order.statusPayment === "payé à la livraison")) {
       return "completed";
     }
 
@@ -256,12 +364,8 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
     </div>
   );
 
-  const formatPrice = (price: number): string => {
-    return new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "XOF",
-    }).format(price);
-  };
+  // Utilisation du formateur global
+  const formatPrice = (price: number) => formatCurrency(price);
 
   if (loading) {
     return (
@@ -319,11 +423,11 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center space-x-4 mb-4 md:mb-0">
-              {status === "succeeded" ? (
+              {liveStatus === "succeeded" ? (
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
                   <CheckCircle2 className="w-8 h-8 text-green-600" />
                 </div>
-              ) : status === "failed" ? (
+              ) : liveStatus === "failed" ? (
                 <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
                   <XOctagon className="w-8 h-8 text-red-600" />
                 </div>
@@ -335,8 +439,8 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
 
               <div>
                 <h1 className="text-2xl font-bold text-gray-800">
-                  {status === "succeeded" ? "Paiement Réussi !" :
-                    status === "failed" ? "Échec du Paiement" :
+                  {liveStatus === "succeeded" ? "Paiement Réussi !" :
+                    liveStatus === "failed" ? "Échec du Paiement" :
                       "Paiement en Cours"}
                 </h1>
                 <p className="text-gray-600">
@@ -352,7 +456,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
 
             {/* Message de statut */}
             <div className="text-right">
-              {status === "succeeded" && (
+              {liveStatus === "succeeded" && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <p className="text-green-800 font-medium">
                     ✅ Votre paiement a été traité avec succès
@@ -363,7 +467,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                 </div>
               )}
 
-              {status === "failed" && (
+              {liveStatus === "failed" && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <p className="text-red-800 font-medium">
                     ❌ Le paiement a échoué
@@ -408,7 +512,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
             {/* Section des actions selon le type de commande */}
             <div className="flex flex-col sm:flex-row gap-4 mb-4 md:mb-0">
               {/* Gestion des paiements échoués */}
-              {(status === "failed" ||
+              {(liveStatus === "failed" ||
                 order?.statusPayment === "échec" ||
                 (order?.statusPayment !== "payé à la livraison" &&
                   order?.statusPayment !== "payé")) ? (
@@ -452,10 +556,10 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                   {orderType === "failed" && <XCircle className="w-3 h-3 inline mr-1" />}
                   {orderType === "completed" && <CheckCircle className="w-3 h-3 inline mr-1" />}
                   {orderType === "inProgress" && <Clock className="w-3 h-3 inline mr-1" />}
-                  {status === "failed" ? "Paiement échoué" :
+                  {liveStatus === "failed" ? "Paiement échoué" :
                     order?.statusPayment === "échec" ? order.etatTraitement :
                       order.statusLivraison === "annulé" ? order.statusLivraison :
-                        status === "succeeded" ? "Confirmé" : order.statusLivraison}
+                        liveStatus === "succeeded" ? "Confirmé" : order.statusLivraison}
                 </span>
               </div>
               <div className="text-sm text-gray-600">
@@ -473,7 +577,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
           </div>
 
           {/* Alerte pour paiements échoués */}
-          {status === "failed" && (
+          {liveStatus === "failed" && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
               <div className="flex items-center gap-3">
                 <XCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
@@ -503,7 +607,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
           )}
 
           {/* Confirmation de paiement réussi */}
-          {status === "succeeded" && (
+          {liveStatus === "succeeded" && (
             <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
               <div className="flex items-center gap-3">
                 <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
@@ -582,14 +686,14 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <p className="font-medium">Status du paiement</p>
-                      <p className={`${status === "failed" || order.statusPayment === "échec"
+                      <p className={`${liveStatus === "failed" || order.statusPayment === "échec"
                         ? "text-red-600"
-                        : status === "succeeded" || order.statusPayment === "payé" || order.statusPayment === "payé à la livraison"
+                        : liveStatus === "succeeded" || order.statusPayment === "payé" || order.statusPayment === "payé à la livraison"
                           ? "text-green-600"
                           : "text-gray-600"
                         }`}>
-                        {status === "failed" ? "Échec" :
-                          status === "succeeded" ? "Payé" :
+                        {liveStatus === "failed" ? "Échec" :
+                          liveStatus === "succeeded" ? "Payé" :
                             order.statusPayment}
                       </p>
                     </div>
@@ -627,13 +731,13 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                     </div>
                     <div>
                       <p className="font-medium">Statut de la transaction</p>
-                      <p className={`font-medium ${status === "succeeded" ? "text-green-600" :
-                        status === "failed" ? "text-red-600" :
+                      <p className={`font-medium ${liveStatus === "succeeded" ? "text-green-600" :
+                        liveStatus === "failed" ? "text-red-600" :
                           "text-yellow-600"
                         }`}>
-                        {status === "succeeded" ? "Réussi" :
-                          status === "failed" ? "Échoué" :
-                            status}
+                        {liveStatus === "succeeded" ? "Réussi" :
+                          liveStatus === "failed" ? "Échoué" :
+                            liveStatus}
                       </p>
                     </div>
                     {amount && (
@@ -735,8 +839,8 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full ${status === "succeeded" ? "bg-green-600" :
-                    status === "failed" ? "bg-red-600" :
+                  <div className={`w-2 h-2 rounded-full ${liveStatus === "succeeded" ? "bg-green-600" :
+                    liveStatus === "failed" ? "bg-red-600" :
                       "bg-yellow-600"
                     }`}></div>
                   <div className="flex-1">
@@ -744,7 +848,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                       Traitement du paiement
                     </p>
                     <p className="text-xs text-gray-500">
-                      Transaction {transactionId} - {status === "succeeded" ? "Réussi" : status === "failed" ? "Échoué" : "En cours"}
+                      Transaction {transactionId} - {liveStatus === "succeeded" ? "Réussi" : liveStatus === "failed" ? "Échoué" : "En cours"}
                     </p>
                     <p className="text-xs text-gray-500">
                       {new Date().toLocaleString("fr-FR")}
@@ -776,7 +880,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                       Statut actuel : {order.etatTraitement}
                     </p>
                     <p className="text-xs text-gray-500">
-                      Livraison : {order.statusLivraison} | Paiement : {status === "succeeded" ? "Payé" : status === "failed" ? "Échoué": order.statusPayment === "payé par téléphone"
+                      Livraison : {order.statusLivraison} | Paiement : {liveStatus === "succeeded" ? "Payé" : liveStatus === "failed" ? "Échoué": order.statusPayment === "payé par téléphone"
       ? "Paiement assisté" : order.statusPayment}
                     </p>
                   </div>
@@ -792,26 +896,19 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Sous-total</span>
-                  <span className="font-medium">{formatPrice(order.prix - (order.reduction || 0))}</span>
+                  <span className="font-medium">{formatPrice(order.prix + (order.reduction || 0))}</span>
                 </div>
 
                 {order.reduction && order.reduction > 0 && (
                   <div className="flex justify-between items-center text-green-600">
-                    <span>Réduction</span>
+                    <span>Réduction appliquée</span>
                     <span>-{formatPrice(order.reduction)}</span>
-                  </div>
-                )}
-
-                {promoCode && (
-                  <div className="flex justify-between items-center text-green-600">
-                    <span>Code promo</span>
-                    <span>-{formatPrice(promoCode.prixReduiction)}</span>
                   </div>
                 )}
 
                 <div className="border-t pt-3">
                   <div className="flex justify-between items-center font-bold text-lg">
-                    <span>Total</span>
+                    <span>Total à payer</span>
                     <span>{formatPrice(order.prix)}</span>
                   </div>
                 </div>
@@ -819,9 +916,9 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                 <div className="text-sm text-gray-500 mt-2">
                   <p>
                     Mode de paiement : {
-                      status === "succeeded"
+                      {liveStatus === "succeeded"
                         ? "Payé en ligne"
-                        : status === "failed"
+                          : liveStatus === "failed"
                           ? "Paiement échoué"
                           : order.statusPayment === "payé par téléphone"
                             ? "Paiement assisté"

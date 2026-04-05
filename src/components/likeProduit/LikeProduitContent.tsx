@@ -60,7 +60,7 @@ const LikeProduitContent = () => {
   const fetchLikedProducts = async () => {
     try {
       setIsLoading(true);
-      const response = await axios.get(`${API_URL}/likes/user/${userId}`);
+      const response = await axios.get(`${API_URL}/likesClient/user/${userId}`);
       // console.log({data : response.data?.data});
       
       setLikedProducts(response.data?.data?.map((like: any) => like.produit) || []);
@@ -245,7 +245,7 @@ const LikeProduitContent = () => {
                       </button>
                       <button
                         onClick={() =>
-                          router.push(`/ProduitDétail/${product._id}`)
+                          router.push(`/ProduitDetail/${product._id}`)
                         }
                         className="p-2 bg-[#30A08B] rounded-full text-white hover:bg-[#268771] transition-colors"
                       >
@@ -273,7 +273,7 @@ const LikeProduitContent = () => {
                       <button
                         onClick={() => {
                           // Naviguer vers la page du produit
-                          router.push(`/ProduitDétail/${product._id}`);
+                          router.push(`/ProduitDetail/${product._id}`);
                         }}
                         className="flex items-center text-[#30A08B] hover:text-[#268771]"
                       >
