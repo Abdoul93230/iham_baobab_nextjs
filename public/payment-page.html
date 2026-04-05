@@ -141,7 +141,9 @@
     </div>
   </div>
   
-  <!-- <script src="https://i-pay.money/checkout.js"></script> -->
+  <!-- Socket.IO Client for real-time payment status -->
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <!-- <script src="./ipaymoney.js"></script> -->
   <script src="./ipaymoney.js"></script>
   <script>
     // data-callback-url="https://secoure.onrender.com/payment_callback2"
@@ -156,10 +158,9 @@
 
     // Configurer le bouton iPay
     const button = document.querySelector('.ipaymoney-button');
-  // const amount = Number(paymentInfo.amount || 0);
-  const amount = Number(100);// Montant fixe pour les tests, à remplacer par paymentInfo.amount en production
-  const transactionId = paymentInfo.transactionId;
-  button.setAttribute('data-amount', amount);
+    const amount = Number(paymentInfo.amount || 0);
+    const transactionId = paymentInfo.transactionId;
+    button.setAttribute('data-amount', amount);
     button.setAttribute('data-transaction-id', paymentInfo.transactionId);
     console.log({paymentInfo});
     
@@ -183,63 +184,185 @@
       return 'pending';
     };
 
+    const clearCheckoutLocalState = () => {
+      [
+        'panier',
+        'orderTotal',
+        'orderSubtotal',
+        'orderShippingCost',
+        'paymentInfo',
+        'pendingOrder',
+        'orderShippingZone',
+        'orderCodeP',
+        'paymentInitiated'
+      ].forEach((key) => localStorage.removeItem(key));
+    };
+
     const redirectToResult = (status) => {
       if (typeof window.onCloseIpayCheckout === 'function') {
         window.onCloseIpayCheckout();
+      }
+
+      if (status === 'succeeded' || status === 'failed') {
+        clearCheckoutLocalState();
       }
 
       window.location.href = `/commandesReference?transactionId=${encodeURIComponent(transactionId)}&status=${encodeURIComponent(status)}&amount=${encodeURIComponent(amount)}`;
     };
 
     const startOrderStatusPolling = () => {
-      let attempts = 0;
-      const maxAttempts = 120; // 10 minutes avec un intervalle de 5s
+      let pollTimer = null;
+      let wsConnected = false;
+      let wsTimedOut = false;
+      let paymentResolved = false;
 
-      const poll = async () => {
-        attempts += 1;
-
+      // ============================================
+      // PRIORITÉ 1: WebSocket Real-time (Phase 2) 🚀
+      // ============================================
+      const connectWebSocket = () => {
         try {
-          const response = await fetch(`${backendUrl}/getCommandeByReference/${encodeURIComponent(transactionId)}`);
+          console.log('🔌 Connecting to WebSocket for real-time payment updates...');
+          const socket = io(backendUrl, {
+            transports: ['websocket', 'polling'],
+            timeout: 10000,
+            reconnection: true,
+            reconnectionAttempts: 3,
+            reconnectionDelay: 1000,
+          });
 
-          if (!response.ok) {
-            return;
-          }
+          socket.on('connect', () => {
+            console.log('✅ WebSocket Connected!');
+            wsConnected = true;
+            // Join payment room for this transaction
+            socket.emit('payment:join', { reference: transactionId });
+            console.log(`📡 Listening for payment status on reference: ${transactionId}`);
+          });
 
-          const data = await response.json();
-          const status = normalizePaymentStatus(data?.commande?.statusPayment);
+          socket.on('payment:status', (event) => {
+            if (paymentResolved) return;
+            
+            console.log('⚡ Payment status received via WebSocket:', event);
+            const status = normalizePaymentStatus(event?.statusPayment || event?.status);
+            
+            if (status === 'succeeded' || status === 'failed') {
+              paymentResolved = true;
+              console.log(`🎉 Payment ${status} via WebSocket! Redirecting...`);
+              
+              // Cleanup
+              if (pollTimer) clearTimeout(pollTimer);
+              socket.emit('payment:leave', { reference: transactionId });
+              socket.disconnect();
+              
+              redirectToResult(status);
+            }
+          });
 
-          if (status === 'succeeded') {
-            redirectToResult('succeeded');
-            return;
-          }
+          socket.on('disconnect', () => {
+            console.log('❌ WebSocket Disconnected');
+            wsConnected = false;
+            if (!paymentResolved && !wsTimedOut) {
+              console.log('⚠️ WebSocket lost, falling back to polling...');
+              wsTimedOut = true;
+              startPolling(); // Fallback to polling
+            }
+          });
 
-          if (status === 'failed') {
-            redirectToResult('failed');
-            return;
-          }
+          socket.on('connect_error', (error) => {
+            console.warn('⚠️ WebSocket connection error:', error.message);
+          });
+
+          // Timeout après 10s si WebSocket ne se connecte pas
+          const wsTimeout = setTimeout(() => {
+            if (!wsConnected && !paymentResolved) {
+              wsTimedOut = true;
+              console.log('⏱️ WebSocket timeout (10s), falling back to polling...');
+              socket.close();
+              startPolling();
+            }
+          }, 10000);
+
+          return { socket, wsTimeout };
         } catch (error) {
-          console.error('Erreur polling paiement:', error);
-        }
-
-        if (attempts >= maxAttempts) {
-          window.location.href = `/commandesReference?transactionId=${encodeURIComponent(transactionId)}&status=pending&amount=${encodeURIComponent(amount)}`;
+          console.error('Error connecting to WebSocket:', error);
+          wsTimedOut = true;
+          startPolling(); // Fallback to polling
+          return null;
         }
       };
 
-      const timer = setInterval(async () => {
-        await poll();
+      // ============================================
+      // FALLBACK: Exponential Backoff Polling
+      // ============================================
+      const startPolling = () => {
+        let attempts = 0;
+        let nextInterval = 3000;
+        let totalTime = 0;
+        const maxTime = 10 * 60 * 1000; // 10 minutes
 
-        if (attempts >= maxAttempts) {
-          clearInterval(timer);
-        }
-      }, 5000);
+        const getNextInterval = (currentAttempts) => {
+          const intervals = [3000, 5000, 8000, 13000, 21000, 34000, 55000];
+          return intervals[Math.min(currentAttempts, intervals.length - 1)];
+        };
 
-      poll();
+        const poll = async () => {
+          attempts += 1;
+
+          try {
+            const response = await fetch(`${backendUrl}/getOrderPaymentStatus/${encodeURIComponent(transactionId)}`);
+
+            if (!response.ok) {
+              console.warn(`Poll attempt ${attempts}: HTTP ${response.status}`);
+              return;
+            }
+
+            const data = await response.json();
+            const status = normalizePaymentStatus(data?.status);
+
+            console.log(`📊 Poll attempt ${attempts}: ${status} (${totalTime}ms)`);
+
+            if (status === 'succeeded' || status === 'failed') {
+              if (paymentResolved) return;
+              paymentResolved = true;
+              
+              console.log(`✅ Payment ${status} via polling! Redirecting...`);
+              if (pollTimer) clearTimeout(pollTimer);
+              redirectToResult(status);
+              return;
+            }
+          } catch (error) {
+            console.error(`Poll attempt ${attempts} error:`, error.message);
+          }
+
+          if (totalTime >= maxTime) {
+            console.warn('⏱️ Max polling time exceeded (10 minutes)');
+            if (pollTimer) clearTimeout(pollTimer);
+            clearCheckoutLocalState();
+            window.location.href = `/commandesReference?transactionId=${encodeURIComponent(transactionId)}&status=pending&amount=${encodeURIComponent(amount)}`;
+            return;
+          }
+
+          nextInterval = getNextInterval(attempts - 1);
+          console.log(`⏳ Next poll in ${nextInterval / 1000}s (attempt ${attempts + 1})`);
+
+          pollTimer = setTimeout(() => {
+            totalTime += nextInterval;
+            poll();
+          }, nextInterval);
+        };
+
+        poll();
+      };
+
+      // ============================================
+      // LAUNCH: WebSocket first, polling fallback
+      // ============================================
+      console.log('🚀 Starting payment status monitoring...');
+      connectWebSocket();
     };
 
     startOrderStatusPolling();
 
-    // Nettoyer le localStorage après configuration
+    // Nettoyer l'info temporaire immédiatement
     localStorage.removeItem('paymentInfo');
   </script>
 

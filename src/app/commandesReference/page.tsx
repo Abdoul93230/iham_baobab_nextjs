@@ -61,6 +61,23 @@ export default function CommandesTransaction() {
     setIsClient(true);
   }, []);
 
+  useEffect(() => {
+    if (!isClient) return;
+    if (status !== "succeeded" && status !== "failed") return;
+
+    [
+      "panier",
+      "orderTotal",
+      "orderSubtotal",
+      "orderShippingCost",
+      "paymentInfo",
+      "pendingOrder",
+      "orderShippingZone",
+      "orderCodeP",
+      "paymentInitiated",
+    ].forEach((key) => localStorage.removeItem(key));
+  }, [isClient, status]);
+
   // Fonction vide pour compatibilité
   const handleCartChange = () => {
     // Géré par Redux ou context

@@ -172,18 +172,35 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
       return;
     }
 
+    let pollTimer: NodeJS.Timeout | null = null;
+    let pollAttempts = 0;
+    let wsConnected = false;
+    let cancelled = false;
+
+    // ============================================
+    // PRIORITÉ 1: WebSocket Real-time (Phase 2) 🚀
+    // ============================================
     const socket: Socket = io(BackendUrl, {
       transports: ["websocket", "polling"],
-      timeout: 20000,
+      timeout: 10000, // 10s timeout for WebSocket connection
+      reconnection: true,
+      reconnectionAttempts: 3,
+      reconnectionDelay: 1000,
     });
 
     socketRef.current = socket;
 
     const handleConnect = () => {
+      wsConnected = true;
+      console.log(`✅ WebSocket Connected for order ${order.reference}`);
       socket.emit("payment:join", { reference: order.reference });
     };
 
     const handlePaymentStatus = (event: any) => {
+      if (cancelled || liveStatus === "succeeded" || liveStatus === "failed") {
+        return;
+      }
+
       const eventReference = event?.reference || event?.externalReference;
       if (eventReference !== order.reference) {
         return;
@@ -194,77 +211,141 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
       }
 
       handledPaymentRef.current = order.reference;
-      const nextStatus = event?.status === "succeeded" ? "succeeded" : event?.status === "failed" ? "failed" : liveStatus;
+      const nextStatus = 
+        event?.status === "succeeded" || event?.statusPayment === "payé" ? "succeeded" : 
+        event?.status === "failed" || event?.statusPayment === "échec" ? "failed" : 
+        liveStatus;
+      
+      console.log(`⚡ Payment status received via WebSocket: ${nextStatus}`);
       setLiveStatus(nextStatus);
 
       if (typeof window !== "undefined" && typeof (window as any).onCloseIpayCheckout === "function") {
         (window as any).onCloseIpayCheckout();
       }
+
+      // Close polling if running
+      if (pollTimer) {
+        clearTimeout(pollTimer);
+      }
     };
 
+    const handleDisconnect = () => {
+      wsConnected = false;
+      console.log("❌ WebSocket Disconnected, fallback to polling...");
+      // Fallback to polling
+      if (!cancelled && liveStatus !== "succeeded" && liveStatus !== "failed") {
+        startFallbackPolling();
+      }
+    };
+
+    // ============================================
+    // FALLBACK: Exponential Backoff Polling
+    // ============================================
+    const startFallbackPolling = () => {
+      let nextInterval = 3000;
+      let totalTime = 0;
+      const maxTime = 10 * 60 * 1000; // 10 minutes
+
+      const getNextInterval = (attempts: number): number => {
+        const intervals = [3000, 5000, 8000, 13000, 21000, 34000, 55000];
+        return intervals[Math.min(attempts, intervals.length - 1)];
+      };
+
+      const poll = async () => {
+        if (cancelled || liveStatus === "succeeded" || liveStatus === "failed") {
+          return;
+        }
+
+        pollAttempts++;
+
+        try {
+          // Use lightweight endpoint
+          const response = await axios.get(`${BackendUrl}/getOrderPaymentStatus/${order.reference}`);
+          const paymentStatus = response?.data?.status;
+
+          console.log(`📊 Poll attempt ${pollAttempts}: ${paymentStatus}`);
+
+          if (paymentStatus === "payé") {
+            handledPaymentRef.current = order.reference;
+            setLiveStatus("succeeded");
+            
+            // Fetch full order details
+            const fullResponse = await axios.get(`${BackendUrl}/getCommandeByReference/${order.reference}`);
+            setOrder(fullResponse?.data?.commande);
+            
+            if (typeof window !== "undefined" && typeof (window as any).onCloseIpayCheckout === "function") {
+              (window as any).onCloseIpayCheckout();
+            }
+            return;
+          }
+
+          if (paymentStatus === "échec") {
+            handledPaymentRef.current = order.reference;
+            setLiveStatus("failed");
+            
+            // Fetch full order details
+            const fullResponse = await axios.get(`${BackendUrl}/getCommandeByReference/${order.reference}`);
+            setOrder(fullResponse?.data?.commande);
+            
+            if (typeof window !== "undefined" && typeof (window as any).onCloseIpayCheckout === "function") {
+              (window as any).onCloseIpayCheckout();
+            }
+            return;
+          }
+
+          // Every 5th poll, fetch full order to keep UI updated
+          if (pollAttempts % 5 === 0 && !wsConnected) {
+            const fullResponse = await axios.get(`${BackendUrl}/getCommandeByReference/${order.reference}`);
+            setOrder(fullResponse?.data?.commande);
+          }
+        } catch (error) {
+          if (!cancelled) {
+            console.log(`Polling attempt ${pollAttempts} error:`, (error as any).message);
+          }
+        }
+
+        if (totalTime >= maxTime) {
+          console.warn("⏱️ Max polling time exceeded");
+          cancelled = true;
+          return;
+        }
+
+        nextInterval = getNextInterval(pollAttempts - 1);
+        console.log(`⏳ Next poll in ${nextInterval / 1000}s`);
+
+        pollTimer = setTimeout(() => {
+          totalTime += nextInterval;
+          poll();
+        }, nextInterval);
+      };
+
+      poll();
+    };
+
+    // Wire up WebSocket events
     socket.on("connect", handleConnect);
     socket.on("payment:status", handlePaymentStatus);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", (error: any) => {
+      console.warn("⚠️ WebSocket error:", error.message);
+    });
 
-    return () => {
-      socket.emit("payment:leave", { reference: order.reference });
-      socket.off("connect", handleConnect);
-      socket.off("payment:status", handlePaymentStatus);
-      socket.disconnect();
-      socketRef.current = null;
-    };
-  }, [order?.reference, liveStatus]);
-
-  useEffect(() => {
-    if (!BackendUrl || !order?.reference) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const refreshOrderStatus = async () => {
-      try {
-        const response = await axios.get(`${BackendUrl}/getCommandeByReference/${order.reference}`);
-        const refreshedOrder = response?.data?.commande;
-
-        if (cancelled || !refreshedOrder) {
-          return;
-        }
-
-        setOrder(refreshedOrder);
-
-        if (refreshedOrder.statusPayment === "payé") {
-          setLiveStatus("succeeded");
-          if (typeof window !== "undefined" && typeof (window as any).onCloseIpayCheckout === "function") {
-            (window as any).onCloseIpayCheckout();
-          }
-          cancelled = true;
-          return;
-        }
-
-        if (refreshedOrder.statusPayment === "échec") {
-          setLiveStatus("failed");
-          if (typeof window !== "undefined" && typeof (window as any).onCloseIpayCheckout === "function") {
-            (window as any).onCloseIpayCheckout();
-          }
-          cancelled = true;
-        }
-      } catch (refreshError) {
-        console.log("Refresh payment status failed:", refreshError);
-      }
-    };
-
-    refreshOrderStatus();
-    const intervalId = window.setInterval(() => {
-      if (!cancelled && liveStatus !== "succeeded" && liveStatus !== "failed") {
-        refreshOrderStatus();
-      }
-    }, 3000);
+    // Start listening immediately
+    console.log(`🚀 Starting payment monitor for ${order.reference}`);
 
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
+      if (pollTimer) {
+        clearTimeout(pollTimer);
+      }
+      socket.emit("payment:leave", { reference: order.reference });
+      socket.off("connect", handleConnect);
+      socket.off("payment:status", handlePaymentStatus);
+      socket.off("disconnect", handleDisconnect);
+      socket.disconnect();
+      socketRef.current = null;
     };
-  }, [order?.reference, liveStatus]);
+  }, [order?.reference, liveStatus, BackendUrl]);
 
   // Fonction pour déterminer le type de commande en tenant compte du statut de transaction
   const getOrderType = (): string => {
@@ -413,7 +494,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
       <div className="container mx-auto px-2">
         <button
           className="flex items-center text-gray-600 mb-4 hover:text-gray-800"
-          onClick={() => router.back()}
+          onClick={() => router.push('/')}
         >
           <ChevronLeft className="w-5 h-5 mr-1" />
           Retour
@@ -444,11 +525,11 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                       "Paiement en Cours"}
                 </h1>
                 <p className="text-gray-600">
-                  Transaction ID: {transactionId}
+                  Référence: {order?.reference || transactionId}
                 </p>
-                {amount && (
+                {order?.prix && (
                   <p className="text-lg font-semibold text-teal-600 mt-1">
-                    Montant: {formatPrice(amount)}
+                    Montant: {formatPrice(order.prix)}
                   </p>
                 )}
               </div>
@@ -464,6 +545,10 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                   <p className="text-green-600 text-sm mt-1">
                     Votre commande est maintenant confirmée
                   </p>
+                  <div className="mt-2 text-sm text-green-700">
+                    <p><strong>Référence :</strong> {order?.reference}</p>
+                    {order?.prix && <p><strong>Montant :</strong> {formatPrice(order.prix)}</p>}
+                  </div>
                 </div>
               )}
 
@@ -617,8 +702,8 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                     Votre paiement a été traité avec succès. Votre commande est maintenant confirmée et sera traitée dans les plus brefs délais.
                   </p>
                   <div className="mt-2 text-sm text-green-600">
-                    <p><strong>ID de transaction :</strong> {transactionId}</p>
-                    {amount && <p><strong>Montant payé :</strong> {formatPrice(amount)}</p>}
+                    <p><strong>Référence de commande :</strong> {order?.reference}</p>
+                    {order?.prix && <p><strong>Montant payé :</strong> {formatPrice(order.prix)}</p>}
                   </div>
                 </div>
               </div>
@@ -726,8 +811,8 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                 <div className="bg-gray-50 rounded-lg p-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <p className="font-medium">ID de transaction</p>
-                      <p className="text-gray-600 font-mono">{transactionId}</p>
+                      <p className="font-medium">Référence de commande</p>
+                      <p className="text-gray-600 font-mono">{order?.reference}</p>
                     </div>
                     <div>
                       <p className="font-medium">Statut de la transaction</p>
@@ -740,15 +825,15 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                             liveStatus}
                       </p>
                     </div>
-                    {amount && (
+                    {order?.prix && (
                       <div>
                         <p className="font-medium">Montant de la transaction</p>
-                        <p className="text-gray-600 font-semibold">{formatPrice(amount)}</p>
+                        <p className="text-gray-600 font-semibold">{formatPrice(order.prix)}</p>
                       </div>
                     )}
                     <div>
                       <p className="font-medium">Date de la transaction</p>
-                      <p className="text-gray-600">{new Date().toLocaleString("fr-FR")}</p>
+                      <p className="text-gray-600">{new Date(order.date).toLocaleString("fr-FR")}</p>
                     </div>
                   </div>
                 </div>
@@ -848,7 +933,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                       Traitement du paiement
                     </p>
                     <p className="text-xs text-gray-500">
-                      Transaction {transactionId} - {liveStatus === "succeeded" ? "Réussi" : liveStatus === "failed" ? "Échoué" : "En cours"}
+                      Référence {order?.reference} - {liveStatus === "succeeded" ? "Réussi" : liveStatus === "failed" ? "Échoué" : "En cours"}
                     </p>
                     <p className="text-xs text-gray-500">
                       {new Date().toLocaleString("fr-FR")}
@@ -926,8 +1011,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                     }
                   </p>
                   <p>Référence commande : {order.reference}</p>
-                  <p>Transaction ID : {transactionId}</p>
-                  {amount && <p>Montant transaction : {formatPrice(amount)}</p>}
+                  <p>Montant payé : {order?.prix ? formatPrice(order.prix) : "N/A"}</p>
                 </div>
               </div>
             </div>

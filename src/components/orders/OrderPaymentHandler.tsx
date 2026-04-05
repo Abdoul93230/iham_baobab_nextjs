@@ -41,22 +41,16 @@ const OrderPaymentHandler: React.FC<OrderPaymentHandlerProps> = ({
           })
         );
 
-      if (pendingOrder !== null && id !== null) {
-        localStorage.setItem(
-          "paymentInitiated",
-          JSON.stringify({
-            transactionId: pendingOrder,
-            commandeId: id,
-            timestamp: new Date().getTime(),
-          })
-        );
+      // IMPORTANT: Ne pas sauvegarder paymentInitiated lors d'une relance de paiement
+      // Cela évite que le useEffect du panier détecte l'ancien statut "échec" et redirige
+      // avant que l'utilisateur puisse refaire le paiement
+      localStorage.removeItem("paymentInitiated");
         
-        // Sauvegarder aussi les infos du code promo pour pré-remplissage
-        if (order.idCodePro) {
-          localStorage.setItem("idCodePro", order.idCodePro);
-          if (order.codePromo) {
-            localStorage.setItem("appliedPromoCode", order.codePromo);
-          }
+      // Sauvegarder les infos du code promo pour pré-remplissage
+      if (order.idCodePro) {
+        localStorage.setItem("idCodePro", order.idCodePro);
+        if (order.codePromo) {
+          localStorage.setItem("appliedPromoCode", order.codePromo);
         }
       }
 
