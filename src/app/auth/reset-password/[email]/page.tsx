@@ -1,4 +1,4 @@
-import ResetPassword from "@/components/auth/ResetPassword";
+import VerifyOTP from "@/components/auth/VerifyOTP";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function ResetPasswordPage() {
-  return <ResetPassword />;
+  return <VerifyOTP />;
 }

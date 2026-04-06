@@ -711,7 +711,7 @@ const Profile: React.FC = () => {
             {/* Changer mot de passe */}
             <div className="pt-4 border-t">
               <button
-                onClick={() => router.push("/auth/forgot-password")}
+                onClick={() => router.push("/auth/forgot-password?returnUrl=/profile")}
                 className="inline-flex items-center space-x-2 text-sm text-[#30A08B] hover:text-[#B2905F] transition-colors"
               >
                 <Lock size={16} />

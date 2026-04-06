@@ -1,4 +1,4 @@
-import Login from "@/components/auth/Login";
+import QuickAuth from "@/components/auth/QuickAuth";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function LoginPage() {
-  return <Login />;
+  return <QuickAuth initialMode="login" />;
 }

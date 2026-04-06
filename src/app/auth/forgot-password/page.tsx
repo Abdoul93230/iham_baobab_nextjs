@@ -1,4 +1,4 @@
-import ForgotPassword from "@/components/auth/ForgotPassword";
+import QuickAuth from "@/components/auth/QuickAuth";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function ForgotPasswordPage() {
-  return <ForgotPassword />;
+  return <QuickAuth initialMode="reset" />;
 }

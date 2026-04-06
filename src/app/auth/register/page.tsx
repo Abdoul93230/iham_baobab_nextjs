@@ -1,4 +1,4 @@
-import Register from "@/components/auth/Register";
+import QuickAuth from "@/components/auth/QuickAuth";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function RegisterPage() {
-  return <Register />;
+  return <QuickAuth initialMode="register" />;
 }
