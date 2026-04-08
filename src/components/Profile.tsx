@@ -22,23 +22,16 @@ import {
 import useAuth from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Alert from "@/components/Alert";
-import { isValidPhoneNumber } from "@/lib/utils";
+import {
+  DEFAULT_PHONE_COUNTRY,
+  PHONE_COUNTRIES,
+  applyPhoneInputChange,
+  getPhonePlaceholder,
+  parseStoredPhone,
+  toBackendPhone,
+  validatePhone,
+} from "@/lib/phoneRules";
 
-// Liste des indicatifs pays
-const countryCodes = [
-  { code: "+227", country: "Niger", flag: "🇳🇪" },
-  { code: "+33", country: "France", flag: "🇫🇷" },
-  { code: "+1", country: "États-Unis", flag: "🇺🇸" },
-  { code: "+221", country: "Sénégal", flag: "🇸🇳" },
-  { code: "+225", country: "Côte d'Ivoire", flag: "🇨🇮" },
-  { code: "+226", country: "Burkina Faso", flag: "🇧🇫" },
-  { code: "+223", country: "Mali", flag: "🇲🇱" },
-  { code: "+229", country: "Bénin", flag: "🇧🇯" },
-  { code: "+228", country: "Togo", flag: "🇹🇬" },
-  { code: "+234", country: "Nigeria", flag: "🇳🇬" },
-  { code: "+212", country: "Maroc", flag: "🇲🇦" },
-  { code: "+213", country: "Algérie", flag: "🇩🇿" },
-];
 
 interface UserData {
   nom: string;
@@ -52,15 +45,16 @@ const Profile: React.FC = () => {
   const { user, isAuthenticated, signOut } = useAuth();
   
   // États pour la gestion du téléphone séparé
-  const [selectedCountryCode, setSelectedCountryCode] = useState(countryCodes[0]);
+  const [selectedCountryCode, setSelectedCountryCode] = useState(DEFAULT_PHONE_COUNTRY);
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
   const [phoneNumberOnly, setPhoneNumberOnly] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   
   const [userData, setUserData] = useState<UserData>({
     nom: "",
     email: "",
     phoneNumber: "",
-    photo: "/icon_user.png",
+    photo: "",
   });
   
   const [loading, setLoading] = useState(true);
@@ -73,6 +67,7 @@ const Profile: React.FC = () => {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [profileImageError, setProfileImageError] = useState(false);
   
   const [alert, setAlert] = useState({
     visible: false,
@@ -100,32 +95,7 @@ const Profile: React.FC = () => {
     };
   }, []);
 
-  // Fonction pour séparer le numéro de téléphone complet
-  const parsePhoneNumber = (fullPhoneNumber: string) => {
-    if (!fullPhoneNumber) {
-      return { countryCode: countryCodes[0], phoneOnly: "" };
-    }
-
-    // Rechercher l'indicatif correspondant
-    const foundCountry = countryCodes.find(country => 
-      fullPhoneNumber.startsWith(country.code)
-    );
-
-    if (foundCountry) {
-      const phoneOnly = fullPhoneNumber.substring(foundCountry.code.length);
-      return { countryCode: foundCountry, phoneOnly };
-    }
-
-    // Si aucun indicatif trouvé, utiliser le premier par défaut
-    return { countryCode: countryCodes[0], phoneOnly: fullPhoneNumber };
-  };
-
-  // Fonction pour construire le numéro complet
-  const buildFullPhoneNumber = () => {
-    return phoneNumberOnly.trim() 
-      ? `${selectedCountryCode.code}${phoneNumberOnly.trim()}`
-      : "";
-  };
+  const buildFullPhoneNumber = () => toBackendPhone(selectedCountryCode, phoneNumberOnly);
 
   // Gestion des alertes
   const showAlert = useCallback((message: string, type: "success" | "error" | "warning" | "info" = "info") => {
@@ -156,10 +126,10 @@ const Profile: React.FC = () => {
 
       const profileData = profileResponse.data.data;
       const fullPhoneNumber = profileData?.numero || userResponse.data.user.phoneNumber || "";
-      const { countryCode, phoneOnly } = parsePhoneNumber(fullPhoneNumber);
+      const { country, display } = parseStoredPhone(fullPhoneNumber);
 
-      setSelectedCountryCode(countryCode);
-      setPhoneNumberOnly(phoneOnly);
+      setSelectedCountryCode(country);
+      setPhoneNumberOnly(display);
 
       setUserData({
         nom: userResponse.data.user.name || "",
@@ -167,7 +137,7 @@ const Profile: React.FC = () => {
         phoneNumber: fullPhoneNumber,
         photo: profileData?.image && profileData.image !== "https://chagona.onrender.com/images/image-1688253105925-0.jpeg"
           ? profileData.image
-          : "/icon_user.png",
+          : "",
       });
 
       showAlert("Profil chargé avec succès", "success");
@@ -198,6 +168,10 @@ const Profile: React.FC = () => {
       setLoading(false);
     }
   }, [isAuthenticated, user, fetchUserData]);
+
+  useEffect(() => {
+    setProfileImageError(false);
+  }, [userData.photo]);
 
   // Gestion du drag & drop
   const handleDragEnter = (e: React.DragEvent) => {
@@ -309,9 +283,10 @@ const Profile: React.FC = () => {
       return false;
     }
     
-    const fullPhoneNumber = buildFullPhoneNumber();
-    if (!isValidPhoneNumber(fullPhoneNumber)) {
-      showAlert("Numéro de téléphone invalide (format: +227XXXXXXXX ou XXXXXXXX)", "warning");
+    const phoneValidation = validatePhone(selectedCountryCode, phoneNumberOnly, true);
+    setPhoneError(phoneValidation.message);
+    if (!phoneValidation.isValid) {
+      showAlert(phoneValidation.message, "warning");
       return false;
     }
     return true;
@@ -369,25 +344,24 @@ const Profile: React.FC = () => {
   };
 
   // Gestion du changement d'indicatif pays
-  const handleCountryCodeChange = (country: typeof countryCodes[0]) => {
+  const handleCountryCodeChange = (country: (typeof PHONE_COUNTRIES)[number]) => {
     setSelectedCountryCode(country);
     setIsCountryDropdownOpen(false);
-    // Mettre à jour le numéro complet dans userData
-    const fullPhoneNumber = phoneNumberOnly.trim() 
-      ? `${country.code}${phoneNumberOnly.trim()}`
-      : "";
+    const normalized = applyPhoneInputChange(country, phoneNumberOnly);
+    setPhoneNumberOnly(normalized.display);
+    const phoneValidation = validatePhone(country, normalized.digits, true);
+    setPhoneError(normalized.display ? phoneValidation.message : "");
+    const fullPhoneNumber = toBackendPhone(country, normalized.digits);
     setUserData(prev => ({ ...prev, phoneNumber: fullPhoneNumber }));
   };
 
   // Gestion du changement du numéro de téléphone
   const handlePhoneNumberChange = (value: string) => {
-    // Permettre seulement les chiffres
-    const cleanValue = value.replace(/[^0-9]/g, '');
-    setPhoneNumberOnly(cleanValue);
-    // Mettre à jour le numéro complet dans userData
-    const fullPhoneNumber = cleanValue.trim() 
-      ? `${selectedCountryCode.code}${cleanValue.trim()}`
-      : "";
+    const normalized = applyPhoneInputChange(selectedCountryCode, value);
+    setPhoneNumberOnly(normalized.display);
+    const phoneValidation = validatePhone(selectedCountryCode, normalized.digits, true);
+    setPhoneError(normalized.display ? phoneValidation.message : "");
+    const fullPhoneNumber = toBackendPhone(selectedCountryCode, normalized.digits);
     setUserData(prev => ({ ...prev, phoneNumber: fullPhoneNumber }));
   };
 
@@ -424,13 +398,20 @@ const Profile: React.FC = () => {
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
               >
-                <Image
-                  src={userData.photo}
-                  alt="Photo de profil"
-                  width={160}
-                  height={160}
-                  className="w-full h-full object-cover"
-                />
+                {userData.photo && !profileImageError ? (
+                  <Image
+                    src={userData.photo}
+                    alt="Photo de profil"
+                    width={160}
+                    height={160}
+                    className="w-full h-full object-cover"
+                    onError={() => setProfileImageError(true)}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-[#E8F4F2] flex items-center justify-center">
+                    <User size={64} className="text-[#30A08B]" />
+                  </div>
+                )}
               </div>
               
               <input
@@ -632,7 +613,7 @@ const Profile: React.FC = () => {
                     >
                       <span className="text-base">{selectedCountryCode.flag}</span>
                       <span className="ml-2 text-sm font-medium">
-                        {selectedCountryCode.code}
+                        {selectedCountryCode.dialCode}
                       </span>
                       <ChevronDown size={16} className="ml-2 text-gray-400" />
                     </button>
@@ -640,16 +621,16 @@ const Profile: React.FC = () => {
                     {/* Dropdown menu */}
                     {isCountryDropdownOpen && isEditing && (
                       <div className="absolute z-50 mt-1 w-64 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                        {countryCodes.map((country) => (
+                        {PHONE_COUNTRIES.map((country) => (
                           <button
-                            key={country.code}
+                            key={country.dialCode}
                             type="button"
                             onClick={() => handleCountryCodeChange(country)}
                             className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                           >
                             <span className="text-base">{country.flag}</span>
-                            <span className="ml-3 text-sm font-medium">{country.code}</span>
-                            <span className="ml-2 text-xs text-gray-500">{country.country}</span>
+                            <span className="ml-3 text-sm font-medium">{country.dialCode}</span>
+                            <span className="ml-2 text-xs text-gray-500">{country.name}</span>
                           </button>
                         ))}
                       </div>
@@ -665,14 +646,16 @@ const Profile: React.FC = () => {
                       onChange={(e) => handlePhoneNumberChange(e.target.value)}
                       disabled={!isEditing}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#30A08B] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500"
-                      placeholder="90123456"
-                      maxLength={11}
+                      placeholder={getPhonePlaceholder(selectedCountryCode)}
+                      maxLength={selectedCountryCode.nationalLength + selectedCountryCode.groups.length - 1}
+                      inputMode="numeric"
                     />
                   </div>
                 </div>
+                {isEditing && phoneError ? <p className="text-xs text-red-600 mt-1">{phoneError}</p> : null}
                 {isEditing && (
                   <p className="text-xs text-gray-500 mt-1">
-                    Exemple: {selectedCountryCode.code}90123456 sera envoyé au serveur
+                    Exemple: {selectedCountryCode.dialCode} {getPhonePlaceholder(selectedCountryCode).replace(/\s/g, "")} sera envoyé au serveur
                   </p>
                 )}
               </div>

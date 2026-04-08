@@ -7,24 +7,17 @@ import { ChevronDown, Lock, Phone, User } from "lucide-react";
 import { useAppDispatch } from "@/redux/hooks";
 import { loginUser } from "@/redux/userSlice";
 import Alert from "@/components/Alert";
+import {
+  DEFAULT_PHONE_COUNTRY,
+  PHONE_COUNTRIES,
+  applyPhoneInputChange,
+  getPhonePlaceholder,
+  toBackendPhone,
+  validatePhone,
+} from "@/lib/phoneRules";
 
 type QuickAuthMode = "auto" | "login" | "register" | "reset";
 type Step = "phone" | "login" | "register";
-
-const countryCodes = [
-  { code: "+227", country: "Niger", flag: "🇳🇪" },
-  { code: "+33", country: "France", flag: "🇫🇷" },
-  { code: "+1", country: "États-Unis", flag: "🇺🇸" },
-  { code: "+221", country: "Sénégal", flag: "🇸🇳" },
-  { code: "+225", country: "Côte d'Ivoire", flag: "🇨🇮" },
-  { code: "+226", country: "Burkina Faso", flag: "🇧🇫" },
-  { code: "+223", country: "Mali", flag: "🇲🇱" },
-  { code: "+229", country: "Bénin", flag: "🇧🇯" },
-  { code: "+228", country: "Togo", flag: "🇹🇬" },
-  { code: "+234", country: "Nigeria", flag: "🇳🇬" },
-  { code: "+212", country: "Maroc", flag: "🇲🇦" },
-  { code: "+213", country: "Algérie", flag: "🇩🇿" },
-];
 
 const getErrorMessage = (error: unknown) => {
   if (typeof error === "string") return error;
@@ -46,9 +39,10 @@ const QuickAuth: React.FC<QuickAuthProps> = ({ initialMode = "auto" }) => {
   const searchParams = useSearchParams();
 
   const [step, setStep] = useState<Step>("phone");
-  const [countryCode, setCountryCode] = useState(countryCodes[0]);
+  const [country, setCountry] = useState(DEFAULT_PHONE_COUNTRY);
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
   const [phoneDigits, setPhoneDigits] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -59,9 +53,10 @@ const QuickAuth: React.FC<QuickAuthProps> = ({ initialMode = "auto" }) => {
   });
 
   const fullPhone = useMemo(() => {
-    const normalized = phoneDigits.replace(/\D/g, "");
-    return normalized ? `${countryCode.code}${normalized}` : "";
-  }, [countryCode.code, phoneDigits]);
+    return toBackendPhone(country, phoneDigits);
+  }, [country, phoneDigits]);
+
+  const formattedPhone = useMemo(() => applyPhoneInputChange(country, phoneDigits).display, [country, phoneDigits]);
 
   const showAlert = (
     type: "success" | "error" | "warning" | "info",
@@ -79,18 +74,40 @@ const QuickAuth: React.FC<QuickAuthProps> = ({ initialMode = "auto" }) => {
     router.push(redirect);
   };
 
-  const validatePhone = () => {
-    if (!fullPhone) {
-      showAlert("error", "Veuillez saisir votre numéro de téléphone.");
+  const validatePhoneField = () => {
+    const result = validatePhone(country, phoneDigits, true);
+    setPhoneError(result.message);
+    if (!result.isValid) {
+      showAlert("error", result.message);
       return false;
     }
-
-    if (!/^\+[1-9]\d{7,14}$/.test(fullPhone)) {
-      showAlert("error", "Numéro invalide. Format attendu: +22790123456");
-      return false;
-    }
-
     return true;
+  };
+
+  const handlePhoneChange = (raw: string) => {
+    const next = applyPhoneInputChange(country, raw);
+    setPhoneDigits(next.digits);
+
+    if (!next.digits) {
+      setPhoneError("");
+      return;
+    }
+
+    const validation = validatePhone(country, next.digits, true);
+    setPhoneError(validation.message);
+  };
+
+  const handleCountrySelect = (entry: (typeof PHONE_COUNTRIES)[number]) => {
+    setCountry(entry);
+    setIsCountryDropdownOpen(false);
+    const next = applyPhoneInputChange(entry, phoneDigits);
+    setPhoneDigits(next.digits);
+    if (!next.digits) {
+      setPhoneError("");
+      return;
+    }
+    const validation = validatePhone(entry, next.digits, true);
+    setPhoneError(validation.message);
   };
 
   const buildVerifyUrl = (params: Record<string, string | number | null | undefined>) => {
@@ -108,7 +125,7 @@ const QuickAuth: React.FC<QuickAuthProps> = ({ initialMode = "auto" }) => {
   };
 
   const handleCheckPhone = async () => {
-    if (!validatePhone()) return;
+    if (!validatePhoneField()) return;
 
     setIsLoading(true);
     try {
@@ -232,7 +249,7 @@ const QuickAuth: React.FC<QuickAuthProps> = ({ initialMode = "auto" }) => {
   };
 
   const handleForgotPassword = async () => {
-    if (!validatePhone()) return;
+    if (!validatePhoneField()) return;
 
     setIsLoading(true);
     try {
@@ -287,26 +304,25 @@ const QuickAuth: React.FC<QuickAuthProps> = ({ initialMode = "auto" }) => {
                     onClick={() => setIsCountryDropdownOpen((v) => !v)}
                     className="h-[48px] px-3 border border-r-0 border-gray-300 rounded-l-lg bg-gray-50 hover:bg-gray-100 flex items-center gap-2"
                   >
-                    <span>{countryCode.flag}</span>
-                    <span className="text-sm font-medium">{countryCode.code}</span>
+                    <span>{country.flag}</span>
+                    <span className="text-sm font-medium">{country.dialCode}</span>
                     <ChevronDown className="h-4 w-4 text-gray-500" />
                   </button>
 
                   {isCountryDropdownOpen && (
                     <div className="absolute top-full left-0 mt-1 w-64 max-h-60 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                      {countryCodes.map((country) => (
+                      {PHONE_COUNTRIES.map((entry) => (
                         <button
-                          key={country.code}
+                          key={entry.dialCode}
                           type="button"
                           onClick={() => {
-                            setCountryCode(country);
-                            setIsCountryDropdownOpen(false);
+                            handleCountrySelect(entry);
                           }}
                           className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2"
                         >
-                          <span>{country.flag}</span>
-                          <span className="font-medium text-sm">{country.code}</span>
-                          <span className="text-xs text-gray-500">{country.country}</span>
+                          <span>{entry.flag}</span>
+                          <span className="font-medium text-sm">{entry.dialCode}</span>
+                          <span className="text-xs text-gray-500">{entry.name}</span>
                         </button>
                       ))}
                     </div>
@@ -316,13 +332,17 @@ const QuickAuth: React.FC<QuickAuthProps> = ({ initialMode = "auto" }) => {
                 <div className="relative flex-1">
                   <Phone className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
-                    value={phoneDigits}
-                    onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, ""))}
-                    placeholder="90123456"
+                    type="tel"
+                    inputMode="numeric"
+                    value={formattedPhone}
+                    onChange={(e) => handlePhoneChange(e.target.value)}
+                    placeholder={getPhonePlaceholder(country)}
                     className="w-full h-[48px] border border-gray-300 rounded-r-lg pl-9 pr-3 focus:outline-none focus:ring-2 focus:ring-[#30A08B]"
+                    maxLength={country.nationalLength + country.groups.length - 1}
                   />
                 </div>
               </div>
+              {phoneError ? <p className="mt-2 text-sm text-red-600">{phoneError}</p> : null}
             </div>
 
             {step === "register" && (

@@ -58,11 +58,6 @@ const profileSEOConfig = {
   // Ajouter les en-têtes supplémentaires séparément
   additionalLinkTags: [
     {
-      rel: "preload",
-      href: "/icon_user.png",
-      as: "image",
-    },
-    {
       rel: "dns-prefetch",
       href: process.env.NEXT_PUBLIC_Backend_Url!,
     },
@@ -99,7 +94,6 @@ export default function ProfilePage() {
       <>
         <NextSeo {...profileSEOConfig} />
         <Head>
-          <link rel="preload" href="/icon_user.png" as="image" />
           <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_Backend_Url} />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         </Head>

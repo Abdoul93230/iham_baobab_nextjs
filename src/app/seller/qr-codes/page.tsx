@@ -31,7 +31,7 @@ export default function SellerQRCodesPage() {
         setSeller(sellerResponse.data.data);
 
         // Récupérer les produits du vendeur
-        const productsResponse = await axios.get(`${BackendUrl}/searchProductBySupplier/${sellerId}`);
+        const productsResponse = await axios.get(`${BackendUrl}/searchProductBySupplierClients/${sellerId}`);
         setProducts(productsResponse.data.data || []);
       } catch (error) {
         console.error("Erreur lors du chargement:", error);

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAppDispatch } from "@/redux/hooks";
 import { loginUser } from "@/redux/userSlice";
 import Alert from "@/components/Alert";
+import { getPasswordChecks, getPasswordStrength, validatePassword } from "@/lib/passwordRules";
 
 type FlowType = "quick-register" | "password-reset";
 type Step = "verify-otp" | "set-password";
@@ -57,6 +58,9 @@ const VerifyOTP: React.FC = () => {
     type: "info" as "success" | "error" | "warning" | "info",
     message: "",
   });
+
+  const passwordChecks = useMemo(() => getPasswordChecks(password), [password]);
+  const passwordStrength = useMemo(() => getPasswordStrength(password), [password]);
 
   const canVerify = useMemo(() => otp.length === 6, [otp.length]);
 
@@ -166,8 +170,9 @@ const VerifyOTP: React.FC = () => {
   };
 
   const handleFinalize = async () => {
-    if (!password || password.length < 6) {
-      showAlert("error", "Le mot de passe doit contenir au moins 6 caractères.");
+    const validation = validatePassword(password);
+    if (!validation.valid) {
+      showAlert("error", validation.message);
       return;
     }
 
@@ -184,7 +189,7 @@ const VerifyOTP: React.FC = () => {
       const body =
         flowType === "password-reset"
           ? { phone, code: otp, newPassword: password }
-          : { phone, name, password };
+          : { phone, name, password, code: otp };
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_Backend_Url}${endpoint}`, {
         method: "POST",
@@ -300,6 +305,26 @@ const VerifyOTP: React.FC = () => {
                     className="w-full h-[48px] border border-gray-300 rounded-lg px-3 focus:outline-none focus:ring-2 focus:ring-[#30A08B]"
                     placeholder="Choisissez un mot de passe"
                   />
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-600">Force du mot de passe</span>
+                      <span className="font-semibold text-gray-800">{passwordStrength.label}</span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-2 ${passwordStrength.colorClass}`}
+                        style={{ width: `${Math.max(8, (passwordStrength.score / 6) * 100)}%` }}
+                      />
+                    </div>
+                    <ul className="text-xs text-gray-600 space-y-1">
+                      <li className={passwordChecks.minLength ? "text-emerald-700" : "text-gray-500"}>8 caractères minimum</li>
+                      <li className={passwordChecks.upper ? "text-emerald-700" : "text-gray-500"}>Au moins une majuscule</li>
+                      <li className={passwordChecks.lower ? "text-emerald-700" : "text-gray-500"}>Au moins une minuscule</li>
+                      <li className={passwordChecks.number ? "text-emerald-700" : "text-gray-500"}>Au moins un chiffre</li>
+                      <li className={passwordChecks.special ? "text-emerald-700" : "text-gray-500"}>Au moins un caractère spécial</li>
+                      <li className={passwordChecks.noSpaces ? "text-emerald-700" : "text-gray-500"}>Sans espace</li>
+                    </ul>
+                  </div>
                 </div>
 
                 <div>
