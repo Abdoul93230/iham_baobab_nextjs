@@ -13,6 +13,7 @@ import {
 import { useRouter } from "next/navigation";
 import axios from "axios";
 // import useAuth from "@/hooks/useAuth";
+import { triggerNavProgress } from "@/components/NavigationProgress";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 // Types TypeScript
@@ -244,9 +245,7 @@ const LikeProduitContent = () => {
                         <Share2 size={20} />
                       </button>
                       <button
-                        onClick={() =>
-                          router.push(`/ProduitDetail/${product._id}`)
-                        }
+                        onClick={() => { triggerNavProgress(); router.push(`/ProduitDetail/${product._id}`); }}
                         className="p-2 bg-[#30A08B] rounded-full text-white hover:bg-[#268771] transition-colors"
                       >
                         <ShoppingCart size={20} />
@@ -272,7 +271,7 @@ const LikeProduitContent = () => {
                       </span>
                       <button
                         onClick={() => {
-                          // Naviguer vers la page du produit
+                          triggerNavProgress();
                           router.push(`/ProduitDetail/${product._id}`);
                         }}
                         className="flex items-center text-[#30A08B] hover:text-[#268771]"

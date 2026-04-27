@@ -8,6 +8,7 @@ import axios from "axios";
 import { io, Socket } from "socket.io-client";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import PaiementPage from "./PaiementPage";
+import PointsRedeemWidget from "@/components/wallet/PointsRedeemWidget";
 
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 
@@ -150,7 +151,13 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
   const router = useRouter();
   const [selectedPayment, setSelectedPayment] = useState("");
   const [message, setMessage] = useState("");
-  const [selectedZone, setSelectedZone] = useState<any>(null);
+  const [selectedZone, setSelectedZone] = useState<any>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem("orderShippingZone");
+      if (saved) { try { return JSON.parse(saved); } catch { return null; } }
+    }
+    return null;
+  });
   const [orderTotal, setOrderTotal] = useState(() => {
     if (typeof window !== 'undefined') {
       const savedTotal = localStorage.getItem("orderTotal");
@@ -211,6 +218,8 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
   });
   const [paiementProduit, setPaiementProduit] = useState(false);
   const [trackedTransactionId, setTrackedTransactionId] = useState<string | null>(null);
+  const [pointsToUse, setPointsToUse] = useState(0);
+  const [pointsDiscount, setPointsDiscount] = useState(0);
   const handledPaymentRef = useRef<string | null>(null);
 
   const spinnerStyle = {
@@ -373,6 +382,18 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
       fetchData();
     }
   }, [user, selectedZone]);
+
+  // Sync selectedZone → deliveryInfo.region immédiatement (indépendant de fetchData)
+  useEffect(() => {
+    if (!selectedZone) return;
+    const regionValue = selectedZone.fullPath
+      || (selectedZone.country && selectedZone.region && selectedZone.name
+        ? `${selectedZone.country} > ${selectedZone.region} > ${selectedZone.name}`
+        : selectedZone.name || "");
+    if (regionValue) {
+      setDeliveryInfo(prev => ({ ...prev, region: regionValue }));
+    }
+  }, [selectedZone]);
 
   const validateDeliveryInfo = () => {
     const errors = [];
@@ -735,14 +756,32 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
       return;
     }
 
+    // Enrichir chaque article avec prixLivraison depuis shippingCalculations
+    const shippingCalculations: Record<string, any> = JSON.parse(
+      localStorage.getItem("orderShippingCalculations") || "{}"
+    );
+    // Répartir le frais fixe du store sur le 1er article, poids sur tous
+    const storeFirstItem: Record<string, boolean> = {};
+    const panierWithShipping = panier.map((item: any) => {
+      const storeId = item.Clefournisseur?._id || item.createdBy || "unknown";
+      const calc = shippingCalculations[storeId];
+      let prixLivraison = 0;
+      if (calc) {
+        const isFirst = !storeFirstItem[storeId];
+        storeFirstItem[storeId] = true;
+        prixLivraison = isFirst ? (calc.fixedCost || 0) : 0;
+        // frais poids proportionnel à la quantité
+        prixLivraison += (calc.costPerKg || 0) * (item.weight || 0) * (item.quantity || 1);
+      }
+      return { ...item, prixLivraison };
+    });
+
     try {
       // 3. Le backend recalcule la réduction, on envoie juste le promoCodeId
       const promoDiscount = PromoCodeService.getDiscount();
       const promoCodeId = PromoCodeService.getPromoCodeId();
-      
-      // AVANT FIX: const finalOrderTotal = orderTotal - promoDiscount; // orderTotal already has discount, so this was a double subtraction
-      // FIX: orderTotal is already (Subtotal - Reduction + Shipping)
-      const finalOrderTotal = orderTotal; 
+
+      const finalOrderTotal = orderTotal;
 
       // 4. Création ou mise à jour de la commande
       const existingOrder = JSON.parse(localStorage.getItem("pendingOrder") || "null");
@@ -758,8 +797,8 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
           tailles: item.sizes,
           couleurs: item.colors,
         })),
-        prix: finalOrderTotal, // Total final à payer (incluant livraison et réduction)
-        prixTotal: orderSubtotal, // Sous-total des produits uniquement
+        prix: finalOrderTotal,
+        prixTotal: orderSubtotal,
         fraisLivraison: orderShippingCost,
         reduction: promoDiscount,
         statusPayment: PaymentMethods.CASH_ON_DELIVERY.includes(selectedPayment)
@@ -772,14 +811,15 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
           email: deliveryInfo.email || null,
           region: deliveryInfo.region,
           quartier: deliveryInfo.quartier,
-          numero: deliveryInfo.countryCode + deliveryInfo.numero, // Numéro complet international
+          numero: deliveryInfo.countryCode + deliveryInfo.numero,
           description: deliveryInfo.description,
         },
-        prod: panier,
+        prod: panierWithShipping,
         ...(promoCodeId && {
           codePro: true,
           idCodePro: promoCodeId,
         }),
+        ...(pointsToUse > 0 && { pointsToUse }),
       };
 
       if (existingOrder) {
@@ -1598,6 +1638,15 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
                 </div>
               </div>
 
+              {/* Points Baobab */}
+              <PointsRedeemWidget
+                orderAmountFcfa={orderSubtotal}
+                onPointsChange={(pts, disc) => {
+                  setPointsToUse(pts);
+                  setPointsDiscount(disc);
+                }}
+              />
+
               {/* Deuxième carte - Méthode de paiement */}
               <PaiementPage
                 selectedPayment={selectedPayment}
@@ -1627,7 +1676,16 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
               {submitStatus.loading ? (
                 <div style={spinnerStyle} className="animate-spin"></div>
               ) : (
-                <span>Confirmer la commande {orderTotal.toLocaleString('fr-FR')} FCFA</span>
+                <span>
+                  Confirmer la commande{" "}
+                  {pointsDiscount > 0 ? (
+                    <>
+                      <span className="line-through opacity-60">{orderTotal.toLocaleString('fr-FR')}</span>{" "}
+                      {(orderTotal - pointsDiscount).toLocaleString('fr-FR')}
+                    </>
+                  ) : orderTotal.toLocaleString('fr-FR')}{" "}
+                  FCFA
+                </span>
               )}
             </motion.button>
 

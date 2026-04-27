@@ -2,34 +2,30 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { triggerNavProgress } from "@/components/NavigationProgress";
 import {
   Trash2,
   Plus,
   Minus,
   RefreshCw,
-  ShoppingCart,
+  ShoppingBag,
   Truck,
-  ChevronUp,
-  ChevronDown,
   Store,
   MapPin,
   AlertTriangle,
   CheckCircle,
+  Tag,
+  ChevronRight,
+  Package,
+  ShoppingCart,
 } from "lucide-react";
 import axios from "axios";
-import { useSelector, useDispatch } from "react-redux";
+import Image from "next/image";
+import { useSelector } from "react-redux";
 import ZoneSelector from "./ZoneSelector";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
 import { formatCurrency } from "../../lib/utils";
 import Alert from "../Alert";
 import { RootState } from "@/redux/store";
-import {
-  selectPanierArticles,
-  deletePanier,
-  updateQuantity as updatePanierQuantity
-} from "@/redux/panierSlice";
 import { AuthService } from "@/lib/auth";
 
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
@@ -49,1209 +45,822 @@ interface StoreGroup {
   storeId: string;
   storeName: string;
   storeInfo: any;
-  products: Record<string, ProductGroup>;
+  articles: { article: any; originalIndex: number }[];
   totalWeight: number;
   totalValue: number;
   shippingCost: number;
-  isAvailable: boolean;
-}
-
-interface ProductGroup {
-  productId: string;
-  name: string;
-  imageUrl: string;
-  variants: any[];
-  totalQuantity: number;
-  totalValue: number;
-  totalWeight: number;
 }
 
 interface ShippingCalculation {
   storeId: string;
-  storeName: string;
-  totalWeight: number;
   totalCost: number;
-  canDeliver: boolean;
-  details: string;
-  success?: boolean;
   fixedCost?: number;
   weightCost?: number;
   costPerKg?: number;
-  appliedPolicy?: {
-    zone: string;
-    type: string;
-    error?: string;
-  };
+  success?: boolean;
+  appliedPolicy?: { zone: string; type: string; error?: string };
 }
 
-// Composant principal
 const PanierPage: React.FC = () => {
   const router = useRouter();
-  const dispatch = useDispatch();
 
-  // Utiliser localStorage directement au lieu de Redux pour éviter les conflits
   const [articles, setArticles] = useState<any[]>([]);
-
   const [codePromo, setCodePromo] = useState("");
   const [reduction, setReduction] = useState(0);
-  const [estAbonne, setEstAbonne] = useState(false);
   const [message, setMessage] = useState("");
   const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
   const [rond, setRond] = useState(false);
-  const [expandedStores, setExpandedStores] = useState<Record<string, boolean>>({});
-
-  // Charger les articles depuis localStorage
-  useEffect(() => {
-    const loadArticles = () => {
-      if (typeof window !== 'undefined') {
-        const storedArticles = localStorage.getItem("panier");
-        if (storedArticles) {
-          setArticles(JSON.parse(storedArticles));
-        }
-      }
-    };
-
-    loadArticles();
-
-    // Écouter les changements du localStorage
-    const handleStorageChange = () => {
-      loadArticles();
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    // Vérifier périodiquement pour les changements dans le même onglet
-    const interval = setInterval(loadArticles, 1000);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
-  }, []);
-  const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [shippingCalculations, setShippingCalculations] = useState<Record<string, ShippingCalculation>>({});
   const [unavailableProducts, setUnavailableProducts] = useState<Set<string>>(new Set());
+  const [codeP, setCodeP] = useState<any>(null);
+  const [total, setTotal] = useState(0);
   const [alert, setAlert] = useState({
     visible: false,
     type: "info" as "info" | "success" | "warning" | "error" | "warn",
     message: "",
   });
-  const [total, setTotal] = useState(0);
-  const [codeP, setCodeP] = useState<any>(null);
 
-  const { acces, user } = useSelector((state: RootState) => state.user);
+  const { acces } = useSelector((state: RootState) => state.user);
 
-  // Auto-appliquer le code promo si présent dans localStorage (relance de commande)
+  // Load articles from localStorage
   useEffect(() => {
-    const appliedCode = localStorage.getItem("appliedPromoCode");
-    const user = AuthService.getUserData();
-    if (appliedCode && articles.length > 0 && !codeP && user) {
-      console.log('🔄 Auto-application du code promo:', appliedCode);
-      setCodePromo(appliedCode);
-      // Attendre que le sous-total soit calculable
-      setTimeout(() => {
-        appliquerCodePromo(appliedCode, true);
-      }, 500);
-    }
-  }, [articles.length]);
-
-  // Surveiller les changements du panier pour recalculer le code promo si déjà appliqué
-  const articlesHash = useMemo(() => articles.map(a => `${a._id}-${a.quantity}`).join(','), [articles]);
-  
-  useEffect(() => {
-    const appliedCode = codeP?.code || localStorage.getItem("appliedPromoCode");
-    if (appliedCode && articles.length > 0) {
-      const delayDebounceFn = setTimeout(() => {
-        console.log('🔄 Recalcul du code promo suite au changement de panier...');
-        appliquerCodePromo(appliedCode, true);
-      }, 800);
-      return () => clearTimeout(delayDebounceFn);
-    }
-  }, [articlesHash]);
-
-  // Fonction pour estimer le poids d'un produit (memoized) - DOIT ÊTRE DÉFINIE AVANT groupedByStore
-  const calculateProductWeight = useMemo(() => (article: any) => {
-    // Si le produit a des dimensions, calculer un poids estimé
-    if (article.shipping?.dimensions) {
-      const { length, width, height } = article.shipping.dimensions;
-      if (length && width && height) {
-        // Estimation basée sur le volume (densité moyenne de 0.5 kg/dm³)
-        const volume = (length * width * height) / 1000; // cm³ vers dm³
-        return Math.max(0.1, volume * 0.5); // Minimum 100g
+    const load = () => {
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem("panier");
+        if (stored) setArticles(JSON.parse(stored));
+        else setArticles([]);
       }
-    }
-
-    // Poids par défaut selon la catégorie
-    const categoryWeights: Record<string, number> = {
-      'mode': 0.5,
-      'electronique': 1.5,
-      'maison': 2.0,
-      'sport': 1.0,
     };
-
-    const category = article.ClefType || 'mode';
-    return categoryWeights[category] || 0.5; // 500g par défaut
+    load();
+    window.addEventListener("storage", load);
+    const interval = setInterval(load, 1000);
+    return () => {
+      window.removeEventListener("storage", load);
+      clearInterval(interval);
+    };
   }, []);
 
-  // Fonction pour obtenir le stock disponible d'un article (basée sur le projet principal React)
+  const calculateProductWeight = useMemo(
+    () => (article: any) => {
+      if (article.shipping?.dimensions) {
+        const { length, width, height } = article.shipping.dimensions;
+        if (length && width && height) {
+          const volume = (length * width * height) / 1000;
+          return Math.max(0.1, volume * 0.5);
+        }
+      }
+      const categoryWeights: Record<string, number> = {
+        mode: 0.5,
+        electronique: 1.5,
+        maison: 2.0,
+        sport: 1.0,
+      };
+      return categoryWeights[article.ClefType || "mode"] || 0.5;
+    },
+    []
+  );
+
   const getAvailableStock = (article: any) => {
-    // Si on a un stock de variante spécifique sauvegardé (ajouté par ProduitDetailMain)
-    if (article.stockVariante !== undefined) {
-      return article.stockVariante;
+    if (article.stockVariante !== undefined) return article.stockVariante;
+    if (article.variants?.length > 0) {
+      const variant = article.variants.find((v: any) => v.color === article.colors?.[0]);
+      return variant ? variant.quantity || variant.stock || 0 : 0;
     }
-
-    // Si l'article a des variantes dans ses données originales
-    if (article.variants && article.variants.length > 0) {
-      // Trouver la variante correspondant à la couleur sélectionnée
-      const variant = article.variants.find((v: any) =>
-        v.color === article.colors?.[0]
-      );
-      return variant ? (variant.quantity || variant.stock || 0) : 0;
-    }
-
-    // Pour les produits sans variantes, utiliser le stock général du produit
     return article.quantite || article.stock || article.quantity_in_stock || 0;
   };
 
-  // Memoization des calculs coûteux pour améliorer les performances
-  const groupedByStore = useMemo(() => {
-    const storeGroups: Record<string, StoreGroup> = {};
-
-    articles.forEach((article, index) => {
+  // Group articles by store — flat array per store (no product sub-grouping)
+  const storeGroups = useMemo(() => {
+    const groups: Record<string, StoreGroup> = {};
+    articles.forEach((article, idx) => {
       const storeId = article.Clefournisseur?._id || "unknown";
-      const storeName = article.Clefournisseur?.storeName || article.Clefournisseur?.name || "Boutique inconnue";
-      const productId = article._id;
-
-      // Créer le groupe boutique s'il n'existe pas
-      if (!storeGroups[storeId]) {
-        storeGroups[storeId] = {
+      const storeName =
+        article.Clefournisseur?.storeName || article.Clefournisseur?.name || "Boutique inconnue";
+      if (!groups[storeId]) {
+        groups[storeId] = {
           storeId,
           storeName,
           storeInfo: article.Clefournisseur || {},
-          products: {},
+          articles: [],
           totalWeight: 0,
           totalValue: 0,
           shippingCost: 0,
-          isAvailable: true,
         };
       }
-
-      // Créer le groupe produit s'il n'existe pas
-      if (!storeGroups[storeId].products[productId]) {
-        storeGroups[storeId].products[productId] = {
-          productId,
-          name: article.name,
-          imageUrl: article.image1 || article.imageUrl || '/placeholder-image.svg',
-          variants: [],
-          totalQuantity: 0,
-          totalValue: 0,
-          totalWeight: 0,
-        };
-      }
-
-      const quantity = article.quantity || 0;
-
-      // Ajouter la variante au produit
-      storeGroups[storeId].products[productId].variants.push(article);
-      storeGroups[storeId].products[productId].totalQuantity += quantity;
-
-      // Calculer le prix de cette variante
-      const variantPrice = (article.prixPromo || article.prix || article.price || 0);
-      const variantTotalPrice = variantPrice * quantity;
-
-      storeGroups[storeId].products[productId].totalValue += variantTotalPrice;
-
-      // Calculer le poids (estimation basée sur les dimensions ou poids par défaut)
-      const estimatedWeight = calculateProductWeight(article) * quantity;
-      storeGroups[storeId].products[productId].totalWeight += estimatedWeight;
-      storeGroups[storeId].totalWeight += estimatedWeight;
+      const qty = article.quantity || 0;
+      const price = article.prixPromo || article.prix || article.price || 0;
+      groups[storeId].articles.push({ article, originalIndex: idx });
+      groups[storeId].totalWeight += calculateProductWeight(article) * qty;
+      groups[storeId].totalValue += price * qty;
     });
+    return groups;
+  }, [articles, calculateProductWeight]);
 
-    return storeGroups;
-  }, [articles, calculateProductWeight]); // Dependency pour recalcul quand articles change
+  const storeGroupsArray = useMemo(() => Object.values(storeGroups), [storeGroups]);
 
-  // Version tableau pour le rendu
-  const storeGroupsArray = useMemo(() => Object.values(groupedByStore), [groupedByStore]);
-
-  // Fonction pour calculer les frais d'expédition via l'API
-  const calculateShippingForStore = async (storeId: string, storeInfo: any, totalWeight: number, customerZoneId: string) => {
+  // Shipping calculations
+  const calculateShippingForStore = async (
+    storeId: string,
+    totalWeight: number,
+    customerZoneId: string
+  ) => {
     try {
-      console.log(`Calcul expédition pour boutique ${storeId}:`, { storeInfo, totalWeight, customerZoneId });
-
-      const response = await axios.post(`${BackendUrl}/api/shipping2/calculate`, {
-        sellerId: storeId,
-        customerZoneId: customerZoneId,
-        weight: totalWeight
-      }, {
-        timeout: 10000, // 10 secondes de timeout
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log(`Réponse API pour boutique ${storeId}:`, response.data);
-
-      if (response.data && response.data.success && response.data.data) {
+      const response = await axios.post(
+        `${BackendUrl}/api/shipping2/calculate`,
+        { sellerId: storeId, customerZoneId, weight: totalWeight },
+        { timeout: 10000 }
+      );
+      if (response.data?.success && response.data?.data) {
         return {
           success: true,
           fixedCost: response.data.data.fixedCost || 0,
-          weightCost: response.data.data.weightCost || (response.data.data.costPerKg || 250) * totalWeight,
+          weightCost: response.data.data.weightCost || 0,
           costPerKg: response.data.data.costPerKg || 250,
           totalCost: response.data.data.totalCost || 0,
-          appliedPolicy: response.data.data.appliedPolicy || { zone: 'API Response', type: 'calculated' }
+          appliedPolicy: response.data.data.appliedPolicy || { zone: "API", type: "calculated" },
         };
       }
-
-      throw new Error('Réponse API invalide ou incomplète');
-
-    } catch (err) {
-      const error = err as any; // Cast pour gérer les erreurs axios
-      console.warn(`Erreur API boutique ${storeId}, utilisation du fallback:`, {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data
-      });
-
-      // Si l'API échoue, utiliser l'ancien système comme fallback
+      throw new Error("Invalid API response");
+    } catch {
       return {
         success: false,
         fixedCost: 1000,
         costPerKg: 250,
         weightCost: 250 * totalWeight,
-        totalCost: 1000 + (250 * totalWeight),
-        appliedPolicy: {
-          zone: 'Politique par défaut',
-          type: 'fallback'
-        }
+        totalCost: 1000 + 250 * totalWeight,
+        appliedPolicy: { zone: "Politique par défaut", type: "fallback" },
       };
     }
   };
 
-  // Calculer les frais d'expédition pour toutes les boutiques
-  const recalculateAllShipping = async (grouped: Record<string, StoreGroup>, customerZone: Zone) => {
-    if (!customerZone) {
-      console.warn('Aucune zone cliente fournie pour le calcul d\'expédition');
-      return;
-    }
-
-    console.log('Recalcul des expéditions pour', Object.keys(grouped).length, 'boutiques');
+  const recalculateAllShipping = async (
+    grouped: Record<string, StoreGroup>,
+    customerZone: Zone
+  ) => {
+    if (!customerZone) return;
     const calculations: Record<string, any> = {};
     const unavailable = new Set<string>();
-    let successCount = 0;
-    let errorCount = 0;
-
-    // Traitement séquentiel pour éviter la surcharge du serveur
     for (const [storeId, storeGroup] of Object.entries(grouped)) {
-      try {
-        console.log(`Traitement boutique ${storeGroup.storeName} (${storeId})`);
-
-        const shippingResult = await calculateShippingForStore(
-          storeId,
-          storeGroup.storeInfo,
-          storeGroup.totalWeight,
-          customerZone._id
+      const result = await calculateShippingForStore(
+        storeId,
+        storeGroup.totalWeight,
+        customerZone._id
+      );
+      calculations[storeId] = result;
+      if (result.totalCost === 0) {
+        storeGroup.articles.forEach(({ article }) =>
+          unavailable.add(`${storeId}-${article._id}`)
         );
-
-        calculations[storeId] = shippingResult;
-
-        if (shippingResult.success) {
-          successCount++;
-          console.log(`✓ Expédition calculée pour ${storeGroup.storeName}: ${shippingResult.totalCost}`);
-        } else {
-          errorCount++;
-          console.warn(`⚠ Fallback utilisé pour ${storeGroup.storeName}: ${shippingResult.totalCost}`);
-        }
-
-        // Si le calcul échoue complètement (coût = 0), marquer les produits comme indisponibles
-        if (shippingResult.totalCost === 0) {
-          Object.keys(storeGroup.products).forEach(productId => {
-            unavailable.add(`${storeId}-${productId}`);
-          });
-          console.warn(`Produits de ${storeGroup.storeName} marqués comme indisponibles`);
-        }
-
-      } catch (error) {
-        errorCount++;
-        console.error(`Erreur critique pour la boutique ${storeGroup.storeName}:`, error);
-
-        // Créer un calcul de fallback même en cas d'erreur critique
-        calculations[storeId] = {
-          success: false,
-          fixedCost: 1000,
-          costPerKg: 250,
-          weightCost: 250 * storeGroup.totalWeight,
-          totalCost: 1000 + (250 * storeGroup.totalWeight),
-          appliedPolicy: {
-            zone: 'Erreur critique - Politique par défaut',
-            type: 'emergency-fallback'
-          }
-        };
-
-        // Marquer tous les produits de cette boutique comme indisponibles
-        Object.keys(storeGroup.products).forEach(productId => {
-          unavailable.add(`${storeId}-${productId}`);
-        });
       }
     }
-
-    console.log(`Calculs terminés: ${successCount} succès, ${errorCount} erreurs/fallbacks`);
     setShippingCalculations(calculations);
     setUnavailableProducts(unavailable);
-
-    // Les erreurs sont gérées silencieusement avec fallback
   };
 
-  const showAlert = (type: "info" | "success" | "warning" | "error" | "warn", message: string) => {
-    setAlert({ visible: true, type, message });
-    setTimeout(() => {
-      setAlert({ visible: false, type: "info", message: "" });
-    }, 5000);
+  const showAlert = (
+    type: "info" | "success" | "warning" | "error" | "warn",
+    msg: string
+  ) => {
+    setAlert({ visible: true, type, message: msg });
+    setTimeout(() => setAlert({ visible: false, type: "info", message: "" }), 5000);
   };
 
-  const handleSuccess = (message: string) => {
-    showAlert("success", message);
-  };
-
-  const handleWarning = (message: string) => {
-    showAlert("warn", message);
-  };
-
-  // Charger les articles et détecter la zone du client
+  // IP-based zone detection on mount
   useEffect(() => {
-    const panierItems = JSON.parse(localStorage.getItem("panier") || "[]");
-
-    const detecterZoneClient = async () => {
+    const detect = async () => {
       setLoading(true);
-      console.log('Début de la détection de zone client...');
-
       try {
-        // Détecter la localisation du client avec timeout
-        console.log('Récupération IP client...');
         const ip = await axios.get("https://ifconfig.me/ip", { timeout: 5000 });
-
-        console.log('Récupération données de géolocalisation...');
-        const response = await axios.get(`${BackendUrl}/proxy/ip-api`, {
-          headers: {
-            "Client-IP": ip.data,
-          },
-          timeout: 5000
+        const geo = await axios.get(`${BackendUrl}/proxy/ip-api`, {
+          headers: { "Client-IP": ip.data },
+          timeout: 5000,
         });
-
-        const region = response.data.regionName || "Niamey";
-        const country = response.data.country || "Niger";
-        console.log(`Localisation détectée: ${region}, ${country}`);
-
-        // Rechercher la zone correspondante dans votre système
-        let detectedZone = null;
+        const region = geo.data.regionName || "Niamey";
+        const country = geo.data.country || "Niger";
+        let zone = null;
         try {
-          console.log(`Recherche de zone pour la région: ${region}`);
-          const zoneResponse = await axios.get(`${BackendUrl}/api/shipping2/zones/search`, {
+          const r = await axios.get(`${BackendUrl}/api/shipping2/zones/search`, {
             params: { q: region, limit: 1 },
-            timeout: 5000
+            timeout: 5000,
           });
-
-          if (zoneResponse.data.success && zoneResponse.data.data.length > 0) {
-            detectedZone = zoneResponse.data.data[0];
-            console.log(`Zone trouvée pour la région: ${detectedZone.name}`);
+          if (r.data.success && r.data.data.length > 0) {
+            zone = r.data.data[0];
           } else {
-            // Fallback: chercher par pays
-            console.log(`Recherche de zone pour le pays: ${country}`);
-            const countryResponse = await axios.get(`${BackendUrl}/api/shipping2/zones/search`, {
+            const r2 = await axios.get(`${BackendUrl}/api/shipping2/zones/search`, {
               params: { q: country, limit: 1 },
-              timeout: 5000
+              timeout: 5000,
             });
-            if (countryResponse.data.success && countryResponse.data.data.length > 0) {
-              detectedZone = countryResponse.data.data[0];
-              console.log(`Zone trouvée pour le pays: ${detectedZone.name}`);
-            }
+            if (r2.data.success && r2.data.data.length > 0) zone = r2.data.data[0];
           }
-        } catch (zoneError) {
-          console.warn("Échec de la détection de zone automatique:", zoneError);
-          showAlert("info", "Détection automatique de zone échouée. Veuillez sélectionner manuellement.");
+        } catch {
+          showAlert("info", "Sélectionnez votre zone de livraison.");
         }
-
-        setSelectedZone(detectedZone);
-
-        // Les articles viennent maintenant automatiquement de Redux
-        // Plus besoin de setArticles(panierItems)
-
-        // Calculer les frais d'expédition si une zone est détectée
-        if (detectedZone) {
-          console.log('Calcul des frais d\'expédition...');
-          await recalculateAllShipping(groupedByStore, detectedZone);
-        } else {
-          console.log('Aucune zone détectée - sélection manuelle requise');
-          showAlert("warning", "Veuillez sélectionner votre zone de livraison pour voir les frais d'expédition.");
-        }
-
-        setLoading(false);
-        console.log('Détection de zone terminée avec succès');
-
-      } catch (error) {
-        console.error("Erreur critique lors de la détection de zone:", error);
-        setLoading(false);
-
-        // Fallback complet: continuer sans détection de zone
-        // Les articles viennent automatiquement de Redux
-
-        showAlert("warning", "Impossible de détecter automatiquement votre zone. Veuillez la sélectionner manuellement.");
+        setSelectedZone(zone);
+        if (zone) await recalculateAllShipping(storeGroups, zone);
+      } catch {
+        showAlert("warning", "Impossible de détecter votre zone. Veuillez la sélectionner.");
       }
+      setLoading(false);
     };
-
-    detecterZoneClient();
+    detect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Recalculer quand la zone change (avec protection contre les boucles)
   useEffect(() => {
-    if (selectedZone && Object.keys(groupedByStore).length > 0) {
-      // Utiliser un délai pour éviter les calculs en cascade
-      const timer = setTimeout(() => {
-        recalculateAllShipping(groupedByStore, selectedZone);
-      }, 100);
-      return () => clearTimeout(timer);
+    if (selectedZone && Object.keys(storeGroups).length > 0) {
+      const t = setTimeout(() => recalculateAllShipping(storeGroups, selectedZone), 100);
+      return () => clearTimeout(t);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedZone?._id]);
 
-  // Fonction pour gérer l'expansion des groupes
-  const toggleStoreExpansion = (storeId: string) => {
-    setExpandedStores((prev) => ({
-      ...prev,
-      [storeId]: !prev[storeId],
-    }));
+  // Auto-apply promo code from localStorage
+  const articlesHash = useMemo(
+    () => articles.map((a) => `${a._id}-${a.quantity}`).join(","),
+    [articles]
+  );
+  useEffect(() => {
+    const savedCode = localStorage.getItem("appliedPromoCode");
+    if (savedCode && articles.length > 0 && !codeP) {
+      setCodePromo(savedCode);
+      setTimeout(() => appliquerCodePromo(savedCode, true), 500);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [articles.length]);
+  useEffect(() => {
+    const savedCode = codeP?.code || localStorage.getItem("appliedPromoCode");
+    if (savedCode && articles.length > 0) {
+      const t = setTimeout(() => appliquerCodePromo(savedCode, true), 800);
+      return () => clearTimeout(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [articlesHash]);
+
+  const removeArticle = (idx: number) => {
+    const updated = articles.filter((_, i) => i !== idx);
+    setArticles(updated);
+    localStorage.setItem("panier", JSON.stringify(updated));
+    if (selectedZone) setTimeout(() => recalculateAllShipping(storeGroups, selectedZone), 100);
   };
 
-  const toggleProductExpansion = (storeId: string, productId: string) => {
-    const key = `${storeId}-${productId}`;
-    setExpandedProducts((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+  const updateQuantity = (idx: number, newQty: number) => {
+    if (newQty <= 0) { removeArticle(idx); return; }
+    const art = articles[idx];
+    if (art) {
+      const maxStock = getAvailableStock(art);
+      if (newQty > maxStock) newQty = maxStock;
+    }
+    const updated = articles.map((a, i) => (i === idx ? { ...a, quantity: newQty } : a));
+    setArticles(updated);
+    localStorage.setItem("panier", JSON.stringify(updated));
+    if (selectedZone) setTimeout(() => recalculateAllShipping(storeGroups, selectedZone), 100);
   };
 
-  // Fonction pour supprimer un article
-  const removeArticle = (articleIndex: number) => {
-    const updatedArticles = articles.filter((_, index) => index !== articleIndex);
-    setArticles(updatedArticles);
-    localStorage.setItem("panier", JSON.stringify(updatedArticles));
-
-    // Les articles sont automatiquement regroupés via useMemo
-    if (selectedZone) {
-      // Recalculer après suppression avec un délai pour laisser l'état se mettre à jour
-      setTimeout(() => {
-        recalculateAllShipping(groupedByStore, selectedZone);
-      }, 100);
-    }
-
-    handleSuccess("Article supprimé du panier");
-  };
-
-  // Fonction pour mettre à jour la quantité d'un article
-  const updateQuantity = (articleIndex: number, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      removeArticle(articleIndex);
-      return;
-    }
-
-    // Vérifier le stock avant d'incrémenter
-    const currentArticle = articles[articleIndex];
-    if (currentArticle) {
-      const availableStock = getAvailableStock(currentArticle);
-
-      if (newQuantity > availableStock) {
-        // Silencieusement limiter à la quantité disponible
-        newQuantity = availableStock;
-      }
-    }
-
-    const updatedArticles = articles.map((article, index) =>
-      index === articleIndex ? {
-        ...article,
-        quantity: newQuantity
-      } : article
+  // Totals
+  const calculerSousTotal = () =>
+    articles.reduce(
+      (sum, a) => sum + (a.prixPromo || a.prix || a.price || 0) * (a.quantity || 0),
+      0
     );
 
-    setArticles(updatedArticles);
-    localStorage.setItem("panier", JSON.stringify(updatedArticles));
+  const calculerTotalFraisExpedition = () =>
+    Object.values(shippingCalculations).reduce((sum, c: any) => sum + (c.totalCost || 0), 0);
 
-    // Forcer le recalcul des frais d'expédition
-    if (selectedZone) {
-      // Recalculer après mise à jour avec un délai pour laisser l'état se mettre à jour
-      setTimeout(() => {
-        recalculateAllShipping(groupedByStore, selectedZone);
-      }, 100);
+  const calculerTotal = () =>
+    calculerSousTotal() - reduction + calculerTotalFraisExpedition();
+
+  useEffect(() => {
+    const t = calculerTotal();
+    if (t !== total) {
+      setTotal(t);
+      localStorage.setItem("orderTotal", t.toString());
+      localStorage.setItem("orderSubtotal", calculerSousTotal().toString());
+      localStorage.setItem("orderShippingCost", calculerTotalFraisExpedition().toString());
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [articles.length, reduction, Object.keys(shippingCalculations).length]);
 
-  // Application du code promo (nouveau système V2)
   const appliquerCodePromo = async (codeToApply?: string, silent = false) => {
-    const finalCode = typeof codeToApply === 'string' ? codeToApply : codePromo;
-    if (!finalCode || !finalCode.trim()) {
-      if (!silent) handleWarning("Veuillez entrer un code promo");
+    const finalCode = typeof codeToApply === "string" ? codeToApply : codePromo;
+    if (!finalCode?.trim()) {
+      if (!silent) showAlert("warn", "Veuillez entrer un code promo");
       return;
     }
-
     if (!silent) setRond(true);
-
     try {
       const userData = AuthService.getUserData();
       const userId = userData?.id;
-      
       if (!userId) {
-        if (!silent) handleWarning("Veuillez vous connecter pour utiliser un code promo.");
+        if (!silent) showAlert("warn", "Veuillez vous connecter pour utiliser un code promo.");
         if (!silent) setRond(false);
         return;
       }
-
       const orderAmount = calculerSousTotal();
-
-      // Récupérer les IDs des produits dans le panier
       const productIds = articles.map((a: any) => a._id).filter(Boolean);
-
       const response = await axios.post(`${BackendUrl}/api/promocodes/validate`, {
         code: finalCode,
         orderAmount,
-        userId: userId || undefined,
+        userId,
         products: productIds,
       });
-
       if (!silent) setRond(false);
-
       if (response.data.valid) {
         const { discount, finalAmount, promoCode } = response.data;
-
         setReduction(discount);
         setCodeP(response.data);
         if (!codePromo) setCodePromo(promoCode.code);
-
-        // Stocker avec le format attendu par OrderConfirmation
-        localStorage.setItem("orderCodeP", JSON.stringify({
-          _id: promoCode.id,
-          code: promoCode.code,
-          type: promoCode.type,
-          value: promoCode.value,
-          discount,
-          finalAmount,
-          isValide: true,
-        }));
-
-        if (!silent) {
-          setMessage("Code promo appliqué avec succès !");
-        }
+        localStorage.setItem(
+          "orderCodeP",
+          JSON.stringify({
+            _id: promoCode.id,
+            code: promoCode.code,
+            type: promoCode.type,
+            value: promoCode.value,
+            discount,
+            finalAmount,
+            isValide: true,
+          })
+        );
+        if (!silent) setMessage("Code promo appliqué avec succès !");
         setTimeout(() => calculerTotal(), 100);
       } else {
-        if (!silent) handleWarning(response.data.message || "Code promo invalide.");
+        if (!silent) showAlert("warn", response.data.message || "Code promo invalide.");
         setReduction(0);
         setCodeP(null);
         setCodePromo("");
         localStorage.removeItem("orderCodeP");
-        localStorage.removeItem("appliedPromoCode"); // Nettoyer aussi ici
-        calculerTotal();
+        localStorage.removeItem("appliedPromoCode");
       }
     } catch (error: any) {
-      console.error(error);
-      if (!silent) {
-        const errorMessage = error?.response?.data?.message || "Ce code promo n'existe pas";
-        handleWarning(errorMessage);
-      }
+      if (!silent)
+        showAlert("warn", error?.response?.data?.message || "Ce code promo n'existe pas");
       setReduction(0);
       setCodeP(null);
       setCodePromo("");
       localStorage.removeItem("orderCodeP");
-      calculerTotal();
       if (!silent) setRond(false);
     }
   };
 
-  // Calculer les totaux
-  const calculerSousTotal = () => {
-    return articles.reduce(
-      (total, article) => total + (article.prixPromo || article.prix || article.price || 0) * (article.quantity || 0),
-      0
-    );
-  };
-
-  const calculerTotalFraisExpedition = () => {
-    return Object.values(shippingCalculations).reduce((total, calc: any) => {
-      return total + (calc.totalCost || 0);
-    }, 0);
-  };
-
-  const calculerTotal = () => {
-    const sousTotal = calculerSousTotal();
-    const totalAvecReduction = sousTotal - reduction;
-    const totalFinal = totalAvecReduction + calculerTotalFraisExpedition();
-    return totalFinal;
-  };
-
-  // Recalculer le total quand les données changent (avec protection contre les boucles)
-  useEffect(() => {
-    const newTotal = calculerTotal();
-    const subtotal = calculerSousTotal();
-    const shipping = calculerTotalFraisExpedition();
-
-    if (newTotal !== total) {
-      setTotal(newTotal);
-      localStorage.setItem("orderTotal", newTotal.toString());
-      localStorage.setItem("orderSubtotal", subtotal.toString());
-      localStorage.setItem("orderShippingCost", shipping.toString());
+  const handleCheckout = () => {
+    if (!selectedZone) {
+      showAlert("warn", "Veuillez sélectionner votre zone de livraison");
+      return;
     }
-  }, [articles.length, reduction, Object.keys(shippingCalculations).length]);
+    if (acces === "non") {
+      showAlert("warn", "Veuillez vous connecter d'abord");
+      setTimeout(() => router.push("/auth/login?fromCart=true&returnUrl=/order-confirmation"), 1000);
+      return;
+    }
+    localStorage.setItem("orderShippingZone", JSON.stringify(selectedZone));
+    localStorage.setItem("orderShippingCalculations", JSON.stringify(shippingCalculations));
+    router.push("/order-confirmation?fromCart=true");
+  };
 
-  // Rendu d'une variante de produit
-  const renderVariant = (variant: any, storeId: string, productId: string, articleIndex: number) => {
-    const isUnavailable = unavailableProducts.has(`${storeId}-${productId}`);
+  const canCheckout =
+    articles.length > 0 &&
+    !!selectedZone &&
+    Object.keys(shippingCalculations).length > 0;
 
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  if (loading && articles.length === 0) {
     return (
-      <div
-        key={`${variant._id}-${variant.colors?.[0]}-${variant.sizes?.[0]}`}
-        className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-0 sm:justify-between border-b pb-3 sm:pb-4 ${isUnavailable ? 'opacity-50' : ''
-          }`}
-      >
-        <div className="flex items-center space-x-3 flex-1">
-          {variant?.imageUrl && (
-            <img
-              src={variant.imageUrl}
-              alt={`Couleur ${variant.colors?.[0]}`}
-              className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded-md border flex-shrink-0"
-            />
-          )}
-
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2 mb-1">
-              {variant.colors?.[0] && (
-                <span className="text-xs sm:text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">
-                  {variant.colors[0]}
-                </span>
-              )}
-              {variant.sizes?.[0] && (
-                <span className="text-xs sm:text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">
-                  {variant.sizes[0]}
-                </span>
-              )}
-              {isUnavailable && (
-                <Badge variant="destructive" className="text-xs">
-                  Non disponible
-                </Badge>
-              )}
-            </div>
-
-            {variant.prixPromo ? (
-              <div className="flex items-center space-x-2">
-                <span className="font-medium text-red-600 text-sm sm:text-base">
-                  {formatCurrency(variant.prixPromo)}
-                </span>
-                <span className="text-xs sm:text-sm text-gray-500 line-through">
-                  {formatCurrency(variant.prix || variant.price)}
-                </span>
-              </div>
-            ) : (
-              <span className="font-medium text-sm sm:text-base">
-                {formatCurrency(variant.prix || variant.price || 0)}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between sm:justify-end space-x-3">
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-7 w-7 sm:h-8 sm:w-8"
-              onClick={() => updateQuantity(articleIndex, (variant.quantity || 0) - 1)}
-            >
-              <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
-            </Button>
-            <span className="w-6 sm:w-8 text-center text-sm sm:text-base font-medium">
-              {variant.quantity || 0}
-            </span>
-            {/* Afficher le stock disponible */}
-            <span className="text-xs text-gray-500 ml-1">
-              /{getAvailableStock(variant)}
-            </span>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-7 w-7 sm:h-8 sm:w-8"
-              disabled={(variant.quantity || 0) >= getAvailableStock(variant)}
-              onClick={() => updateQuantity(articleIndex, (variant.quantity || 0) + 1)}
-            >
-              <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-            </Button>
-          </div>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 sm:h-8 sm:w-8 text-red-500 hover:text-red-700"
-            onClick={() => removeArticle(articleIndex)}
-          >
-            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-          </Button>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
+        <div className="w-10 h-10 border-4 border-[#30A08B] border-t-transparent rounded-full animate-spin" />
+        <p className="text-gray-500 text-sm">Chargement de votre panier…</p>
       </div>
     );
-  };
+  }
 
-  // Rendu d'un groupe produit
-  const renderProduct = (product: ProductGroup, storeId: string) => {
-    const key = `${storeId}-${product.productId}`;
-    const isExpanded = expandedProducts[key];
-    const isUnavailable = unavailableProducts.has(key);
-
+  if (articles.length === 0) {
     return (
-      <div key={product.productId} className="border rounded-lg p-2 sm:p-3 bg-white">
-        <div
-          className="cursor-pointer hover:bg-gray-50 p-2 rounded"
-          onClick={() => toggleProductExpansion(storeId, product.productId)}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
-              <img
-                src={product.imageUrl}
-                alt={product.name}
-                className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded flex-shrink-0"
-              />
-              <div className="min-w-0 flex-1">
-                <h4 className="font-medium text-sm sm:text-base truncate">{product.name}</h4>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 text-xs sm:text-sm text-gray-500">
-                  <div className="flex items-center space-x-1 sm:space-x-2">
-                    <span>{product.variants.length} variante(s)</span>
-                    <span>•</span>
-                    <span>Poids: {product.totalWeight.toFixed(2)} kg</span>
-                  </div>
-                  {isUnavailable && (
-                    <Badge variant="destructive" className="text-xs w-fit mt-1 sm:mt-0">
-                      Non livrable
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2 flex-shrink-0">
-              <span className="font-medium text-sm sm:text-base">{formatCurrency(product.totalValue)}</span>
-              {isExpanded ? (
-                <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5" />
-              ) : (
-                <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />
-              )}
-            </div>
-          </div>
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-5 px-4">
+        <div className="w-24 h-24 bg-[#30A08B]/10 rounded-full flex items-center justify-center">
+          <ShoppingCart className="w-12 h-12 text-[#30A08B]" />
         </div>
-
-        {isExpanded && (
-          <div className="p-2 sm:p-3 bg-gray-50 rounded space-y-2 sm:space-y-3 mt-2">
-            {product.variants.map((variant, index) => {
-              // Trouver l'index réel de cette variante dans le tableau articles original
-              const articleIndex = articles.findIndex(article =>
-                article._id === variant._id &&
-                article.colors?.[0] === variant.colors?.[0] &&
-                article.sizes?.[0] === variant.sizes?.[0]
-              );
-              return renderVariant(variant, storeId, product.productId, articleIndex);
-            })}
-          </div>
-        )}
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Votre panier est vide</h2>
+          <p className="text-gray-500 text-sm max-w-xs">
+            Découvrez nos produits et ajoutez-les à votre panier pour commencer vos achats.
+          </p>
+        </div>
+        <button
+          onClick={() => router.push("/")}
+          className="flex items-center gap-2 bg-[#30A08B] text-white px-6 py-3 rounded-full font-semibold hover:bg-[#27866f] transition-colors"
+        >
+          <ShoppingBag size={16} />
+          Continuer mes achats
+        </button>
       </div>
     );
-  };
-
-  // Rendu d'un groupe boutique
-  const renderStoreGroup = (storeGroup: StoreGroup) => {
-    const isExpanded = expandedStores[storeGroup.storeId];
-    const shippingCalc = shippingCalculations[storeGroup.storeId];
-    const hasUnavailableProducts = Object.keys(storeGroup.products).some(productId =>
-      unavailableProducts.has(`${storeGroup.storeId}-${productId}`)
-    );
-
-    return (
-      <Card key={storeGroup.storeId} className="mb-4 sm:mb-6 shadow-sm">
-        <CardHeader
-          className={`cursor-pointer hover:bg-gray-50 pb-2 sm:pb-3 ${hasUnavailableProducts ? 'bg-red-50' : ''
-            }`}
-          onClick={() => toggleStoreExpansion(storeGroup.storeId)}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
-              <div className="w-8 h-8 sm:w-12 sm:h-12 bg-[#30A08B] rounded-lg flex items-center justify-center flex-shrink-0">
-                {storeGroup.storeInfo.logo ? (
-                  <img
-                    src={storeGroup.storeInfo.logo}
-                    alt={storeGroup.storeName}
-                    className="w-6 h-6 sm:w-10 sm:h-10 object-cover rounded"
-                  />
-                ) : (
-                  <Store className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <CardTitle className="text-sm sm:text-base lg:text-lg truncate">{storeGroup.storeName}</CardTitle>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-xs text-gray-500">
-                  <div className="flex items-center">
-                    <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
-                    <span className="truncate">{storeGroup.storeInfo.city || 'N/A'}, {storeGroup.storeInfo.region || 'N/A'}</span>
-                  </div>
-                  <span className="hidden sm:inline">•</span>
-                  <div className="flex items-center gap-2">
-                    <span>{Object.keys(storeGroup.products).length} produit(s)</span>
-                    <span>•</span>
-                    <span>{storeGroup.totalWeight.toFixed(2)} kg</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
-              {hasUnavailableProducts && (
-                <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
-                  <AlertTriangle className="h-3 w-3 mr-1" />
-                  <span className="hidden sm:inline">Livraison limitée</span>
-                  <span className="sm:hidden">Limité</span>
-                </Badge>
-              )}
-
-              {shippingCalc && (
-                <div className="text-right">
-                  <div className="font-medium text-[#30A08B] text-xs sm:text-sm">
-                    {formatCurrency(shippingCalc.totalCost)}
-                  </div>
-                  <div className="text-xs text-gray-500 flex items-center justify-end">
-                    <Truck className="h-3 w-3 inline mr-1" />
-                    <span className="truncate max-w-16 sm:max-w-none text-right">expédition</span>
-                  </div>
-                </div>
-              )}
-
-              {isExpanded ? (
-                <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-              ) : (
-                <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-              )}
-            </div>
-          </div>
-        </CardHeader>
-
-        {isExpanded && (
-          <CardContent className="pt-0 space-y-3 sm:space-y-4">
-            {/* Informations d'expédition */}
-            {shippingCalc && (
-              <div className="p-3 sm:p-4 bg-blue-50 rounded-lg">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 sm:mb-3">
-                  <h4 className="text-sm sm:text-base font-medium text-blue-800 mb-1 sm:mb-0">
-                    Détails d'expédition
-                  </h4>
-                  {shippingCalc.success ? (
-                    <Badge variant="default" className="bg-green-100 text-green-800 w-fit">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Disponible
-                    </Badge>
-                  ) : (
-                    <Badge variant="destructive" className="w-fit">
-                      <AlertTriangle className="h-3 w-3 mr-1" />
-                      Politique par défaut
-                    </Badge>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm">
-                  <div className="flex justify-between sm:block">
-                    <span className="text-gray-600">Coût fixe:</span>
-                    <span className="ml-2 font-medium">{formatCurrency(shippingCalc.fixedCost || 0)}</span>
-                  </div>
-                  <div className="flex justify-between sm:block">
-                    <span className="text-gray-600">Coût poids:</span>
-                    <span className="ml-2 font-medium">
-                      {formatCurrency(
-                        shippingCalc.weightCost ||
-                        ((shippingCalc.costPerKg || 0) * storeGroup.totalWeight)
-                      )}
-                    </span>
-                  </div>
-                  <div className="col-span-1 sm:col-span-2 flex justify-between sm:block">
-                    <span className="text-gray-600">Politique appliquée:</span>
-                    <span className="ml-2 font-medium break-words">
-                      {shippingCalc.appliedPolicy?.zone || 'Zone par défaut'}
-                      {shippingCalc.appliedPolicy?.error && (
-                        <span className="text-xs text-orange-600 ml-1">
-                          ({shippingCalc.appliedPolicy.error})
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {Object.values(storeGroup.products).map((product) =>
-              renderProduct(product, storeGroup.storeId)
-            )}
-          </CardContent>
-        )}
-      </Card>
-    );
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24 sm:pb-20 xl:pb-4">
-      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-[#30A08B] mb-4 sm:mb-6">Mon Panier</h1>
+    <div className="min-h-screen bg-gray-50 pb-32 md:pb-10">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 py-5 sm:py-8">
+        {/* Page title */}
+        <div className="flex items-center gap-2 mb-6">
+          <ShoppingBag className="w-5 h-5 text-[#30A08B]" />
+          <h1 className="text-xl font-bold text-gray-900">
+            Mon Panier
+            <span className="ml-2 text-sm font-normal text-gray-500">
+              ({articles.length} article{articles.length > 1 ? "s" : ""})
+            </span>
+          </h1>
+        </div>
 
-        {/* Sélecteur de zone */}
-        <Card className="mb-4 sm:mb-6">
-          <CardHeader className="pb-3 sm:pb-4">
-            <CardTitle className="text-base sm:text-lg flex items-center">
-              <Truck className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              Zone de livraison
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="space-y-3">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {/* ── Left: items list ──────────────────────────────────────────── */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Delivery zone */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+              <div className="flex items-center gap-2 mb-3">
+                <MapPin className="w-4 h-4 text-[#30A08B]" />
+                <span className="font-semibold text-sm text-gray-800">Zone de livraison</span>
+              </div>
               <ZoneSelector
                 selectedZone={selectedZone}
                 onSelect={setSelectedZone}
-                placeholder="Sélectionner votre zone de livraison..."
+                placeholder="Sélectionner votre zone…"
                 className="w-full"
               />
-              {selectedZone && (
-                <div className="text-xs sm:text-sm text-gray-600 bg-green-50 p-2 sm:p-3 rounded-lg">
-                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 inline mr-2 text-green-600" />
-                  Livraison vers: <strong className="break-words">{selectedZone.fullPath || selectedZone.name}</strong>
+              {selectedZone ? (
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-green-700 bg-green-50 px-3 py-2 rounded-lg">
+                  <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="truncate">{selectedZone.fullPath || selectedZone.name}</span>
                 </div>
-              )}
-              {!selectedZone && (
-                <div className="text-xs sm:text-sm text-orange-600 bg-orange-50 p-2 sm:p-3 rounded-lg">
-                  <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 inline mr-2" />
-                  Veuillez sélectionner votre zone pour calculer les frais d'expédition
+              ) : (
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                  Sélectionnez votre zone pour calculer les frais d'expédition
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {articles.length === 0 ? (
-          loading ? (
-            <div className="flex flex-col items-center justify-center space-y-3 sm:space-y-4 p-6 sm:p-8 bg-white rounded-lg shadow-sm">
-              <ShoppingCart className="h-10 w-10 sm:h-12 sm:w-12 text-[#30A08B] animate-bounce" />
-              <p className="text-base sm:text-lg text-[#30A08B] text-center">Chargement...</p>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center space-y-3 sm:space-y-4 p-6 sm:p-8 bg-white rounded-lg shadow-sm">
-              <ShoppingCart className="h-10 w-10 sm:h-12 sm:w-12 text-[#30A08B] animate-bounce" />
-              <p className="text-base sm:text-lg text-[#30A08B] text-center">Votre panier est vide</p>
-              <p className="text-sm text-gray-600 text-center max-w-md">
-                Découvrez nos produits et ajoutez-les à votre panier pour commencer vos achats.
-              </p>
-              <Button
-                onClick={() => router.push('/')}
-                className="bg-[#30A08B] hover:bg-[#30A08B]/90 mt-4"
-                size="sm"
-              >
-                Continuer mes achats
-              </Button>
-            </div>
-          )
-        ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
-            {/* Liste des boutiques et produits */}
-            <div className="xl:col-span-2 space-y-3 sm:space-y-4">
-              {storeGroupsArray.map((storeGroup: StoreGroup) =>
-                renderStoreGroup(storeGroup)
               )}
             </div>
 
-            {/* Résumé de la commande */}
-            <div className="xl:sticky xl:top-20 space-y-3 sm:space-y-4 h-fit order-first xl:order-last">
-              <Card className="shadow-sm">
-                <CardHeader className="pb-3 sm:pb-4">
-                  <CardTitle className="text-base sm:text-lg text-[#30A08B]">
-                    Résumé de la commande
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="space-y-3 sm:space-y-4">
-                    <div className="flex justify-between text-sm sm:text-base">
-                      <span>Sous-total</span>
-                      <span>{formatCurrency(calculerSousTotal())}</span>
-                    </div>
-                    {reduction > 0 && (
-                      <div className="flex flex-col gap-1 border-b border-dashed pb-2">
-                        <div className="flex justify-between text-sm sm:text-base text-green-600 font-medium">
-                          <span>Réduction</span>
-                          <span>-{formatCurrency(reduction)}</span>
-                        </div>
-                        {codePromo && (
-                          <div className="text-[10px] text-green-500 font-bold uppercase tracking-widest pl-1 border-l-2 border-green-500">
-                            Code appliqué: {codePromo}
-                          </div>
+            {/* Store groups */}
+            {storeGroupsArray.map((group) => {
+              const shippingCalc = shippingCalculations[group.storeId];
+              return (
+                <div
+                  key={group.storeId}
+                  className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+                >
+                  {/* Store header */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50 bg-gray-50/60">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 bg-[#30A08B]/10 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {group.storeInfo.logo ? (
+                          <Image
+                            src={group.storeInfo.logo}
+                            alt={group.storeName}
+                            width={32}
+                            height={32}
+                            className="object-cover w-full h-full"
+                          />
+                        ) : (
+                          <Store className="w-4 h-4 text-[#30A08B]" />
                         )}
                       </div>
-                    )}
-
-                    {/* Détail des frais d'expédition par boutique */}
-                    {Object.keys(shippingCalculations).length > 0 && (
-                      <div className="space-y-1 sm:space-y-2">
-                        <div className="text-xs sm:text-sm font-medium text-gray-700">Frais d'expédition:</div>
-                        {Object.entries(shippingCalculations).map(([storeId, calc]) => {
-                          const store = groupedByStore[storeId];
-                          return (
-                            <div key={storeId} className="flex justify-between text-xs text-gray-500 ml-2 gap-2">
-                              <span className="truncate flex-1">{store?.storeName}</span>
-                              <span className="flex-shrink-0">{formatCurrency(calc.totalCost)}</span>
-                            </div>
-                          );
-                        })}
-                        <div className="flex justify-between text-xs sm:text-sm text-gray-600 border-t pt-1 sm:pt-2">
-                          <span>Total expédition</span>
-                          <span>{formatCurrency(calculerTotalFraisExpedition())}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="pt-2 sm:pt-3 border-t">
-                      <div className="flex justify-between font-bold text-base sm:text-lg text-[#30A08B]">
-                        <span>Total</span>
-                        <span>{formatCurrency(calculerTotal())}</span>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800 leading-none">{group.storeName}</p>
+                        {group.storeInfo.city && (
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {group.storeInfo.city}, {group.storeInfo.region || "Niger"}
+                          </p>
+                        )}
                       </div>
                     </div>
+                    {shippingCalc ? (
+                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <Truck className="w-3.5 h-3.5 text-[#30A08B]" />
+                        <span className="font-medium text-[#30A08B]">
+                          {formatCurrency(shippingCalc.totalCost)}
+                        </span>
+                      </div>
+                    ) : loading ? (
+                      <div className="w-3.5 h-3.5 border-2 border-[#30A08B]/30 border-t-[#30A08B] rounded-full animate-spin" />
+                    ) : null}
                   </div>
 
-                  {/* Code promo */}
-                  <div className="pt-3 sm:pt-4 border-t">
-                    <h3 className="text-sm font-semibold text-[#30A08B] mb-2">
-                      Code promo
-                    </h3>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <input
-                        className="flex-grow px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#30A08B] focus:border-transparent uppercase font-semibold tracking-wide"
-                        type="text"
-                        placeholder="EX: BIENVENUE20"
-                        value={codePromo}
-                        onChange={(e) => setCodePromo(e.target.value.toUpperCase().replace(/\s/g, ''))}
-                      />
-                      <Button
-                        onClick={() => appliquerCodePromo()}
-                        disabled={rond}
-                        className="bg-[#30A08B] hover:bg-[#30A08B]/90 w-full sm:w-auto"
-                        size="sm"
-                      >
-                        {rond ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : null}
-                        {rond ? "..." : "Appliquer"}
-                      </Button>
-                    </div>
-                    {(message || codeP) && (
-                      <div className="mt-2">
-                        {message && <p className="text-xs sm:text-sm text-green-600 font-medium">{message}</p>}
-                        {codeP && (
-                          <div className="mt-1 flex flex-col gap-1">
-                            <p className="text-xs sm:text-sm font-semibold text-green-700">
-                              Réduction active: {codeP.promoCode?.type === 'percentage' ? `-${codeP.promoCode?.value}%` : `-${codeP.promoCode?.value} CFA`}
-                            </p>
-                            {codeP.promoCode?.description && (
-                              <p className="text-xs text-gray-500 italic">{codeP.promoCode.description}</p>
+                  {/* Article rows */}
+                  <div className="divide-y divide-gray-50">
+                    {group.articles.map(({ article, originalIndex }) => {
+                      const price = article.prixPromo || article.prix || article.price || 0;
+                      const origPrice = article.prix || article.price || 0;
+                      const hasPromo = article.prixPromo && article.prixPromo < origPrice;
+                      const qty = article.quantity || 0;
+                      const stock = getAvailableStock(article);
+                      const isUnavailable = unavailableProducts.has(
+                        `${group.storeId}-${article._id}`
+                      );
+
+                      return (
+                        <div
+                          key={`${article._id}-${article.colors?.[0]}-${article.sizes?.[0]}-${originalIndex}`}
+                          className={`flex gap-3 p-4 ${isUnavailable ? "opacity-50" : ""}`}
+                        >
+                          {/* Product image */}
+                          <div
+                            className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 cursor-pointer"
+                            onClick={() => { triggerNavProgress(); router.push(`/ProduitDetail/${article._id}`); }}
+                          >
+                            {article.image1 || article.imageUrl ? (
+                              <Image
+                                src={article.image1 || article.imageUrl}
+                                alt={article.name}
+                                fill
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Package className="w-8 h-8 text-gray-300" />
+                              </div>
+                            )}
+                            {hasPromo && (
+                              <div className="absolute top-1 left-1 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                                PROMO
+                              </div>
                             )}
                           </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
 
-              {/* Résumé des boutiques */}
-              {Object.keys(groupedByStore).length > 0 && (
-                <Card className="shadow-sm">
-                  <CardHeader className="pb-2 sm:pb-3">
-                    <CardTitle className="text-sm sm:text-base">Expéditions</CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
-                      {storeGroupsArray.map((store: StoreGroup) => (
-                        <div key={store.storeId} className="flex justify-between gap-2">
-                          <span className="truncate flex-1">{store.storeName}</span>
-                          <span className="font-medium flex-shrink-0">
-                            {formatCurrency(shippingCalculations[store.storeId]?.totalCost || 0)}
-                          </span>
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <p
+                              className="text-sm font-semibold text-gray-800 line-clamp-2 leading-snug cursor-pointer hover:text-[#30A08B] transition-colors"
+                              onClick={() => { triggerNavProgress(); router.push(`/ProduitDetail/${article._id}`); }}
+                            >
+                              {article.name}
+                            </p>
+
+                            {/* Variant chips */}
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {article.colors?.[0] && (
+                                <span className="inline-flex items-center gap-1 text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">
+                                  <span
+                                    className="w-2 h-2 rounded-full border border-gray-300"
+                                    style={{ backgroundColor: article.colors[0].toLowerCase() }}
+                                  />
+                                  {article.colors[0]}
+                                </span>
+                              )}
+                              {article.sizes?.[0] && (
+                                <span className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">
+                                  {article.sizes[0]}
+                                </span>
+                              )}
+                              {isUnavailable && (
+                                <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">
+                                  Non livrable
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Price */}
+                            <div className="flex items-baseline gap-2 mt-2">
+                              <span className="text-base font-bold text-gray-900">
+                                {formatCurrency(price)}
+                              </span>
+                              {hasPromo && (
+                                <span className="text-xs text-gray-400 line-through">
+                                  {formatCurrency(origPrice)}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Qty controls + delete */}
+                            <div className="flex items-center justify-between mt-2.5">
+                              <div className="flex items-center gap-1 bg-gray-100 rounded-full p-0.5">
+                                <button
+                                  className="w-7 h-7 rounded-full bg-white shadow-sm flex items-center justify-center text-gray-600 hover:text-[#30A08B] transition-colors disabled:opacity-40"
+                                  onClick={() => updateQuantity(originalIndex, qty - 1)}
+                                  disabled={qty <= 1}
+                                >
+                                  <Minus size={13} />
+                                </button>
+                                <span className="w-8 text-center text-sm font-bold text-gray-800">
+                                  {qty}
+                                </span>
+                                <button
+                                  className="w-7 h-7 rounded-full bg-white shadow-sm flex items-center justify-center text-gray-600 hover:text-[#30A08B] transition-colors disabled:opacity-40"
+                                  onClick={() => updateQuantity(originalIndex, qty + 1)}
+                                  disabled={qty >= stock}
+                                >
+                                  <Plus size={13} />
+                                </button>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-bold text-[#30A08B]">
+                                  {formatCurrency(price * qty)}
+                                </span>
+                                <button
+                                  className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                                  onClick={() => removeArticle(originalIndex)}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      ))}
+                      );
+                    })}
+                  </div>
+
+                  {/* Store shipping footer */}
+                  {shippingCalc && (
+                    <div className="flex items-center justify-between px-4 py-2.5 bg-[#30A08B]/5 border-t border-[#30A08B]/10 text-xs">
+                      <span className="flex items-center gap-1.5 text-gray-500">
+                        <Truck className="w-3.5 h-3.5 text-[#30A08B]" />
+                        Livraison depuis {group.storeName}
+                      </span>
+                      <span className="font-semibold text-[#30A08B]">
+                        {formatCurrency(shippingCalc.totalCost)}
+                      </span>
                     </div>
-                  </CardContent>
-                </Card>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Continue shopping link */}
+            <button
+              onClick={() => router.push("/")}
+              className="flex items-center gap-1.5 text-sm text-[#30A08B] hover:underline px-1"
+            >
+              <ChevronRight size={14} className="rotate-180" />
+              Continuer mes achats
+            </button>
+          </div>
+
+          {/* ── Right: order summary ──────────────────────────────────────── */}
+          <div className="lg:sticky lg:top-[100px] h-fit space-y-4">
+            {/* Promo code */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+              <div className="flex items-center gap-2 mb-3">
+                <Tag className="w-4 h-4 text-[#30A08B]" />
+                <span className="font-semibold text-sm text-gray-800">Code promo</span>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#30A08B]/30 focus:border-[#30A08B] uppercase font-semibold tracking-wide placeholder-gray-300 transition-all"
+                  type="text"
+                  placeholder="BIENVENUE20"
+                  value={codePromo}
+                  onChange={(e) =>
+                    setCodePromo(e.target.value.toUpperCase().replace(/\s/g, ""))
+                  }
+                  onKeyDown={(e) => e.key === "Enter" && appliquerCodePromo()}
+                />
+                <button
+                  onClick={() => appliquerCodePromo()}
+                  disabled={rond}
+                  className="px-4 py-2.5 bg-[#30A08B] text-white rounded-xl text-sm font-semibold hover:bg-[#27866f] transition-colors disabled:opacity-60 flex items-center gap-1.5"
+                >
+                  {rond ? (
+                    <RefreshCw size={14} className="animate-spin" />
+                  ) : null}
+                  {rond ? "" : "Appliquer"}
+                </button>
+              </div>
+              {message && (
+                <p className="mt-2 text-xs text-green-600 font-medium">{message}</p>
+              )}
+              {codeP?.promoCode && (
+                <div className="mt-2 flex items-center gap-2 bg-green-50 px-3 py-2 rounded-lg">
+                  <CheckCircle className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
+                  <p className="text-xs font-semibold text-green-700">
+                    {codeP.promoCode.type === "percentage"
+                      ? `-${codeP.promoCode.value}%`
+                      : `-${formatCurrency(codeP.promoCode.value)}`}{" "}
+                    appliqué
+                  </p>
+                </div>
               )}
             </div>
-          </div>
-        )}
-      </div>
 
-      {/* Bouton Commander */}
-      <div className="container mx-auto px-3 sm:px-4 py-4">
-        {/* Version mobile - barre fixe en bas */}
-        <div className="xl:hidden fixed bottom-0 left-0 right-0 bg-white p-3 sm:p-4 shadow-lg border-t z-50">
-          {calculerTotal() !== 0 && (
-            <div className="flex items-center justify-between space-x-3">
-              <div className="text-left min-w-0 flex-1">
-                <div className="text-xs sm:text-sm text-gray-600">Total</div>
-                <div className="text-sm sm:text-lg font-bold text-[#30A08B] truncate">
-                  {formatCurrency(calculerTotal())}
+            {/* Order summary */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+              <h3 className="font-bold text-base text-gray-900 mb-4">Récapitulatif</h3>
+
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Sous-total ({articles.length} article{articles.length > 1 ? "s" : ""})</span>
+                  <span className="font-medium text-gray-800">{formatCurrency(calculerSousTotal())}</span>
+                </div>
+
+                {reduction > 0 && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span className="flex items-center gap-1">
+                      <Tag size={12} />
+                      Réduction ({codePromo})
+                    </span>
+                    <span className="font-semibold">-{formatCurrency(reduction)}</span>
+                  </div>
+                )}
+
+                {Object.keys(shippingCalculations).length > 0 ? (
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>Livraison</span>
+                      <span className="font-medium text-gray-800">
+                        {formatCurrency(calculerTotalFraisExpedition())}
+                      </span>
+                    </div>
+                    {storeGroupsArray.length > 1 &&
+                      storeGroupsArray.map((sg) =>
+                        shippingCalculations[sg.storeId] ? (
+                          <div
+                            key={sg.storeId}
+                            className="flex justify-between text-xs text-gray-400 pl-3"
+                          >
+                            <span className="truncate flex-1">{sg.storeName}</span>
+                            <span className="flex-shrink-0 ml-2">
+                              {formatCurrency(shippingCalculations[sg.storeId].totalCost)}
+                            </span>
+                          </div>
+                        ) : null
+                      )}
+                  </div>
+                ) : (
+                  <div className="flex justify-between text-sm text-gray-400">
+                    <span>Livraison</span>
+                    <span className="text-xs">Sélectionnez une zone</span>
+                  </div>
+                )}
+
+                <div className="h-px bg-gray-100" />
+
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-base text-gray-900">Total</span>
+                  <span className="font-black text-xl text-[#30A08B]">
+                    {formatCurrency(calculerTotal())}
+                  </span>
                 </div>
               </div>
-              <Button
-                onClick={() => {
-                  if (calculerTotal() === 0) return;
 
-                  if (!selectedZone) {
-                    handleWarning("Veuillez sélectionner votre zone de livraison");
-                    return;
-                  }
-
-                  if (acces === "non") {
-                    handleWarning("Veuillez vous connecter d'abord");
-                    setTimeout(() => {
-                      router.push("/auth/login?fromCart=true&returnUrl=/order-confirmation");
-                    }, 1000);
-                  } else {
-                    localStorage.setItem("orderShippingZone", JSON.stringify(selectedZone));
-                    localStorage.setItem("orderShippingCalculations", JSON.stringify(shippingCalculations));
-                    router.push("/order-confirmation?fromCart=true");
-                  }
-                }}
-                className="bg-[#30A08B] text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold hover:bg-[#30A08B]/90 text-sm sm:text-base flex-shrink-0"
-                disabled={!selectedZone || Object.keys(shippingCalculations).length === 0}
+              {/* Desktop checkout button */}
+              <button
+                onClick={handleCheckout}
+                disabled={!canCheckout}
+                className="mt-5 w-full bg-[#30A08B] text-white py-3.5 rounded-xl font-bold text-base hover:bg-[#27866f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Commander
-              </Button>
+                {!canCheckout && !selectedZone ? (
+                  <>
+                    <MapPin size={16} />
+                    Choisir une zone
+                  </>
+                ) : (
+                  <>
+                    Commander · {formatCurrency(calculerTotal())}
+                    <ChevronRight size={16} />
+                  </>
+                )}
+              </button>
+
+              {!selectedZone && (
+                <p className="text-center text-xs text-gray-400 mt-2">
+                  Sélectionnez votre zone pour continuer
+                </p>
+              )}
             </div>
-          )}
+
+            {/* Trust badges */}
+            <div className="grid grid-cols-3 gap-2 text-center text-xs text-gray-500">
+              {[
+                { icon: <Truck size={16} className="text-[#30A08B]" />, label: "Livraison rapide" },
+                { icon: <CheckCircle size={16} className="text-[#30A08B]" />, label: "Paiement sécurisé" },
+                { icon: <RefreshCw size={16} className="text-[#30A08B]" />, label: "Retour facile" },
+              ].map((b) => (
+                <div key={b.label} className="bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex flex-col items-center gap-1.5">
+                  {b.icon}
+                  <span className="leading-tight">{b.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
+      </div>
 
-        {/* Version desktop */}
-        <div className="hidden xl:block">
-          {calculerTotal() !== 0 && (
-            <Button
-              onClick={() => {
-                if (calculerTotal() === 0) return;
-
-                if (!selectedZone) {
-                  handleWarning("Veuillez sélectionner votre zone de livraison");
-                  return;
-                }
-
-                if (acces === "non") {
-                  handleWarning("Veuillez vous connecter d'abord");
-                  setTimeout(() => {
-                    router.push("/auth/login?fromCart=true&returnUrl=/order-confirmation");
-                  }, 1000);
-                } else {
-                  localStorage.setItem("orderShippingZone", JSON.stringify(selectedZone));
-                  localStorage.setItem("orderShippingCalculations", JSON.stringify(shippingCalculations));
-                  router.push("/order-confirmation?fromCart=true");
-                }
-              }}
-              className="w-full bg-[#30A08B] text-white py-3 rounded-lg font-semibold hover:bg-[#30A08B]/90"
-              disabled={!selectedZone || Object.keys(shippingCalculations).length === 0}
-            >
-              Passer la commande {formatCurrency(calculerTotal())}
-            </Button>
-          )}
+      {/* ── Mobile fixed checkout bar ─────────────────────────────────────── */}
+      <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 px-4 py-3 shadow-2xl">
+        <div className="flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="text-xs text-gray-500">Total à payer</div>
+            <div className="text-lg font-black text-[#30A08B] truncate">
+              {formatCurrency(calculerTotal())}
+            </div>
+          </div>
+          <button
+            onClick={handleCheckout}
+            disabled={!canCheckout}
+            className="flex-shrink-0 bg-[#30A08B] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#27866f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            Commander
+            <ChevronRight size={14} />
+          </button>
         </div>
       </div>
 

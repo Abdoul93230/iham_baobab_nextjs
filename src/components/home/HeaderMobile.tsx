@@ -151,7 +151,7 @@ const HeaderMobile: React.FC<HeaderMobileProps> = ({
       countBg: "bg-emerald-600",
       label: "Panier",
       onClick: () => {
-        router.push("/panier");
+        router.push("/Panier");
         setIsMobileMenuOpen(false);
       },
     },
@@ -162,7 +162,7 @@ const HeaderMobile: React.FC<HeaderMobileProps> = ({
       countBg: "bg-red-500",
       label: "Notifications",
       onClick: () => {
-        router.push("/notifications");
+        router.push("/");
         setIsMobileMenuOpen(false);
       },
     },
@@ -173,7 +173,7 @@ const HeaderMobile: React.FC<HeaderMobileProps> = ({
       countBg: "bg-emerald-600",
       label: "Messages",
       onClick: () => {
-        router.push("/messages");
+        router.push("/Messagerie");
         setIsMobileMenuOpen(false);
       },
     },

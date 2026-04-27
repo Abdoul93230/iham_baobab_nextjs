@@ -3,759 +3,503 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Plus,
-  Menu,
-  User,
-  ChevronDown,
-  ChevronRight,
-  Home,
-  ShoppingCart,
-  Heart,
-  Bell,
-  Globe,
-  Truck,
-  Gift,
-  Phone,
-  X,
-  Package,
-  LogOut,
-  HelpCircle,
-  Shield,
-  Info,
-  MessageCircle,
+  Menu, User, ChevronDown, ChevronRight,
+  ShoppingCart, Heart, Truck, Phone,
+  Package, LogOut, HelpCircle, Shield,
+  Info, MessageCircle, Grid3X3, Home,
+  Search, Store, Plus, Bell, Trees,
 } from "lucide-react";
 import Image from "next/image";
 import { useAppSelector, useAppDispatch } from "@/redux/hooks";
-import { logout, selectAcces, selectIsAuthenticated } from "@/redux/userSlice";
-import axios from "axios";
+import { logout, selectAcces } from "@/redux/userSlice";
 import { io, Socket } from "socket.io-client";
+import axios from "axios";
 import SearchBar from "../SearchBarNew";
 import { fetchUserLikes } from "@/redux/likesSlice";
+import { selectWallet, fetchWallet } from "@/redux/gamificationSlice";
 import HeaderMobile from "./HeaderMobile";
+import { triggerNavProgress } from "@/components/NavigationProgress";
 import { usePanierSync } from "@/hooks/usePanierSync";
+import { cn } from "@/lib/utils";
 
-interface HomeHeaderProps {
-  chg?: () => void; // Optionnel maintenant
-}
-
-interface Category {
-  _id: string;
-  name: string;
-  image: string;
-}
+interface HomeHeaderProps { chg?: () => void; }
+interface Category { _id: string; name: string; image: string; }
 
 const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const categories = useAppSelector((state) => state.products.categories) as Category[];
-  
-  // Utiliser notre hook de synchronisation du panier
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const categories = useAppSelector((s) => s.products.categories) as Category[];
   const { panierCount } = usePanierSync();
   const acces = useAppSelector(selectAcces);
-  const currentUser = useAppSelector((state) => state.user.user);
+  const currentUser = useAppSelector((s) => s.user.user);
+  const { likedProducts } = useAppSelector((s) => s.likes);
+  const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
+
+  const wallet = useAppSelector(selectWallet);
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const [produits, setProduits] = useState(0);
+  const [scrolled, setScrolled] = useState(false);
   const [nbr, setNbr] = useState(0);
-  // const [likedProducts, setLikedProducts] = useState<Set<string>>(new Set());
-  const { likedProducts, loading: likesLoading, error: likesError } = useAppSelector((state) => state.likes);
-  const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
-  const [socket, setSocket] = useState<Socket | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [socket, setSocket] = useState<Socket | null>(null);
 
+  // ── User ───────────────────────────────────────────────────────────────────
   useEffect(() => {
-    // Utiliser l'utilisateur Redux si disponible, sinon localStorage
     if (currentUser) {
       setUser(currentUser);
     } else if (typeof window !== "undefined") {
-      const userData = JSON.parse(localStorage.getItem("userEcomme") || "null");
-      setUser(userData?.user || userData);
+      try {
+        const raw = localStorage.getItem("userEcomme");
+        if (raw) { const d = JSON.parse(raw); setUser(d?.user || d); }
+      } catch {}
     }
   }, [currentUser]);
 
+  // ── Scroll shadow ──────────────────────────────────────────────────────────
   useEffect(() => {
-    // Initialiser le socket côté client
-    if (typeof window !== "undefined" && BackendUrl) {
-      const socketInstance = io(BackendUrl);
-      setSocket(socketInstance);
-      
-      return () => {
-        socketInstance.disconnect();
-      };
-    }
+    const fn = () => setScrolled(window.scrollY > 8);
+    window.addEventListener("scroll", fn, { passive: true });
+    return () => window.removeEventListener("scroll", fn);
+  }, []);
+
+  // ── Socket.io ──────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (typeof window === "undefined" || !BackendUrl) return;
+    const s = io(BackendUrl);
+    setSocket(s);
+    return () => { s.disconnect(); };
   }, [BackendUrl]);
 
-  const userId = user?.id;
-
+  // ── Likes + wallet ────────────────────────────────────────────────────────
   useEffect(() => {
-    if (userId) {
-      dispatch(fetchUserLikes(userId));
+    if (user?.id) {
+      dispatch(fetchUserLikes(user.id));
+      dispatch(fetchWallet(user.id));
     }
-  }, [userId, dispatch]);
+  }, [user?.id, dispatch]);
 
-
+  // ── Messages ───────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!user?.id || !BackendUrl) return;
+    axios
+      .get(`${BackendUrl}/getUserMessagesByClefUser/${user.id}`)
+      .then((res) =>
+        setNbr(res.data.filter((i: any) => !i.lusUser && i.provenance === false).length)
+      )
+      .catch(() => {});
+  }, [user?.id, BackendUrl]);
 
   useEffect(() => {
-    if (user) {
+    if (!socket || !user?.id || !BackendUrl) return;
+    const refresh = () => {
       axios
-        .get(`${BackendUrl}/getUserMessagesByClefUser/${user?.id}`)
-        .then((res) => {
-          setNbr(
-            res.data.filter(
-              (item: any) => item.lusUser == false && item.provenance === false
-            )?.length
-          );
-        })
-        .catch((error) => {
-          console.log(error);
-        });
-    }
-  }, [user, BackendUrl]);
-
-  useEffect(() => {
-    if (!socket) return;
-
-    // Écouter les nouveaux messages du serveur
-    socket.on("new_message_user", (message: any) => {
-      if (message && user) {
-        axios
-          .get(`${BackendUrl}/getUserMessagesByClefUser/${user?.id}`)
-          .then((res) => {
-            setNbr(
-              res.data.filter(
-                (item: any) => item.lusUser == false && item.provenance === false
-              )?.length
-            );
-          })
-          .catch((error) => {
-            console.log(error);
-          });
-      }
-    });
-
-    return () => {
-      socket.off("new_message_user");
+        .get(`${BackendUrl}/getUserMessagesByClefUser/${user.id}`)
+        .then((res) =>
+          setNbr(res.data.filter((i: any) => !i.lusUser && i.provenance === false).length)
+        )
+        .catch(() => {});
     };
-  }, [socket, user, BackendUrl]);
+    socket.on("new_message_user", refresh);
+    return () => { socket.off("new_message_user", refresh); };
+  }, [socket, user?.id, BackendUrl]);
 
-  const toggleDropdown = (dropdown: string) => {
-    setActiveDropdown((prevDropdown) =>
-      prevDropdown === dropdown ? null : dropdown
-    );
-  };
+  // ── Click outside to close dropdowns ──────────────────────────────────────
+  useEffect(() => {
+    const fn = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setActiveDropdown(null);
+      }
+    };
+    document.addEventListener("mousedown", fn);
+    return () => document.removeEventListener("mousedown", fn);
+  }, []);
 
-  const closeAllDropdowns = () => {
+  const toggleDropdown = (key: string) =>
+    setActiveDropdown((prev) => (prev === key ? null : key));
+
+  const closeAll = () => {
     setActiveDropdown(null);
+    setIsMobileMenuOpen(false);
   };
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        closeAllDropdowns();
-      }
-    };
+  const handleLogout = () => {
+    dispatch(logout());
+    ["orderTotal", "pendingOrder", "cartItems", "userToken"].forEach((k) =>
+      localStorage.removeItem(k)
+    );
+    chg?.();
+    closeAll();
+    router.push("/");
+    setTimeout(() => window.location.reload(), 100);
+  };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  // ── Options ────────────────────────────────────────────────────────────────
+  const accountOpts = [
+    ...(acces === "non"
+      ? [
+          { icon: User, label: "Se connecter", href: "/auth/login" },
+          { icon: Plus, label: "S'inscrire", href: "/auth/register" },
+        ]
+      : []),
+    { icon: Home, label: "Mon compte", href: acces === "oui" ? "/profile" : "/auth/login?returnUrl=/profile" },
+    { icon: Package, label: "Mes commandes", href: acces === "oui" ? "/commandes" : "/auth/login?returnUrl=/commandes" },
+    { icon: Trees, label: "Baobab Points", href: acces === "oui" ? "/wallet" : "/auth/login?returnUrl=/wallet" },
+    { icon: Heart, label: "Inviter des amis", href: acces === "oui" ? "/invite-ami" : "/auth/login?returnUrl=/invite-ami" },
+    { icon: Truck, label: "Mes adresses", href: acces === "oui" ? "/livraison" : "/auth/login?returnUrl=/livraison" },
+    ...(acces === "oui"
+      ? [{ icon: LogOut, label: "Se déconnecter", onClick: handleLogout }]
+      : []),
+  ];
 
-  const CategoryButton = ({ icon: Icon, label, onClick }: any) => (
+  const helpOpts = [
+    { icon: HelpCircle, label: "Centre d'aide", href: "/centre-aide" },
+    { icon: Truck, label: "Adresse de livraison", href: "/livraison" },
+    { icon: Bell, label: "Notifications", href: "/" },
+    { icon: Shield, label: "Confidentialité", href: "/confidentialite" },
+    { icon: HelpCircle, label: "FAQ", href: "/faq" },
+    { icon: Info, label: "Informations légales", href: "/informations-legales" },
+  ];
+
+  // ── Reusable sub-components ────────────────────────────────────────────────
+  const DropdownItem = ({ icon: Icon, label, href, onClick: onClickProp }: any) => (
     <button
-      onClick={onClick}
-      className="w-full flex items-center px-4 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-[#30A08B]/10 hover:to-transparent group transition-all duration-200"
+      onClick={() => {
+        closeAll();
+        if (onClickProp) onClickProp();
+        else if (href) { triggerNavProgress(); router.push(href); }
+      }}
+      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-[#f0faf7] hover:text-[#30A08B] transition-colors group"
     >
-      <Icon className="w-5 h-5 text-[#30A08B] group-hover:scale-110 transition-transform duration-200" />
-      <span className="ml-3 text-sm font-medium group-hover:text-[#30A08B]">
-        {label}
-      </span>
-      <ChevronRight className="w-4 h-4 ml-auto opacity-0 group-hover:opacity-100 text-[#30A08B] transform translate-x-0 group-hover:translate-x-1 transition-all duration-200" />
+      <Icon size={16} className="text-gray-400 group-hover:text-[#30A08B] flex-shrink-0" />
+      <span className="font-medium text-left flex-1">{label}</span>
+      <ChevronRight size={13} className="text-gray-300 group-hover:text-[#30A08B] flex-shrink-0" />
     </button>
   );
 
-  const AccountButton = ({ icon: Icon, label, onClick }: any) => (
+  const IconAction = ({ icon: Icon, badge, onClick, ariaLabel }: any) => (
     <button
       onClick={onClick}
-      className="w-full flex items-center px-4 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-[#30A08B]/10 hover:to-transparent group transition-all duration-200"
+      aria-label={ariaLabel}
+      className="relative w-10 h-10 rounded-xl flex items-center justify-center text-gray-600 hover:text-[#30A08B] hover:bg-[#f0faf7] transition-all"
     >
-      <Icon className="w-5 h-5 text-[#30A08B] group-hover:scale-110 transition-transform duration-200" />
-      <span className="ml-3 text-sm font-medium group-hover:text-[#30A08B]">
-        {label}
-      </span>
-      <ChevronRight className="w-4 h-4 ml-auto opacity-0 group-hover:opacity-100 text-[#30A08B] transform translate-x-0 group-hover:translate-x-1 transition-all duration-200" />
+      <Icon size={20} />
+      {badge > 0 && (
+        <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-[#30A08B] text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
     </button>
   );
-
-  const HelpButton = ({ icon: Icon, label, onClick }: any) => (
-    <button
-      onClick={onClick}
-      className="w-full flex items-center px-4 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-[#30A08B]/10 hover:to-transparent group transition-all duration-200"
-    >
-      <Icon className="w-5 h-5 text-[#30A08B] group-hover:scale-110 transition-transform duration-200" />
-      <span className="ml-3 text-sm font-medium group-hover:text-[#30A08B]">
-        {label}
-      </span>
-      <ChevronRight className="w-4 h-4 ml-auto opacity-0 group-hover:opacity-100 text-[#30A08B] transform translate-x-0 group-hover:translate-x-1 transition-all duration-200" />
-    </button>
-  );
-
-  const renderDropdownContent = (dropdown: string) => {
-    const accountOptions = [
-      ...(acces === "non"
-        ? [
-            {
-              icon: User,
-              label: "Se connecter",
-              onClick: () => {
-                setActiveDropdown(null);
-                setIsMobileMenuOpen(false);
-                router.push("/auth/login");
-              },
-            },
-            {
-              icon: Plus,
-              label: "S'inscrire",
-              onClick: () => {
-                setActiveDropdown(null);
-                setIsMobileMenuOpen(false);
-                router.push("/auth/register");
-              },
-            },
-          ]
-        : []),
-      {
-        icon: Home,
-        label: "Mon compte",
-        onClick: () => {
-          setActiveDropdown(null);
-          setIsMobileMenuOpen(false);
-          if (acces === "oui") {
-            router.push("/profile");
-          } else {
-            // Rediriger vers la connexion avec le paramètre de retour
-            router.push("/auth/login?returnUrl=/profile");
-          }
-        },
-      },
-      {
-        icon: Package,
-        label: "Mes commandes",
-        onClick: () => {
-          setActiveDropdown(null);
-          setIsMobileMenuOpen(false);
-          if (acces === "oui") {
-            router.push("/commandes");
-          } else {
-            router.push("/auth/login?returnUrl=/commandes");
-          }
-        },
-      },
-      {
-        icon: Heart,
-        label: "Inviter des amis",
-        onClick: () => {
-          setActiveDropdown(null);
-          setIsMobileMenuOpen(false);
-          if (acces === "oui") {
-            router.push("/invite-ami");
-          } else {
-            router.push("/auth/login?returnUrl=/invite-ami");
-          }
-        },
-      },
-      {
-        icon: Truck,
-        label: "Mes adresses",
-        onClick: () => {
-          setActiveDropdown(null);
-          setIsMobileMenuOpen(false);
-          if (acces === "oui") {
-            router.push("/livraison");
-          } else {
-            router.push("/auth/login?returnUrl=/livraison");
-          }
-        },
-      },
-      ...(acces === "oui"
-        ? [
-            {
-              icon: LogOut,
-              label: "Se déconnecter",
-              onClick: () => {
-                // Utiliser Redux pour la déconnexion
-                dispatch(logout());
-                
-                // Supprimer les données supplémentaires du localStorage
-                localStorage.removeItem("orderTotal");
-                localStorage.removeItem("pendingOrder");
-                localStorage.removeItem("cartItems");
-                localStorage.removeItem("userToken");
-                
-                // Mettre à jour l'état de connexion
-                chg?.();
-                
-                // Fermer les dropdowns
-                setActiveDropdown(null);
-                setIsMobileMenuOpen(false);
-                
-                // Rediriger vers la page d'accueil
-                router.push("/");
-                
-                // Recharger la page pour s'assurer que tous les états sont réinitialisés
-                setTimeout(() => {
-                  window.location.reload();
-                }, 100);
-              },
-            },
-          ]
-        : []),
-    ];
-
-    const helpOptions = [
-      {
-        icon: HelpCircle,
-        label: "Centre d'aide",
-        onClick: () => {
-          setActiveDropdown(null);
-          setIsMobileMenuOpen(false);
-          router.push("/centre-aide");
-        },
-      },
-      {
-        icon: Truck,
-        label: "Adresse de livraison",
-        onClick: () => {
-          setActiveDropdown(null);
-          setIsMobileMenuOpen(false);
-          router.push("/livraison");
-        },
-      },
-      {
-        icon: Bell,
-        label: "Paramètre de notification",
-        onClick: () => {
-          setActiveDropdown(null);
-          setIsMobileMenuOpen(false);
-          // router.push("/dashboard");
-          router.push("/");
-        },
-      },
-      {
-        icon: Shield,
-        label: "Avis de confidentialité",
-        onClick: () => {
-          setActiveDropdown(null);
-          setIsMobileMenuOpen(false);
-          router.push("/confidentialite");
-        },
-      },
-      {
-        icon: HelpCircle,
-        label: "Questions fréquemment posées",
-        onClick: () => router.push("/faq"),
-      },
-      {
-        icon: Info,
-        label: "Informations légales",
-        onClick: () => router.push("/informations-legales"),
-      },
-    ];
-
-    switch (dropdown) {
-      case "language":
-        return (
-          <div className="absolute top-8 right-4 mt-2 w-32 bg-white border border-gray-200 rounded shadow-lg z-50">
-            <button className="block px-4 py-2 text-gray-800 hover:bg-emerald-100 transition">
-              English
-            </button>
-            <button className="block px-4 py-2 text-gray-800 hover:bg-emerald-100 transition">
-              Deutsch
-            </button>
-            <button className="block px-4 py-2 text-gray-800 hover:bg-emerald-100 transition">
-              Español
-            </button>
-          </div>
-        );
-
-      case "categories":
-        return (
-          <div className="absolute z-30 left-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden backdrop-blur-sm backdrop-saturate-150 transition-all duration-300">
-            <div className="py-2">
-              
-              {categories?.map((category, index) => {
-                if (category.name === "all") {
-                  return null;
-                }
-                return (
-                  <div key={category._id}>
-                    <button
-                      onClick={() => router.push(`/Categorie/${category.name}`)}
-                      className="w-full flex items-center px-4 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-[#30A08B]/10 hover:to-transparent group transition-all duration-200"
-                    >
-                      <Image
-                        src={category?.image}
-                        alt="category"
-                        width={30}
-                        height={30}
-                        className="object-contain rounded-full"
-                      />
-                      <span className="ml-3 text-sm font-medium group-hover:text-[#30A08B]">
-                        {category.name}
-                      </span>
-                      <ChevronRight className="w-4 h-4 ml-auto opacity-0 group-hover:opacity-100 text-[#30A08B] transform translate-x-0 group-hover:translate-x-1 transition-all duration-200" />
-                    </button>
-                    {index < categories?.length - 1 && (
-                      <div className="mx-4 border-b border-gray-100" />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="bg-gradient-to-b from-[#30A08B]/5 to-[#30A08B]/10 px-4 py-3">
-              <button
-                onClick={() => {
-                  setActiveDropdown(null);
-                  setIsMobileMenuOpen(false);
-                  router.push("/voir-plus");
-                }}
-                className="w-full text-center text-sm font-medium text-[#30A08B] hover:text-[#2a907d] transition-colors"
-              >
-                Découvrir toutes les catégories
-              </button>
-            </div>
-          </div>
-        );
-
-      case "account":
-        return (
-          <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden backdrop-blur-sm backdrop-saturate-150 transition-all duration-300 z-10">
-            <h3 className="px-4 py-2 text-lg font-semibold text-amber-800 border-b border-gray-200">
-              Mon Compte
-            </h3>
-            <div className="py-2">
-              {accountOptions.map((option, index) => (
-                <React.Fragment key={option.label}>
-                  <AccountButton
-                    icon={option.icon}
-                    label={option.label}
-                    onClick={option.onClick}
-                  />
-                  {index < accountOptions.length - 1 && (
-                    <div className="mx-4 border-b border-gray-100" />
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
-          </div>
-        );
-
-      case "help":
-        return (
-          <div className="absolute z-30 right-0 mt-2 w-72 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden backdrop-blur-sm backdrop-saturate-150 transition-all duration-300">
-            <h3 className="px-4 py-2 text-lg font-semibold text-amber-800 border-b border-gray-200">
-              Plus
-            </h3>
-            <div className="py-2">
-              {helpOptions.map((option, index) => (
-                <React.Fragment key={option.label}>
-                  <HelpButton
-                    icon={option.icon}
-                    label={option.label}
-                    onClick={option.onClick}
-                  />
-                  {index < helpOptions.length - 1 && (
-                    <div className="mx-4 border-b border-gray-100" />
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
-    }
-  };
-
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
-
-  useEffect(() => {
-    const local = localStorage.getItem("panier");
-    if (local) {
-      setProduits(JSON.parse(local));
-    } else {
-      setProduits(0);
-    }
-  }, []);
 
   return (
-    <div className="">
-      {/* Top bar */}
-      <div className="bg-emerald-700 text-white py-1 px-4 text-sm flex justify-between items-center">
-        <div className="flex items-center space-x-4">
-          <span className="flex items-center">
-            <Phone className="h-4 w-4 mr-1" /> Support: +227 87727501
-          </span>
-          <span className="flex items-center">
-            <Truck className="h-4 w-4 mr-1" /> Livraison gratuite dès 30 000F
-          </span>
-        </div>
-        <div className="flex items-center space-x-4">
-          <button
-            className="flex items-center hover:text-emerald-200"
-            onClick={() => toggleDropdown("language")}
-          >
-            <Globe className="h-4 w-4 mr-1" /> FR
-            <ChevronDown
-              className={`h-3 w-3 ml-1 transition-transform ${
-                activeDropdown === "language" ? "transform rotate-180" : ""
-              }`}
-            />
-          </button>
-          {activeDropdown === "language" && renderDropdownContent("language")}
+    <>
+      {/* ── Top info bar (desktop only) ───────────────────────────────────────── */}
+      <div className="hidden md:block bg-[#0d1117]">
+        <div className="max-w-7xl mx-auto px-5 py-1.5 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-6 text-gray-400">
+            <span className="flex items-center gap-1.5">
+              <Phone size={11} /> +227 87727501
+            </span>
+            <span className="flex items-center gap-1.5 text-[#4bbda5]">
+              <Truck size={11} /> Livraison gratuite dès 30&nbsp;000F
+            </span>
+          </div>
+          <div className="flex items-center gap-5 text-gray-400">
+            <span className="text-yellow-400 font-medium">
+              🎉 Code <strong>BIENVENUE20</strong> → -20% (max 2&nbsp;000F)
+            </span>
+            <button
+              onClick={() => router.push("/become-seller")}
+              className="flex items-center gap-1 hover:text-[#4bbda5] transition-colors"
+            >
+              <Store size={11} /> Vendre sur IhamBaobab
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Main header */}
+      {/* ── Main sticky header ────────────────────────────────────────────────── */}
       <header
-        className="bg-gradient-to-r from-amber-100 to-amber-300 text-gray-800 shadow-lg"
         ref={dropdownRef}
+        className={cn(
+          "sticky top-0 z-30 bg-white transition-all duration-200",
+          scrolled ? "shadow-lg" : "shadow-sm border-b border-gray-100"
+        )}
       >
-        <div className="container mx-auto px-2 py-3 flex flex-wrap items-center justify-between">
-          <div className="relative flex items-center space-x-2 p-1 bg-gradient-to-r from-amber-100 to-amber-300 shadow-md rounded-xl">
+        <div className="max-w-7xl mx-auto px-3 sm:px-5">
+
+          {/* ── Mobile: Row 1 — Hamburger · Logo · Cart ── */}
+          <div className="md:hidden flex items-center justify-between py-2 gap-2">
             <button
-              onClick={toggleMenu}
-              className="text-amber-800 hover:text-amber-900 md:hidden focus:outline-none transition-transform duration-300 z-50 relative"
-              aria-label="Toggle menu"
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
+              aria-label="Menu"
             >
-              {isMenuOpen ? (
-                <X className="h-8 w-8 text-amber-800 hover:text-amber-900" />
-              ) : (
-                <Menu className="h-8 w-8 cursor-pointer" />
-              )}
+              <Menu size={22} />
             </button>
 
-            <span
-              className="text-2xl w-32 h-12 md:w-36 md:h-14 font-extrabold text-amber-900 tracking-widest cursor-pointer relative overflow-hidden rounded-lg"
-              onClick={() => router.push("/")}
-            >
+            <div onClick={() => { triggerNavProgress(); router.push("/"); }} className="flex-1 cursor-pointer flex justify-center">
               <Image
                 src="/LogoText.png"
-                alt="Logo IhamBaobab"
-                fill
-                className="object-contain scale-[3] cursor-pointer transition-opacity duration-300 hover:opacity-90"
+                alt="IhamBaobab"
+                width={52}
+                height={48}
+                className="object-contain"
+                priority
               />
-            </span>
+            </div>
 
-            {isMenuOpen && (
-              <div className="fixed top-28 left-4 flex space-x-2 p-2 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-full shadow-2xl transition-all duration-500 ease-out z-50 animate-in slide-in-from-top-5">
-                {/* Menu Button - Opens Mobile Menu */}
+            <IconAction
+              icon={ShoppingCart}
+              badge={panierCount}
+              onClick={() => { triggerNavProgress(); router.push("/Panier"); }}
+              ariaLabel="Panier"
+            />
+          </div>
+
+          {/* ── Mobile: Row 2 — Full-width search ── */}
+          <div className="md:hidden pb-2">
+            <SearchBar onSearch={(q) => { triggerNavProgress(); router.push(`/Search?q=${encodeURIComponent(q)}`); }} />
+          </div>
+
+          {/* ── Desktop: Single row — Logo · Search · Actions ── */}
+          <div className="hidden md:flex items-center gap-3 py-2.5">
+            {/* Logo */}
+            <div onClick={() => { triggerNavProgress(); router.push("/"); }} className="flex-shrink-0 cursor-pointer">
+              <Image
+                src="/LogoText.png"
+                alt="IhamBaobab"
+                width={56}
+                height={52}
+                className="object-contain"
+                priority
+              />
+            </div>
+
+            {/* Search */}
+            <div className="flex-1 min-w-0 mx-2">
+              <SearchBar onSearch={(q) => { triggerNavProgress(); router.push(`/Search?q=${encodeURIComponent(q)}`); }} />
+            </div>
+
+            {/* Desktop action icons */}
+            <div className="flex items-center gap-0.5">
+              {/* Account dropdown */}
+              <div className="relative">
                 <button
-                  onClick={() => {
-                    setIsMobileMenuOpen(true);
-                    setIsMenuOpen(false);
-                  }}
-                  className="bg-gradient-to-br from-green-800 to-green-900 w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg transform transition-all duration-300 hover:scale-110 hover:shadow-2xl active:scale-95"
+                  onClick={() => toggleDropdown("account")}
+                  className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl hover:bg-[#f0faf7] text-gray-700 hover:text-[#30A08B] transition-all"
                 >
-                  <Menu className="w-5 h-5" />
+                  <div className="relative w-7 h-7 rounded-full bg-[#f0faf7] flex items-center justify-center flex-shrink-0">
+                    <User size={15} className="text-[#30A08B]" />
+                    {wallet?.level && wallet.level !== "Graine" && (
+                      <span className="absolute -bottom-1 -right-1 text-[9px] leading-none">
+                        {wallet.level === "Grand Baobab" ? "🌳" : "🌿"}
+                      </span>
+                    )}
+                  </div>
+                  <div className="hidden lg:block text-left">
+                    <p className="text-[10px] text-gray-400 leading-none">Bonjour</p>
+                    <p className="text-xs font-bold text-gray-700 leading-none mt-0.5">
+                      {acces === "oui" ? (user?.name?.split(" ")[0] ?? "Compte") : "Compte"}
+                    </p>
+                  </div>
+                  <ChevronDown
+                    size={13}
+                    className={cn("text-gray-400 transition-transform", activeDropdown === "account" && "rotate-180")}
+                  />
                 </button>
 
-                {/* Wishlist Button */}
-                <button 
-                  onClick={() => {
-                    router.push("/like-produit");
-                    setIsMenuOpen(false);
-                  }}
-                  className="bg-gradient-to-br from-red-500 to-red-600 w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg transform transition-all duration-300 hover:scale-110 hover:shadow-2xl active:scale-95 relative"
-                >
-                  <Heart className="h-5 w-5" />
-                  {likedProducts?.length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-emerald-500 rounded-full w-5 h-5 text-[10px] text-white flex items-center justify-center font-bold border-2 border-white">
-                      {likedProducts?.length}
-                    </span>
-                  )}
-                </button>
-
-                {/* Shopping Cart Button */}
-                <button 
-                  onClick={() => {
-                    router.push("/Panier");
-                    setIsMenuOpen(false);
-                  }} 
-                  className="bg-gradient-to-br from-blue-500 to-blue-600 w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg transform transition-all duration-300 hover:scale-110 hover:shadow-2xl active:scale-95 relative"
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                  {panierCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-emerald-600 rounded-full w-5 h-5 text-[10px] text-white flex items-center justify-center font-bold border-2 border-white">
-                      {panierCount}
-                    </span>
-                  )}
-                </button>
-
-                {/* Message Button */}
-                <button 
-                  onClick={() => {
-                    router.push("/Messagerie");
-                    setIsMenuOpen(false);
-                  }}
-                  className="bg-gradient-to-br from-green-500 to-green-600 w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg transform transition-all duration-300 hover:scale-110 hover:shadow-2xl active:scale-95 relative"
-                >
-                  <MessageCircle className="h-5 w-5" />
-                  {nbr > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 rounded-full w-5 h-5 text-[10px] text-white flex items-center justify-center font-bold border-2 border-white">
-                      {nbr}
-                    </span>
-                  )}
-                </button>
+                {activeDropdown === "account" && (
+                  <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-50 animate-popIn">
+                    {acces === "oui" && user && (
+                      <div className="bg-gradient-to-r from-[#30A08B] to-[#1d7a6a] px-4 py-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-white font-bold text-sm">{user.name || "Mon compte"}</p>
+                          {wallet?.level && (
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                              wallet.level === "Grand Baobab" ? "bg-amber-400 text-amber-900" :
+                              wallet.level === "Arbre" ? "bg-white/20 text-white" :
+                              "bg-white/15 text-white/80"
+                            }`}>
+                              {wallet.level === "Grand Baobab" ? "🌳" : wallet.level === "Arbre" ? "🌿" : "🌱"} {wallet.level}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between mt-0.5">
+                          <p className="text-white/70 text-xs truncate">{user.email || ""}</p>
+                          {wallet !== null && (
+                            <p className="text-white/90 text-xs font-semibold shrink-0 ml-2">{wallet.balance ?? 0} BP</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    <div className="py-1">
+                      {accountOpts.map((o) => (
+                        <DropdownItem key={o.label} {...o} />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+
+              <IconAction
+                icon={Heart}
+                badge={likedProducts?.length || 0}
+                onClick={() => { triggerNavProgress(); router.push("/like-produit"); }}
+                ariaLabel="Favoris"
+              />
+              <IconAction
+                icon={ShoppingCart}
+                badge={panierCount}
+                onClick={() => { triggerNavProgress(); router.push("/Panier"); }}
+                ariaLabel="Panier"
+              />
+              <IconAction
+                icon={MessageCircle}
+                badge={nbr}
+                onClick={() => { triggerNavProgress(); router.push("/Messagerie"); }}
+                ariaLabel="Messages"
+              />
+
+              {/* Help dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => toggleDropdown("help")}
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-600 hover:text-[#30A08B] hover:bg-[#f0faf7] transition-all"
+                  aria-label="Aide"
+                >
+                  <HelpCircle size={20} />
+                </button>
+                {activeDropdown === "help" && (
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-50 animate-popIn">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <p className="font-bold text-gray-800 text-sm">Aide & informations</p>
+                    </div>
+                    <div className="py-1">
+                      {helpOpts.map((o) => (
+                        <DropdownItem key={o.label} {...o} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
 
-          {/* Search bar */}
-          <div className="relative flex-grow max-w-xl mx-4 my-2 w-full">
-            <SearchBar onSearch={(query) => {
-              // Rediriger vers la page de recherche avec le query
-              router.push(`/Search?q=${encodeURIComponent(query)}`);
-            }} />
-          </div>
-
-          {/* Navigation */}
-          <nav className="hidden md:flex items-center space-x-6">
-            <div className="relative">
+          {/* Row 2 — Sub-navigation (desktop only) */}
+          <nav className="hidden md:flex items-center gap-1 pb-2 pt-0.5 border-t border-gray-50">
+            {/* Categories */}
+            <div className="relative mr-1">
               <button
-                className="flex items-center text-amber-800 hover:text-amber-900"
                 onClick={() => toggleDropdown("categories")}
-                aria-label="Categories"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-white bg-[#30A08B] hover:bg-[#268070] transition-colors"
               >
-                <span>Catégories</span>
+                <Grid3X3 size={14} />
+                Catégories
                 <ChevronDown
-                  className={`h-4 w-4 ml-1 transition-transform ${
-                    activeDropdown === "categories"
-                      ? "transform rotate-180"
-                      : ""
-                  }`}
+                  size={13}
+                  className={cn("transition-transform", activeDropdown === "categories" && "rotate-180")}
                 />
               </button>
-              {activeDropdown === "categories" &&
-                renderDropdownContent("categories")}
+
+              {activeDropdown === "categories" && (
+                <div className="absolute left-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-50 animate-popIn">
+                  <div className="py-1 max-h-96 overflow-y-auto">
+                    {categories
+                      .filter((c) => c.name !== "all")
+                      .map((cat) => (
+                        <button
+                          key={cat._id}
+                          onClick={() => { closeAll(); triggerNavProgress(); router.push(`/Categorie/${cat.name}`); }}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-[#f0faf7] hover:text-[#30A08B] transition-colors"
+                        >
+                          {cat.image && (
+                            <Image
+                              src={cat.image}
+                              alt={cat.name}
+                              width={26}
+                              height={26}
+                              className="rounded-lg object-cover flex-shrink-0"
+                            />
+                          )}
+                          <span className="capitalize font-medium flex-1 text-left">{cat.name}</span>
+                          <ChevronRight size={13} className="text-gray-300 flex-shrink-0" />
+                        </button>
+                      ))}
+                  </div>
+                  <div className="border-t border-gray-100 px-4 py-2.5">
+                    <button
+                      onClick={() => { closeAll(); triggerNavProgress(); router.push("/voir-plus"); }}
+                      className="text-sm text-[#30A08B] font-semibold hover:underline"
+                    >
+                      Voir toutes les catégories →
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <button
-              onClick={() => router.push("/promotion")}
-              className="text-amber-800 hover:text-amber-900"
-            >
-              Promotions
-            </button>
-            <button
-              onClick={() => router.push("/nouveaux")}
-              className="text-amber-800 hover:text-amber-900"
-            >
-              Nouveautés
-            </button>
-
-            <div className="relative">
+            {[
+              { label: "Promotions", href: "/promotion" },
+              { label: "Nouveautés", href: "/nouveaux" },
+              { label: "🌳 Baobab Points", href: "/wallet" },
+              { label: "Devenir vendeur", href: "/become-seller" },
+              { label: "Nos magasins", href: "/suppliers" },
+            ].map(({ label, href }) => (
               <button
-                className="flex items-center text-amber-800 hover:text-amber-900"
-                onClick={() => toggleDropdown("account")}
-                aria-label="Account options"
+                key={label}
+                onClick={() => { triggerNavProgress(); router.push(href); }}
+                className="text-sm font-medium px-3 py-1.5 rounded-lg text-gray-600 hover:text-[#30A08B] hover:bg-[#f0faf7] transition-all"
               >
-                <User className="h-6 w-6 mr-1" />
-                <span>Compte</span>
-                <ChevronDown
-                  className={`h-4 w-4 ml-1 transition-transform ${
-                    activeDropdown === "account" ? "transform rotate-180" : ""
-                  }`}
-                />
+                {label}
               </button>
-              {activeDropdown === "account" && renderDropdownContent("account")}
-            </div>
-
-            <div className="relative">
-              <button
-                className="flex items-center text-amber-800 hover:text-amber-900"
-                onClick={() => toggleDropdown("help")}
-                aria-label="Help options"
-              >
-                <span>Plus</span>
-                <ChevronDown
-                  className={`h-4 w-4 ml-1 transition-transform ${
-                    activeDropdown === "help" ? "transform rotate-180" : ""
-                  }`}
-                />
-              </button>
-              {activeDropdown === "help" && renderDropdownContent("help")}
-            </div>
-
-            <button
-              className="relative text-amber-800 hover:text-amber-900"
-              aria-label="Wishlist"
-              onClick={() => router.push("/like-produit")}
-            >
-              <Heart className="h-6 w-6" />
-              <span className="absolute -top-1 -right-1 bg-emerald-500 rounded-full w-4 h-4 text-xs text-white flex items-center justify-center">
-                {likedProducts?.length}
-              </span>
-            </button>
-
-            <div onClick={() => router.push("/Panier")} className="relative cursor-pointer">
-              <div className="bg-emerald-600 rounded-full z-10 w-5 h-5 flex items-center justify-center text-white text-xs font-bold absolute -top-2 -right-2">
-                {panierCount || 0}
-              </div>
-              <ShoppingCart
-                className="h-6 w-6 text-amber-800 hover:text-amber-900 cursor-pointer transition-transform transform hover:scale-110"
-                aria-label="Panier"
-              />
-            </div>
-
-            <div onClick={() => router.push("/Messagerie")} className="relative cursor-pointer">
-              <div className="bg-emerald-600 rounded-full z-10 w-5 h-5 flex items-center justify-center text-white text-xs font-bold absolute -top-2 -right-2">
-                {nbr}
-              </div>
-              <MessageCircle
-                className="h-6 w-6 text-amber-800 hover:text-amber-900 cursor-pointer transition-transform transform hover:scale-110"
-                aria-label="messages"
-              />
-            </div>
-
-            {isCartOpen && (
-              <div className="absolute right-0 w-full h-screen max-w-sm md:max-w-md lg:max-w-lg text-black top-5 rounded shadow-lg z-50 p-2">
-                1
-              </div>
-            )}
+            ))}
           </nav>
         </div>
       </header>
 
-      {/* Promo banner */}
-      <div className="bg-gradient-to-r from-amber-300 to-amber-400 text-amber-900 py-2 px-2 md:px-5 shadow-lg overflow-hidden">
-        <div className="container mx-auto flex items-center justify-center animate-pulse text-center">
-          <Gift className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2 animate-bounce text-amber-700 flex-shrink-0" />
-          <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-xs md:text-sm leading-tight">
-            <span className="font-bold">🎉 -20% code</span>
-            <span className="bg-amber-200 px-2 py-0.5 rounded font-extrabold text-amber-900 shadow-sm">
-              BIENVENUE20
-            </span>
-            <span className="bg-red-500 text-white px-1.5 py-0.5 rounded text-[10px] md:text-xs font-semibold shadow-sm">
-              max 2000F
-            </span>
-          </div>
+      {/* ── Mobile bottom navigation bar ─────────────────────────────────────── */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200">
+        <div className="grid grid-cols-5 h-[60px]">
+          {[
+            { icon: Home, label: "Accueil", action: () => { triggerNavProgress(); router.push("/"); } },
+            { icon: Grid3X3, label: "Catégories", action: () => setIsMobileMenuOpen(true) },
+            { icon: Search, label: "Explorer", action: () => { triggerNavProgress(); router.push("/voir-plus"); } },
+            { icon: ShoppingCart, label: "Panier", action: () => { triggerNavProgress(); router.push("/Panier"); }, badge: panierCount },
+            { icon: Trees, label: "Points", action: () => { triggerNavProgress(); router.push(acces === "oui" ? "/wallet" : "/auth/login?returnUrl=/wallet"); } },
+          ].map(({ icon: Icon, label, action, badge }: any) => (
+            <button
+              key={label}
+              onClick={action}
+              className="flex flex-col items-center justify-center gap-0.5 text-gray-500 hover:text-[#30A08B] active:text-[#30A08B] transition-colors"
+            >
+              <div className="relative">
+                <Icon size={21} />
+                {badge > 0 && (
+                  <span className="absolute -top-1 -right-1.5 min-w-[15px] h-[15px] bg-[#30A08B] text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none">
+                    {badge > 99 ? "99+" : badge}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] font-medium leading-none">{label}</span>
+            </button>
+          ))}
         </div>
-      </div>
+      </nav>
 
-      {/* Mobile menu */}
+      {/* ── Mobile full-screen drawer ─────────────────────────────────────────── */}
       {isMobileMenuOpen && (
-        <HeaderMobile 
+        <HeaderMobile
           setIsMobileMenuOpen={setIsMobileMenuOpen}
           nbr={nbr}
           paniernbr={panierCount}
         />
       )}
-    </div>
+    </>
   );
 };
 

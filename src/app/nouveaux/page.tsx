@@ -1,5 +1,6 @@
 import React from "react";
 import NouveauterPage from "@/components/nouveauProduit/NouveauterPage";
+import HomeHeader from "@/components/home/HomeHeader";
 import HomeFooter from "@/components/home/HomeFooter";
 import { Metadata } from "next";
 
@@ -206,6 +207,7 @@ export default function NouveauxProduitsPage() {
       
       {/* Composant principal */}
       <main>
+        <HomeHeader />
         <NouveauterPage />
         <HomeFooter />
       </main>

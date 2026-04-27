@@ -1,6 +1,8 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import DetailHomme from "@/components/categoryPage/DetailHomme";
+import HomeHeader from "@/components/home/HomeHeader";
+import HomeFooter from "@/components/home/HomeFooter";
 
 interface PageProps {
   params: Promise<{
@@ -37,46 +39,43 @@ async function getCategoryData(categoryName: string) {
     // Récupérer les données depuis l'API
     const baseUrl = process.env.NEXT_PUBLIC_Backend_Url;
     
-    const [categoriesRes, typesRes, productsRes] = await Promise.all([
-      fetch(`${baseUrl}/getAllCategories`, { 
-        next: { revalidate: 3600 } // Cache pendant 1 heure
-      }),
-      fetch(`${baseUrl}/getAllType`, { 
-        next: { revalidate: 3600 }
-      }),
-      fetch(`${baseUrl}/ProductsClients`, { 
-        next: { revalidate: 1800 } // Cache pendant 30 minutes
-      })
+    // Step 1: get categories + types (light, cached 1h)
+    const [categoriesRes, typesRes] = await Promise.all([
+      fetch(`${baseUrl}/getAllCategories`, { next: { revalidate: 3600 } }),
+      fetch(`${baseUrl}/getAllType`, { next: { revalidate: 3600 } }),
     ]);
 
-    if (!categoriesRes.ok || !typesRes.ok || !productsRes.ok) {
-      throw new Error('Failed to fetch data');
-    }
+    if (!categoriesRes.ok || !typesRes.ok) throw new Error('Failed to fetch data');
 
-    const [categoriesData, typesData, productsData] = await Promise.all([
+    const [categoriesData, typesData] = await Promise.all([
       categoriesRes.json(),
       typesRes.json(),
-      productsRes.json()
     ]);
 
-    // Trouver la catégorie correspondante
     const category = categoriesData.data?.find(
       (cat: any) => cat.name.toLowerCase() === decodedName.toLowerCase()
     );
+    if (!category) return null;
 
-    if (!category) {
-      return null;
-    }
-
-    // Filtrer les types pour cette catégorie
-    const categoryTypes = typesData.data?.filter(
+    const categoryTypes: any[] = typesData.data?.filter(
       (type: any) => type.clefCategories === category._id
     ) || [];
 
-    // Filtrer les produits pour cette catégorie
-    const categoryProducts = productsData.data?.filter((product: any) =>
-      categoryTypes.some((type: any) => type._id === product.ClefType)
-    ) || [];
+    // Step 2: fetch products for each type with server-side filtering (paginated)
+    const typeIds = categoryTypes.map((t: any) => t._id);
+    let categoryProducts: any[] = [];
+
+    if (typeIds.length > 0) {
+      // Fetch up to 60 products for the first type as representative sample for SSR/SEO
+      const firstTypeRes = await fetch(
+        `${baseUrl}/searchProductByType/${typeIds[0]}?limit=60`,
+        { next: { revalidate: 1800 } }
+      );
+      if (firstTypeRes.ok) {
+        const firstTypeData = await firstTypeRes.json();
+        categoryProducts = firstTypeData.products ?? firstTypeData.data ?? [];
+      }
+    }
 
     return {
       category,
@@ -279,10 +278,12 @@ export default async function CategoryPage({ params }: PageProps) {
         }}
       />
       
-      <DetailHomme 
-        acces={acces} 
+      <HomeHeader />
+      <DetailHomme
+        acces={acces}
         categoryParam={name}
       />
+      <HomeFooter />
     </>
   );
 }

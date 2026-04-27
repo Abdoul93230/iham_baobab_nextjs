@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Heart } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "@/redux/hooks";
 import { fetchUserLikes, toggleLike } from "@/redux/likesSlice";
+import { triggerNavProgress } from "@/components/NavigationProgress";
 
 function cn(...classes: (string | undefined | boolean)[]): string {
   return classes.filter(Boolean).join(" ");
@@ -105,7 +106,7 @@ const ProduitSimilaires: React.FC<ProduitSimilairesProps> = ({
         {produits?.map((produit) => (
           <div
             key={produit._id}
-            onClick={() => router.push(`/ProduitDetail/${produit._id}`)}
+            onClick={() => { triggerNavProgress(); router.push(`/ProduitDetail/${produit._id}`); }}
             className="bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer relative group"
           >
             <div className="relative aspect-square overflow-hidden rounded-t-lg">

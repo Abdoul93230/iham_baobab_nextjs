@@ -3,7 +3,6 @@ import axios from "axios";
 
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 
-// Types basés sur votre structure existante
 export interface Variant {
   color: string;
   imageUrl: string;
@@ -31,13 +30,8 @@ export interface Product {
   quantite?: number;
   prixLivraison?: number;
   variants?: Variant[];
-  shipping?: {
-    weight?: number;
-  };
-  Clefournisseur?: {
-    _id: string;
-    name?: string;
-  };
+  shipping?: { weight?: number };
+  Clefournisseur?: { _id: string; name?: string };
 }
 
 interface Category {
@@ -53,16 +47,17 @@ interface Type {
   clefCategories?: string;
 }
 
-// Interface qui correspond exactement à votre structure originale
 interface ProductsState {
+  // Home feed — lightweight, limited set
   data: Product[];
+  // Static ref data
   types: Type[];
   categories: Category[];
   products_Pubs: any[];
   products_Commentes: any[];
   loading?: boolean;
   error?: string | null;
-  lastFetched?: number; // Timestamp pour la cache
+  lastFetched?: number;
 }
 
 const initialState: ProductsState = {
@@ -76,15 +71,13 @@ const initialState: ProductsState = {
   lastFetched: 0,
 };
 
-// Async thunks qui correspondent à vos actions originales
+// Fetch a lightweight home feed (max 40 products, no subscription loop)
 export const getProducts = createAsyncThunk(
   "products/getProducts",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${BackendUrl}/ProductsClients`);
-      console.log({response});
-      
-      return response.data.data;
+      const response = await axios.get(`${BackendUrl}/ProductsHome?limit=40`);
+      return response.data.products ?? response.data.data ?? [];
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || "Error fetching products");
     }
@@ -139,7 +132,6 @@ export const getProducts_Commentes = createAsyncThunk(
   }
 );
 
-// Slice qui correspond exactement à votre structure
 export const getSlice = createSlice({
   name: "products",
   initialState,
@@ -165,7 +157,6 @@ export const getSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // getProducts
       .addCase(getProducts.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -179,7 +170,6 @@ export const getSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
-      // getCategories
       .addCase(getCategories.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -193,16 +183,13 @@ export const getSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
-      // getTypes
       .addCase(getTypes.fulfilled, (state, action) => {
         state.types = action.payload;
         state.lastFetched = Date.now();
       })
-      // getProducts_Pubs
       .addCase(getProducts_Pubs.fulfilled, (state, action) => {
         state.products_Pubs = action.payload;
       })
-      // getProducts_Commentes
       .addCase(getProducts_Commentes.fulfilled, (state, action) => {
         state.products_Commentes = action.payload;
       });

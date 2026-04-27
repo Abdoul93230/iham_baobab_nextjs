@@ -3,6 +3,7 @@ import productsReducer from "./productsSlice";
 import likesReducer from "./likesSlice";
 import panierReducer from "./panierSlice";
 import userReducer from "./userSlice";
+import gamificationReducer from "./gamificationSlice";
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     likes: likesReducer,
     panier: panierReducer,
     user: userReducer,
+    gamification: gamificationReducer,
   },
 });
 

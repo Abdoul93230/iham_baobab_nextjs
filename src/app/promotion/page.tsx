@@ -1,5 +1,7 @@
 import React from "react";
 import ProduitPromotion from "@/components/promotionProduit/ProduitPromotion";
+import HomeHeader from "@/components/home/HomeHeader";
+import HomeFooter from "@/components/home/HomeFooter";
 import { Metadata } from "next";
 
 // Métadonnées pour la page des promotions
@@ -115,7 +117,9 @@ export default function PromotionPage() {
         }}
       />
       
+      <HomeHeader />
       <ProduitPromotion acces={acces} />
+      <HomeFooter />
     </>
   );
 }

@@ -1,21 +1,23 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAppDispatch } from "@/redux/hooks";
 import { loginUser } from "@/redux/userSlice";
 import Alert from "@/components/Alert";
 import { getPasswordChecks, getPasswordStrength, validatePassword } from "@/lib/passwordRules";
+import {
+  Eye, EyeOff, Lock, CheckCircle2, RefreshCcw,
+  ShieldCheck, Truck, Headphones, ArrowLeft,
+} from "lucide-react";
 
 type FlowType = "quick-register" | "password-reset";
-type Step = "verify-otp" | "set-password";
+type Step = "verify-otp" | "set-password" | "success";
 
-const formatDuration = (seconds: number) => {
-  const safe = Math.max(0, Math.floor(Number(seconds) || 0));
-  const minutes = Math.floor(safe / 60);
-  const remaining = safe % 60;
-  return `${minutes}:${remaining.toString().padStart(2, "0")}`;
+const fmt = (s: number) => {
+  const safe = Math.max(0, Math.floor(Number(s) || 0));
+  return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, "0")}`;
 };
 
 const getErrorMessage = (error: unknown) => {
@@ -28,331 +30,487 @@ const getErrorMessage = (error: unknown) => {
   return "Une erreur est survenue";
 };
 
+const TRUST_ITEMS = [
+  { icon: ShieldCheck, label: "Paiement 100% sécurisé",  sub: "SSL & chiffrement bancaire" },
+  { icon: Truck,       label: "Livraison rapide",          sub: "Partout au Niger" },
+  { icon: Headphones,  label: "Support 7j/7",              sub: "Toujours disponible" },
+];
+
+const STRENGTH_COLORS: Record<string, string> = {
+  "Très faible": "bg-red-400",
+  "Faible":      "bg-orange-400",
+  "Moyen":       "bg-yellow-400",
+  "Fort":        "bg-emerald-400",
+  "Très fort":   "bg-emerald-600",
+};
+
+const OTP_LEN = 6;
+
 const VerifyOTP: React.FC = () => {
   const dispatch = useAppDispatch();
-  const router = useRouter();
+  const router   = useRouter();
   const searchParams = useSearchParams();
 
   const flowType = (searchParams.get("type") as FlowType) || "quick-register";
-  const phone = searchParams.get("phone") || "";
-  const name = searchParams.get("name") || "";
+  const phone    = searchParams.get("phone") || "";
+  const name     = searchParams.get("name")  || "";
+  const refCode  = searchParams.get("refCode") || "";
   const redirect = searchParams.get("redirect") || "/";
 
-  const [step, setStep] = useState<Step>("verify-otp");
-  const [otp, setOtp] = useState("");
-  const [devCode, setDevCode] = useState(searchParams.get("devCode") || "");
-  const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(
+  const [step, setStep]         = useState<Step>("verify-otp");
+  const [digits, setDigits]     = useState<string[]>(Array(OTP_LEN).fill(""));
+  const [attemptsLeft, setAttemptsLeft] = useState<number | null>(
     searchParams.get("attemptsRemaining") ? Number(searchParams.get("attemptsRemaining")) : null
   );
-  const [cooldownSeconds, setCooldownSeconds] = useState(
-    searchParams.get("cooldownSeconds") ? Number(searchParams.get("cooldownSeconds")) : 0
-  );
-  const [expiresInSeconds, setExpiresInSeconds] = useState(
-    searchParams.get("expiresInSeconds") ? Number(searchParams.get("expiresInSeconds")) : 0
-  );
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [cooldown, setCooldown]   = useState(Number(searchParams.get("cooldownSeconds") || 0));
+  const [expires,  setExpires]    = useState(Number(searchParams.get("expiresInSeconds") || 0));
+  const [password, setPassword]   = useState("");
+  const [confirm,  setConfirm]    = useState("");
+  const [showPwd,  setShowPwd]    = useState(false);
+  const [showConf, setShowConf]   = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [alert, setAlert] = useState({
-    visible: false,
-    type: "info" as "success" | "error" | "warning" | "info",
-    message: "",
-  });
+  const [alert, setAlert] = useState({ visible: false, type: "info" as "success"|"error"|"warning"|"info", message: "" });
 
-  const passwordChecks = useMemo(() => getPasswordChecks(password), [password]);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const otp = digits.join("");
+  const canVerify = otp.length === OTP_LEN;
+
+  const passwordChecks  = useMemo(() => getPasswordChecks(password),  [password]);
   const passwordStrength = useMemo(() => getPasswordStrength(password), [password]);
 
-  const canVerify = useMemo(() => otp.length === 6, [otp.length]);
-
+  // Countdown
   useEffect(() => {
-    if (cooldownSeconds <= 0 && expiresInSeconds <= 0) return;
-    const timer = setInterval(() => {
-      setCooldownSeconds((v) => (v > 0 ? v - 1 : 0));
-      setExpiresInSeconds((v) => (v > 0 ? v - 1 : 0));
+    if (cooldown <= 0 && expires <= 0) return;
+    const id = setInterval(() => {
+      setCooldown((v) => (v > 0 ? v - 1 : 0));
+      setExpires((v)  => (v > 0 ? v - 1 : 0));
     }, 1000);
-    return () => clearInterval(timer);
-  }, [cooldownSeconds, expiresInSeconds]);
+    return () => clearInterval(id);
+  }, []);
 
-  const showAlert = (
-    type: "success" | "error" | "warning" | "info",
-    message: string
-  ) => setAlert({ visible: true, type, message });
-
+  const showAlert = (type: "success"|"error"|"warning"|"info", message: string) =>
+    setAlert({ visible: true, type, message });
   const hideAlert = () => setAlert({ visible: false, type: "info", message: "" });
 
-  const loginAfterDone = async (pwd: string) => {
-    const result = await dispatch(
-      loginUser({
-        identifier: phone,
-        phoneNumber: phone,
-        password: pwd,
-      })
-    );
+  // OTP input handlers
+  const handleOtpChange = (index: number, value: string) => {
+    const char = value.replace(/\D/g, "").slice(-1);
+    const next = [...digits];
+    next[index] = char;
+    setDigits(next);
+    if (char && index < OTP_LEN - 1) inputRefs.current[index + 1]?.focus();
+  };
 
-    if (loginUser.fulfilled.match(result)) {
-      router.push(redirect);
-      return;
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !digits[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
     }
+    if (e.key === "ArrowLeft"  && index > 0)          inputRefs.current[index - 1]?.focus();
+    if (e.key === "ArrowRight" && index < OTP_LEN - 1) inputRefs.current[index + 1]?.focus();
+  };
 
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, OTP_LEN);
+    const next = [...digits];
+    pasted.split("").forEach((c, i) => { next[i] = c; });
+    setDigits(next);
+    const focusIdx = Math.min(pasted.length, OTP_LEN - 1);
+    inputRefs.current[focusIdx]?.focus();
+  };
+
+  const loginAfterDone = async (pwd: string) => {
+    const result = await dispatch(loginUser({ identifier: phone, phoneNumber: phone, password: pwd }));
+    if (loginUser.fulfilled.match(result)) { router.push(redirect); return; }
     showAlert("error", getErrorMessage(result.payload));
   };
 
   const handleVerify = async () => {
-    if (!canVerify) {
-      showAlert("error", "Veuillez saisir les 6 chiffres du code OTP.");
-      return;
-    }
-
+    if (!canVerify) { showAlert("error", "Saisissez les 6 chiffres."); return; }
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_Backend_Url}/auth/verify-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res  = await fetch(`${process.env.NEXT_PUBLIC_Backend_Url}/auth/verify-otp`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone, code: otp }),
       });
-
-      const data = await response.json();
-      if (!response.ok) {
-        const remaining = Number(data?.data?.attemptsRemaining);
-        if (!Number.isNaN(remaining)) setAttemptsRemaining(remaining);
+      const data = await res.json();
+      if (!res.ok) {
+        const rem = Number(data?.data?.attemptsRemaining);
+        if (!isNaN(rem)) setAttemptsLeft(rem);
         showAlert("error", data?.message || "Code OTP invalide");
         return;
       }
-
-      const remaining = Number(data?.data?.attemptsRemaining);
-      if (!Number.isNaN(remaining)) setAttemptsRemaining(remaining);
       setStep("set-password");
-    } catch (error) {
-      showAlert("error", getErrorMessage(error));
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (e) { showAlert("error", getErrorMessage(e)); }
+    finally { setIsLoading(false); }
   };
 
   const handleResend = async () => {
     setIsLoading(true);
     try {
-      const endpoint =
-        flowType === "password-reset"
-          ? "/auth/request-password-reset-otp"
-          : "/auth/send-otp";
-
-      const body =
-        flowType === "password-reset"
-          ? { phone }
-          : { phone, name: name || null };
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_Backend_Url}${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const endpoint = flowType === "password-reset" ? "/auth/request-password-reset-otp" : "/auth/send-otp";
+      const body     = flowType === "password-reset" ? { phone } : { phone, name: name || null };
+      const res  = await fetch(`${process.env.NEXT_PUBLIC_Backend_Url}${endpoint}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-
-      const data = await response.json();
-      if (!response.ok) {
-        showAlert("error", data?.message || "Impossible de renvoyer le code");
-        return;
-      }
-
-      setDevCode(data?.data?.devOTP || "");
-      setAttemptsRemaining(
-        typeof data?.data?.attemptsRemaining === "number" ? data.data.attemptsRemaining : attemptsRemaining
-      );
-      setCooldownSeconds(typeof data?.data?.cooldownSeconds === "number" ? data.data.cooldownSeconds : 0);
-      setExpiresInSeconds(typeof data?.data?.expiresInSeconds === "number" ? data.data.expiresInSeconds : 0);
-      setOtp("");
-      showAlert("success", "Nouveau code OTP envoyé.");
-    } catch (error) {
-      showAlert("error", getErrorMessage(error));
-    } finally {
-      setIsLoading(false);
-    }
+      const data = await res.json();
+      if (!res.ok) { showAlert("error", data?.message || "Impossible de renvoyer le code"); return; }
+      if (typeof data?.data?.attemptsRemaining === "number") setAttemptsLeft(data.data.attemptsRemaining);
+      if (typeof data?.data?.cooldownSeconds   === "number") setCooldown(data.data.cooldownSeconds);
+      if (typeof data?.data?.expiresInSeconds  === "number") setExpires(data.data.expiresInSeconds);
+      setDigits(Array(OTP_LEN).fill(""));
+      inputRefs.current[0]?.focus();
+      showAlert("success", "Nouveau code envoyé !");
+    } catch (e) { showAlert("error", getErrorMessage(e)); }
+    finally { setIsLoading(false); }
   };
 
   const handleFinalize = async () => {
-    const validation = validatePassword(password);
-    if (!validation.valid) {
-      showAlert("error", validation.message);
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      showAlert("error", "Les mots de passe ne correspondent pas.");
-      return;
-    }
-
+    const v = validatePassword(password);
+    if (!v.valid)               { showAlert("error", v.message); return; }
+    if (password !== confirm)   { showAlert("error", "Les mots de passe ne correspondent pas."); return; }
     setIsLoading(true);
     try {
-      const endpoint =
-        flowType === "password-reset" ? "/auth/reset-password-phone" : "/auth/quick-register";
-
-      const body =
-        flowType === "password-reset"
-          ? { phone, code: otp, newPassword: password }
-          : { phone, name, password, code: otp };
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_Backend_Url}${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const endpoint = flowType === "password-reset" ? "/auth/reset-password-phone" : "/auth/quick-register";
+      const body     = flowType === "password-reset"
+        ? { phone, code: otp, newPassword: password }
+        : { phone, name, password, code: otp, ...(refCode ? { refCode } : {}) };
+      const res  = await fetch(`${process.env.NEXT_PUBLIC_Backend_Url}${endpoint}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-
-      const data = await response.json();
-      if (!response.ok) {
-        showAlert("error", data?.message || "Echec de finalisation");
-        return;
-      }
-
-      await loginAfterDone(password);
-    } catch (error) {
-      showAlert("error", getErrorMessage(error));
-    } finally {
-      setIsLoading(false);
-    }
+      const data = await res.json();
+      if (!res.ok) { showAlert("error", data?.message || "Échec de finalisation"); return; }
+      setStep("success");
+      setTimeout(() => loginAfterDone(password), 1800);
+    } catch (e) { showAlert("error", getErrorMessage(e)); }
+    finally { setIsLoading(false); }
   };
 
   if (!phone) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <div className="bg-white border border-gray-200 rounded-xl p-6 max-w-md w-full text-center">
-          <h2 className="text-xl font-semibold text-gray-900">Session OTP invalide</h2>
-          <p className="text-sm text-gray-600 mt-2">Veuillez recommencer depuis la page de connexion.</p>
+        <div className="bg-white border border-gray-200 rounded-2xl p-8 max-w-sm w-full text-center shadow-sm">
+          <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+            <ShieldCheck size={24} className="text-red-400" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900">Session invalide</h2>
+          <p className="text-sm text-gray-500 mt-2 mb-6">Recommencez depuis la page de connexion.</p>
           <button
             onClick={() => router.push("/auth/login")}
-            className="mt-4 h-[44px] px-4 rounded-lg bg-[#30A08B] text-white font-semibold"
+            className="w-full h-[48px] rounded-xl bg-[#30A08B] text-white font-bold text-sm hover:bg-[#27897A] transition-colors"
           >
-            Retour à QuickAuth
+            Retour à la connexion
           </button>
         </div>
       </div>
     );
   }
 
+  const strengthColor = STRENGTH_COLORS[passwordStrength.label] || "bg-gray-300";
+  const strengthScore = Math.max(4, (passwordStrength.score / 6) * 100);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50 flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-lg">
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-          <div className="bg-gradient-to-r from-[#1f8a70] via-[#2aa286] to-[#30A08B] p-8 text-white text-center">
-            <div className="relative w-16 h-16 mx-auto mb-4 rounded-full bg-white/20">
-              <Image src="/logo.png" alt="IhamBaobab" fill className="object-contain p-2" />
+    <div className="min-h-screen flex bg-white">
+
+      {/* ── LEFT PANEL ─────────────────────────────────────────────────── */}
+      <div className="hidden lg:flex lg:w-[52%] xl:w-[55%] relative flex-col overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0d6e5c] via-[#30A08B] to-[#1a8a74]" />
+        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-white/5" />
+        <div className="absolute top-1/3 -right-20 w-72 h-72 rounded-full bg-white/5" />
+        <div className="absolute -bottom-20 left-1/4 w-80 h-80 rounded-full bg-white/5" />
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.6) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.6) 1px,transparent 1px)", backgroundSize: "40px 40px" }}
+        />
+        <div className="relative z-10 flex flex-col justify-between h-full px-12 py-14">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+              <Image src="/logo.png" alt="IhamBaobab" width={28} height={28} className="object-contain" />
             </div>
-            <h1 className="text-2xl font-bold">Vérification OTP</h1>
-            <p className="text-white/90 mt-2 text-sm">Code envoyé à {phone}</p>
+            <span className="text-white font-black text-2xl tracking-tight">IhamBaobab</span>
           </div>
 
-          <div className="p-6 sm:p-8 space-y-5">
-            {devCode ? (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                <p className="text-xs font-semibold text-emerald-700 uppercase">Mode développement</p>
-                <p className="text-lg font-bold text-emerald-800 tracking-widest mt-1">{devCode}</p>
-              </div>
-            ) : null}
-
-            {typeof attemptsRemaining === "number" && (
-              <p className="text-sm text-gray-600 text-center">Tentatives restantes: {attemptsRemaining}</p>
-            )}
-
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-center">
-              <p className="text-xs uppercase tracking-wide text-gray-500">Expiration du code</p>
-              <p className="text-2xl font-bold text-[#30A08B] mt-1">{formatDuration(expiresInSeconds)}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {expiresInSeconds > 0 ? "Le code est valide." : "Le code a expiré."}
-              </p>
-            </div>
-
-            {step === "verify-otp" && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Code OTP</label>
-                  <input
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    placeholder="123456"
-                    className="w-full h-[52px] border border-gray-300 rounded-lg px-3 text-center text-xl tracking-[0.4em] font-mono focus:outline-none focus:ring-2 focus:ring-[#30A08B]"
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  disabled={isLoading || !canVerify}
-                  onClick={handleVerify}
-                  className="w-full h-[48px] rounded-lg bg-[#30A08B] hover:bg-[#288975] text-white font-semibold disabled:opacity-60"
-                >
-                  {isLoading ? "Vérification..." : "Vérifier le code"}
-                </button>
-
-                <button
-                  type="button"
-                  disabled={isLoading || cooldownSeconds > 0}
-                  onClick={handleResend}
-                  className="w-full h-[44px] rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-60"
-                >
-                  {cooldownSeconds > 0
-                    ? `Renvoyer dans ${formatDuration(cooldownSeconds)}`
-                    : "Renvoyer le code"}
-                </button>
-              </>
-            )}
-
-            {step === "set-password" && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Mot de passe</label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full h-[48px] border border-gray-300 rounded-lg px-3 focus:outline-none focus:ring-2 focus:ring-[#30A08B]"
-                    placeholder="Choisissez un mot de passe"
-                  />
-                  <div className="mt-3 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-600">Force du mot de passe</span>
-                      <span className="font-semibold text-gray-800">{passwordStrength.label}</span>
-                    </div>
-                    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className={`h-2 ${passwordStrength.colorClass}`}
-                        style={{ width: `${Math.max(8, (passwordStrength.score / 6) * 100)}%` }}
-                      />
-                    </div>
-                    <ul className="text-xs text-gray-600 space-y-1">
-                      <li className={passwordChecks.minLength ? "text-emerald-700" : "text-gray-500"}>8 caractères minimum</li>
-                      <li className={passwordChecks.upper ? "text-emerald-700" : "text-gray-500"}>Au moins une majuscule</li>
-                      <li className={passwordChecks.lower ? "text-emerald-700" : "text-gray-500"}>Au moins une minuscule</li>
-                      <li className={passwordChecks.number ? "text-emerald-700" : "text-gray-500"}>Au moins un chiffre</li>
-                      <li className={passwordChecks.special ? "text-emerald-700" : "text-gray-500"}>Au moins un caractère spécial</li>
-                      <li className={passwordChecks.noSpaces ? "text-emerald-700" : "text-gray-500"}>Sans espace</li>
-                    </ul>
+          <div>
+            <h2 className="text-white font-black text-4xl xl:text-5xl leading-tight mb-6">
+              {step === "verify-otp" ? <>Confirmez<br />votre identité.</> : step === "success" ? <>Bienvenue !<br /><span className="text-white/60">Vous êtes connecté.</span></> : <>Choisissez<br />votre mot<br />de passe.</>}
+            </h2>
+            <p className="text-white/80 text-base mb-10 max-w-sm leading-relaxed">
+              {step === "verify-otp"
+                ? `Un code à 6 chiffres a été envoyé au ${phone}. Il est valable quelques minutes.`
+                : step === "success"
+                ? "Votre compte est prêt. Vous allez être redirigé automatiquement."
+                : "Choisissez un mot de passe fort pour protéger votre compte."}
+            </p>
+            <div className="space-y-4">
+              {TRUST_ITEMS.map(({ icon: Icon, label, sub }) => (
+                <div key={label} className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
+                    <Icon size={18} className="text-white" />
+                  </div>
+                  <div>
+                    <p className="text-white font-semibold text-sm">{label}</p>
+                    <p className="text-white/60 text-xs">{sub}</p>
                   </div>
                 </div>
+              ))}
+            </div>
+          </div>
 
+          <div className="flex items-center gap-8">
+            {[{ value: "50K+", label: "Acheteurs" }, { value: "2K+", label: "Vendeurs" }, { value: "10K+", label: "Produits" }].map((s) => (
+              <div key={s.label}>
+                <p className="text-white font-black text-2xl">{s.value}</p>
+                <p className="text-white/60 text-xs mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── RIGHT PANEL ────────────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col justify-center items-center px-6 sm:px-10 py-12 bg-[#fafbfc]">
+
+        {/* Mobile logo */}
+        <div className="lg:hidden flex items-center gap-2 mb-10">
+          <div className="w-9 h-9 rounded-xl bg-[#30A08B] flex items-center justify-center">
+            <Image src="/logo.png" alt="IhamBaobab" width={24} height={24} className="object-contain" />
+          </div>
+          <span className="font-black text-xl text-gray-900 tracking-tight">IhamBaobab</span>
+        </div>
+
+        <div className="w-full max-w-md">
+
+          {/* ── SUCCESS ─────────────────────────────────────────────────── */}
+          {step === "success" && (
+            <div className="text-center py-10">
+              <div className="w-20 h-20 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-6 animate-bounce">
+                <CheckCircle2 size={44} className="text-[#30A08B]" />
+              </div>
+              <h2 className="text-2xl font-black text-gray-900 mb-2">
+                {flowType === "password-reset" ? "Mot de passe mis à jour !" : "Compte créé !"}
+              </h2>
+              <p className="text-gray-500 text-sm">Vous allez être redirigé automatiquement…</p>
+              <div className="mt-6 flex justify-center">
+                <svg className="animate-spin h-6 w-6 text-[#30A08B]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+              </div>
+            </div>
+          )}
+
+          {/* ── VERIFY OTP ───────────────────────────────────────────────── */}
+          {step === "verify-otp" && (
+            <>
+              <div className="mb-8">
+                <h1 className="text-2xl sm:text-3xl font-black text-gray-900 leading-tight">Code de vérification</h1>
+                <p className="text-gray-500 text-sm mt-1.5">
+                  Entrez le code envoyé au <span className="font-semibold text-gray-700">{phone}</span>
+                </p>
+              </div>
+
+              {/* Timer */}
+              <div className="flex items-center justify-between bg-white rounded-xl border border-gray-200 px-5 py-3.5 mb-6 shadow-sm">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Confirmer le mot de passe</label>
+                  <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Expire dans</p>
+                  <p className={`text-2xl font-black mt-0.5 tabular-nums ${expires > 0 ? "text-[#30A08B]" : "text-red-500"}`}>
+                    {fmt(expires)}
+                  </p>
+                </div>
+                {typeof attemptsLeft === "number" && (
+                  <div className="text-right">
+                    <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Tentatives</p>
+                    <p className={`text-2xl font-black mt-0.5 ${attemptsLeft <= 1 ? "text-red-500" : "text-gray-800"}`}>
+                      {attemptsLeft}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* OTP boxes */}
+              <div className="mb-6">
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                  Code à 6 chiffres
+                </label>
+                <div className="flex gap-2 sm:gap-3 justify-between" onPaste={handleOtpPaste}>
+                  {digits.map((d, i) => (
+                    <input
+                      key={i}
+                      ref={(el) => { inputRefs.current[i] = el; }}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={d}
+                      onChange={(e) => handleOtpChange(i, e.target.value)}
+                      onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                      className={`w-full max-w-[52px] h-[60px] text-center text-xl font-black rounded-xl border-2 transition-all outline-none
+                        ${d ? "border-[#30A08B] bg-emerald-50 text-[#30A08B]" : "border-gray-200 bg-white text-gray-900"}
+                        focus:border-[#30A08B] focus:ring-2 focus:ring-[#30A08B]/20`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                disabled={isLoading || !canVerify}
+                onClick={handleVerify}
+                className="w-full h-[52px] rounded-xl bg-[#30A08B] hover:bg-[#27897A] active:bg-[#1f7060] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#30A08B]/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all mb-3"
+              >
+                {isLoading ? (
+                  <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                ) : "Vérifier le code"}
+              </button>
+
+              <button
+                type="button"
+                disabled={isLoading || cooldown > 0}
+                onClick={handleResend}
+                className="w-full h-[44px] rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+              >
+                <RefreshCcw size={14} />
+                {cooldown > 0 ? `Renvoyer dans ${fmt(cooldown)}` : "Renvoyer le code"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => router.push("/auth/login")}
+                className="w-full h-[40px] mt-2 text-sm text-gray-400 hover:text-gray-600 flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <ArrowLeft size={13} />
+                Retour à la connexion
+              </button>
+            </>
+          )}
+
+          {/* ── SET PASSWORD ─────────────────────────────────────────────── */}
+          {step === "set-password" && (
+            <>
+              <div className="mb-8">
+                <h1 className="text-2xl sm:text-3xl font-black text-gray-900 leading-tight">
+                  {flowType === "password-reset" ? "Nouveau mot de passe" : "Créez votre mot de passe"}
+                </h1>
+                <p className="text-gray-500 text-sm mt-1.5">Choisissez un mot de passe sécurisé</p>
+              </div>
+
+              {/* Password */}
+              <div className="mb-4">
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Mot de passe
+                </label>
+                <div className="flex rounded-xl overflow-hidden border border-gray-200 bg-white shadow-sm focus-within:border-[#30A08B] focus-within:ring-2 focus-within:ring-[#30A08B]/20 transition-all">
+                  <div className="flex items-center pl-3 pr-1">
+                    <Lock size={15} className="text-gray-400" />
+                  </div>
                   <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full h-[48px] border border-gray-300 rounded-lg px-3 focus:outline-none focus:ring-2 focus:ring-[#30A08B]"
-                    placeholder="Retapez votre mot de passe"
+                    type={showPwd ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Choisissez un mot de passe"
+                    className="flex-1 h-[52px] px-3 text-sm text-gray-900 bg-transparent focus:outline-none"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPwd(!showPwd)}
+                    className="px-3 text-gray-400 hover:text-gray-600 border-l border-gray-200"
+                  >
+                    {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  disabled={isLoading}
-                  onClick={handleFinalize}
-                  className="w-full h-[48px] rounded-lg bg-[#30A08B] hover:bg-[#288975] text-white font-semibold disabled:opacity-60"
-                >
-                  {isLoading
-                    ? "Finalisation..."
-                    : flowType === "password-reset"
-                    ? "Réinitialiser le mot de passe"
-                    : "Terminer l'inscription"}
-                </button>
-              </>
-            )}
-          </div>
+                {/* Strength bar */}
+                {password && (
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs text-gray-500">Force du mot de passe</span>
+                      <span className={`text-xs font-bold ${strengthColor.replace("bg-", "text-")}`}>{passwordStrength.label}</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full transition-all ${strengthColor}`} style={{ width: `${strengthScore}%` }} />
+                    </div>
+                    {/* Checks */}
+                    <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
+                      {[
+                        { ok: passwordChecks.minLength, label: "8 caractères min" },
+                        { ok: passwordChecks.upper,     label: "Une majuscule" },
+                        { ok: passwordChecks.lower,     label: "Une minuscule" },
+                        { ok: passwordChecks.number,    label: "Un chiffre" },
+                        { ok: passwordChecks.special,   label: "Un caractère spécial" },
+                        { ok: passwordChecks.noSpaces,  label: "Sans espace" },
+                      ].map(({ ok, label }) => (
+                        <div key={label} className={`flex items-center gap-1.5 text-xs ${ok ? "text-emerald-600" : "text-gray-400"}`}>
+                          <div className={`w-3.5 h-3.5 rounded-full flex-shrink-0 flex items-center justify-center ${ok ? "bg-emerald-100" : "bg-gray-100"}`}>
+                            {ok ? <CheckCircle2 size={9} className="text-emerald-600" /> : <span className="w-1.5 h-1.5 rounded-full bg-gray-300 block" />}
+                          </div>
+                          {label}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Confirm */}
+              <div className="mb-6">
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Confirmer le mot de passe
+                </label>
+                <div className={`flex rounded-xl overflow-hidden border bg-white shadow-sm focus-within:ring-2 transition-all ${
+                  confirm && password !== confirm
+                    ? "border-red-300 focus-within:ring-red-200"
+                    : confirm && password === confirm
+                    ? "border-emerald-300 focus-within:ring-emerald-200"
+                    : "border-gray-200 focus-within:border-[#30A08B] focus-within:ring-[#30A08B]/20"
+                }`}>
+                  <div className="flex items-center pl-3 pr-1">
+                    <Lock size={15} className="text-gray-400" />
+                  </div>
+                  <input
+                    type={showConf ? "text" : "password"}
+                    value={confirm}
+                    onChange={(e) => setConfirm(e.target.value)}
+                    placeholder="Retapez votre mot de passe"
+                    className="flex-1 h-[52px] px-3 text-sm text-gray-900 bg-transparent focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConf(!showConf)}
+                    className="px-3 text-gray-400 hover:text-gray-600 border-l border-gray-200"
+                  >
+                    {showConf ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                {confirm && password !== confirm && (
+                  <p className="mt-1.5 text-xs text-red-500">Les mots de passe ne correspondent pas</p>
+                )}
+                {confirm && password === confirm && (
+                  <p className="mt-1.5 text-xs text-emerald-600 flex items-center gap-1">
+                    <CheckCircle2 size={12} /> Les mots de passe correspondent
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={handleFinalize}
+                className="w-full h-[52px] rounded-xl bg-[#30A08B] hover:bg-[#27897A] active:bg-[#1f7060] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#30A08B]/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {isLoading ? (
+                  <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                ) : flowType === "password-reset" ? "Réinitialiser le mot de passe" : "Terminer l'inscription"}
+              </button>
+            </>
+          )}
         </div>
       </div>
 

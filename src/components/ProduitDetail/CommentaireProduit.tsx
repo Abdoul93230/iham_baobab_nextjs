@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useRef } from "react";
-import { Star, X } from "lucide-react";
+import React, { useState } from "react";
+import { Star, X, ThumbsUp, User } from "lucide-react";
 
 interface Comment {
   _id: string;
@@ -12,215 +12,149 @@ interface Comment {
   date: string;
 }
 
-interface Categorie {
-  name: string;
-}
-
 interface CommentaireProduitProps {
   name: string;
   img?: string[];
   coments: Comment[];
-  categorie?: Categorie;
+  categorie?: { name: string };
 }
 
-const CommentaireProduit: React.FC<CommentaireProduitProps> = ({ 
-  name, 
-  img, 
-  coments, 
-  categorie 
-}) => {
-  const [showModal, setShowModal] = useState(false);
-  const swiperRef = useRef(null);
+const formatDate = (d: string) =>
+  new Date(d).toLocaleDateString("fr-FR", { year: "numeric", month: "short", day: "numeric" });
 
-  const relatedSearches = [
-    "chaussure asics homme blanche",
-    "chaussures de marche sportive homme",
-    "sneakers blanc homme",
-    "chaussure homme sport",
-    "chaussures de sport taille 39",
-    "basket reebok blanche homme",
-    "espadrille homme blanche",
-    "chaussure sport homme",
-    "chaussure de sport homme running",
-    "chaussures sport hommes soldes",
-    "sneaker blanche homme",
-    "chaussure homme sporti",
-  ];
+const StarRow = ({ count, size = 14 }: { count: number; size?: number }) => (
+  <div className="flex gap-0.5">
+    {[1, 2, 3, 4, 5].map((s) => (
+      <Star
+        key={s}
+        size={size}
+        className={s <= count ? "text-yellow-400 fill-yellow-400" : "text-gray-200 fill-gray-200"}
+      />
+    ))}
+  </div>
+);
 
-  const keywords = [
-    "baskets homme scratch",
-    "basquette running femme",
-    "chaussure sports femme",
-    "shoes running men marque",
-    "sneaker scratch homme",
-    "verrou coffre fort",
-  ];
-
-  const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { 
-      year: "numeric", 
-      month: "long", 
-      day: "numeric" 
-    };
-    return new Date(dateString).toLocaleDateString(undefined, options);
-  };
-
-  const CommentCard = ({ comment }: { comment: Comment }) => (
-    <div className="p-2 border rounded-md" ref={swiperRef}>
-      <div className="flex items-center mb-2">
-        <div
-          style={{
-            textAlign: "center",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontWeight: "bold",
-          }}
-          className="w-10 h-10 bg-pink-100 rounded-full mr-2"
-        >
-          {comment.userName
-            ?.split(" ")
-            .map((word) => word.charAt(0))
-            .join("")}
-        </div>
-        <div className="flex">
-          {[...Array(comment.etoil)].map((_, i) => (
-            <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
-          ))}
-        </div>
+const CommentCard = ({ comment }: { comment: Comment }) => (
+  <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow">
+    <div className="flex items-start gap-3 mb-2">
+      <div className="w-9 h-9 bg-gradient-to-br from-[#30A08B] to-[#1d7a6a] rounded-full flex items-center justify-center flex-shrink-0 text-white text-sm font-bold">
+        {comment.userName
+          ? comment.userName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
+          : <User size={14} />}
       </div>
-      <p className="text-gray-600 mb-2">
-        {comment.userName ? comment.userName : ""}
-      </p>
-      <p className="text-gray-600 mb-2">
-        {comment.description ? comment.description : ""}
-      </p>
-      <p className="text-gray-800 mb-4">{comment.review}</p>
-      <div className="grid grid-cols-6 gap-2 mb-4">
-        {img?.map((image, index) => (
-          <div
-            key={index}
-            className="bg-gray-200 h-22 border overflow-hidden rounded-md"
-          >
-            <img src={image} className="w-full h-full object-cover" alt="" />
-          </div>
-        ))}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-gray-800 truncate">
+          {comment.userName || "Anonyme"}
+        </p>
+        <StarRow count={comment.etoil} />
       </div>
-      <div className="flex justify-between items-center text-sm text-gray-500">
-        <span>
-          {name?.slice(0, 20)}... | {formatDate(comment.date)}
-        </span>
-        <div className="flex text-nowrap cursor-pointer items-center">
-          <svg
-            className="w-4 h-4 mr-1"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
-            />
-          </svg>
-          <span>Serviable (0)</span>
-        </div>
-      </div>
+      <span className="text-xs text-gray-400 flex-shrink-0">{formatDate(comment.date)}</span>
     </div>
-  );
+    {comment.description && (
+      <p className="text-sm text-gray-700 leading-relaxed mb-1">{comment.description}</p>
+    )}
+    {comment.review && comment.review !== comment.description && (
+      <p className="text-sm text-gray-600">{comment.review}</p>
+    )}
+    <div className="flex items-center gap-1 mt-3 text-xs text-gray-400 cursor-pointer hover:text-[#30A08B] transition-colors w-fit">
+      <ThumbsUp size={12} />
+      <span>Utile</span>
+    </div>
+  </div>
+);
+
+const CommentaireProduit: React.FC<CommentaireProduitProps> = ({ coments }) => {
+  const [showModal, setShowModal] = useState(false);
+
+  if (coments.length === 0) return null;
+
+  const avgRating =
+    coments.reduce((s, c) => s + (c.etoil || 0), 0) / coments.length;
+
+  const ratingDist = [5, 4, 3, 2, 1].map((star) => ({
+    star,
+    count: coments.filter((c) => Math.round(c.etoil) === star).length,
+  }));
 
   return (
-    <div className="py-3" ref={swiperRef}>
-      <div className="border-t border-gray-300 mb-4" />
-      <p className="text-2xl font-bold text-[#B17236] my-3">
-        Avis des acheteurs ({coments.length})
-      </p>
-      {coments.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-2 gap-4 mx-auto">
-          {coments?.slice(0, 4).map((comment) => (
-            <CommentCard key={comment._id} comment={comment} />
+    <div className="mt-6 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-base font-bold text-gray-900">
+          Avis des acheteurs
+          <span className="ml-2 text-sm font-normal text-gray-400">({coments.length})</span>
+        </h2>
+      </div>
+
+      {/* Rating summary */}
+      <div className="flex gap-6 mb-5 p-4 bg-gray-50 rounded-xl">
+        <div className="flex flex-col items-center justify-center min-w-[72px]">
+          <span className="text-4xl font-black text-gray-900">{avgRating.toFixed(1)}</span>
+          <StarRow count={Math.round(avgRating)} size={16} />
+          <span className="text-xs text-gray-400 mt-1">{coments.length} avis</span>
+        </div>
+        <div className="flex-1 space-y-1.5">
+          {ratingDist.map(({ star, count }) => (
+            <div key={star} className="flex items-center gap-2 text-xs">
+              <span className="w-4 text-gray-500 text-right">{star}</span>
+              <Star size={11} className="text-yellow-400 fill-yellow-400 flex-shrink-0" />
+              <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-yellow-400 rounded-full"
+                  style={{ width: coments.length > 0 ? `${(count / coments.length) * 100}%` : "0%" }}
+                />
+              </div>
+              <span className="w-5 text-gray-400 text-right">{count}</span>
+            </div>
           ))}
         </div>
-      ) : null}
+      </div>
+
+      {/* Comments grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {coments.slice(0, 4).map((c) => (
+          <CommentCard key={c._id} comment={c} />
+        ))}
+      </div>
+
       {coments.length > 4 && (
-        <div className="flex items-center justify-center my-4">
-          <button
-            className="bg-[#96956B] bg-opacity-50 p-2 w-40 rounded-full text-[#399F89]"
-            onClick={() => setShowModal(true)}
-          >
-            Voir plus
-          </button>
-        </div>
+        <button
+          onClick={() => setShowModal(true)}
+          className="mt-4 w-full py-2.5 rounded-xl border border-[#30A08B] text-[#30A08B] text-sm font-semibold hover:bg-[#f0faf7] transition-colors"
+        >
+          Voir tous les {coments.length} avis
+        </button>
       )}
+
+      {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg w-full max-w-4xl h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center p-6 border-b">
-              <h2 className="text-2xl font-bold text-[#B17236]">
-                Tous les avis
-              </h2>
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <h3 className="font-bold text-gray-900">Tous les avis ({coments.length})</h3>
               <button
                 onClick={() => setShowModal(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
               >
-                <X size={24} />
+                <X size={16} />
               </button>
             </div>
-            <div className="overflow-y-auto flex-grow p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {coments.map((comment) => (
-                  <CommentCard key={comment._id} comment={comment} />
+            <div className="overflow-y-auto flex-1 p-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {coments.map((c) => (
+                  <CommentCard key={c._id} comment={c} />
                 ))}
               </div>
             </div>
           </div>
         </div>
       )}
-
-      <div className="border-t border-gray-300 mb-4" />
-      <div className="mx-auto p-4">
-        <h2 className="text-2xl text-[#B17236] font-bold mb-4">
-          Les acheteurs ont aussi recherchés
-        </h2>
-
-        <div className="mb-6">
-          <h3 className="text-lg text-[#B17236] font-semibold mb-2">
-            Recherche connexe
-          </h3>
-          <div className="flex flex-wrap gap-2 cursor-pointer">
-            {relatedSearches.map((search, index) => (
-              <span
-                key={index}
-                className="bg-gray-200 rounded-full px-3 py-1 text-sm"
-              >
-                {search}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="mb-6">
-          <h3 className="text-lg text-[#B17236] font-semibold mb-2">
-            Mots-clés de classement
-          </h3>
-          <div className="flex flex-wrap gap-2 cursor-pointer">
-            {keywords.map((keyword, index) => (
-              <span
-                key={index}
-                className="bg-gray-200 rounded-full px-3 py-1 text-sm"
-              >
-                {keyword}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <p className="text-sm text-gray-600">
-          Cet article est dans la catégorie : {categorie?.name}
-        </p>
-      </div>
     </div>
   );
 };
