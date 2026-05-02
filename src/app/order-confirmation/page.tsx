@@ -86,6 +86,7 @@ export default function OrderConfirmationPage() {
   const [total, setTotal] = useState(0);
   const [codeP, setCodeP] = useState<any>(null);
   const [orderData, setOrderData] = useState<any>(null);
+  const [initialBP, setInitialBP] = useState<{ pointsUsed: number; pointsDiscount: number } | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -129,6 +130,16 @@ export default function OrderConfirmationPage() {
           setOrderData(JSON.parse(savedOrder));
         } catch (e) {
           console.warn("Erreur lors du chargement des données de commande:", e);
+        }
+      }
+
+      // Charger les BP de la commande originale si relance
+      const savedBP = localStorage.getItem("pendingOrderBP");
+      if (savedBP) {
+        try {
+          setInitialBP(JSON.parse(savedBP));
+        } catch (e) {
+          console.warn("Erreur lors du chargement des BP:", e);
         }
       }
 
@@ -408,6 +419,7 @@ export default function OrderConfirmationPage() {
             total={total}
             codeP={codeP}
             setCodeP={setCodeP}
+            initialBP={initialBP}
           />
         </main>
       </div>

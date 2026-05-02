@@ -415,6 +415,12 @@ const PanierPage: React.FC = () => {
     }
     localStorage.setItem("orderShippingZone", JSON.stringify(selectedZone));
     localStorage.setItem("orderShippingCalculations", JSON.stringify(shippingCalculations));
+    const shippingByStore = Object.entries(storeGroups).map(([storeId, group]) => ({
+      storeId,
+      storeName: group.storeName,
+      shippingCost: shippingCalculations[storeId]?.totalCost || 0,
+    }));
+    localStorage.setItem("orderShippingByStore", JSON.stringify(shippingByStore));
     router.push("/order-confirmation?fromCart=true");
   };
 

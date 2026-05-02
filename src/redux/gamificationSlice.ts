@@ -276,10 +276,20 @@ const gamificationSlice = createSlice({
           streak: action.payload.streak,
           pointsEarned: checkinDelta + bonusDelta,
         };
-        // Update wallet balance optimistically
         if (state.wallet) {
           state.wallet.balance += checkinDelta + bonusDelta;
           state.wallet.checkinStreak = action.payload.streak;
+          // Met à jour lastCheckinDate pour désactiver le bouton immédiatement
+          state.wallet.lastCheckinDate = new Date().toISOString();
+        }
+        // Prepend la nouvelle transaction checkin dans l'historique
+        const newTxn = action.payload.checkin?.transaction;
+        if (newTxn) {
+          state.transactions = [newTxn, ...state.transactions];
+        }
+        const bonusTxn = action.payload.bonus?.transaction?.[0];
+        if (bonusTxn) {
+          state.transactions = [bonusTxn, ...state.transactions];
         }
       })
       .addCase(dailyCheckin.rejected, (state, action) => {

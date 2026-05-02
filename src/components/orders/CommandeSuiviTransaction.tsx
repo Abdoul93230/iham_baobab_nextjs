@@ -51,6 +51,11 @@ interface Order {
   idCodePro?: string;
   clefUser?: string;
   reduction?: number;
+  prixTotal?: number;
+  fraisLivraison?: number;
+  pointsUsed?: number;
+  pointsDiscount?: number;
+  codePromo?: string;
   dateValidation?: string;
 }
 
@@ -980,14 +985,33 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
             <div className="bg-gray-50 rounded-lg p-4">
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Sous-total</span>
-                  <span className="font-medium">{formatPrice(order.prix + (order.reduction || 0))}</span>
+                  <span className="text-gray-600">Sous-total (articles)</span>
+                  <span className="font-medium">{formatPrice(order.prixTotal || (order.prix + (order.reduction || 0) + (order.pointsDiscount || 0) - (order.fraisLivraison || 0)))}</span>
                 </div>
+
+                {order.fraisLivraison && order.fraisLivraison > 0 && (
+                  <div className="flex justify-between items-center text-gray-600">
+                    <span>Frais d'expédition</span>
+                    <span>+{formatPrice(order.fraisLivraison)}</span>
+                  </div>
+                )}
 
                 {order.reduction && order.reduction > 0 && (
                   <div className="flex justify-between items-center text-green-600">
-                    <span>Réduction appliquée</span>
+                    <span>Réduction appliquée{order.codePromo ? ` (${order.codePromo})` : ""}</span>
                     <span>-{formatPrice(order.reduction)}</span>
+                  </div>
+                )}
+
+                {order.pointsDiscount && order.pointsDiscount > 0 && (
+                  <div className="flex flex-col gap-0.5 bg-amber-50 border border-amber-100 px-3 py-2 rounded-lg">
+                    <div className="flex justify-between items-center text-amber-700">
+                      <span className="font-medium">🌿 Points Baobab utilisés</span>
+                      <span className="font-bold">-{formatPrice(order.pointsDiscount)}</span>
+                    </div>
+                    <span className="text-[10px] text-amber-500 font-semibold">
+                      {order.pointsUsed || 0} pts déduits de votre solde
+                    </span>
                   </div>
                 )}
 

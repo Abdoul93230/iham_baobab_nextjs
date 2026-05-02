@@ -145,9 +145,10 @@ interface OrderConfirmationProps {
   total?: number;
   codeP?: any;
   setCodeP?: (code: any) => void;
+  initialBP?: { pointsUsed: number; pointsDiscount: number } | null;
 }
 
-const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
+const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP }) => {
   const router = useRouter();
   const [selectedPayment, setSelectedPayment] = useState("");
   const [message, setMessage] = useState("");
@@ -220,6 +221,14 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
   const [trackedTransactionId, setTrackedTransactionId] = useState<string | null>(null);
   const [pointsToUse, setPointsToUse] = useState(0);
   const [pointsDiscount, setPointsDiscount] = useState(0);
+
+  // Sync quand initialBP arrive (chargé après le mount via useEffect de la page parente)
+  useEffect(() => {
+    if (initialBP?.pointsUsed && initialBP.pointsUsed > 0) {
+      setPointsToUse(initialBP.pointsUsed);
+      setPointsDiscount(initialBP.pointsDiscount || 0);
+    }
+  }, [initialBP]);
   const handledPaymentRef = useRef<string | null>(null);
 
   const spinnerStyle = {
@@ -239,7 +248,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
 
     handledPaymentRef.current = transactionId;
 
-    ["panier", "orderTotal", "paymentInfo", "pendingOrder", "orderShippingZone", "orderCodeP", "paymentInitiated"].forEach((key) =>
+    ["panier", "orderTotal", "paymentInfo", "pendingOrder", "orderShippingZone", "orderShippingCalculations", "orderShippingByStore", "orderCodeP", "paymentInitiated", "pendingOrderBP"].forEach((key) =>
       localStorage.removeItem(key)
     );
 
@@ -760,7 +769,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
     const shippingCalculations: Record<string, any> = JSON.parse(
       localStorage.getItem("orderShippingCalculations") || "{}"
     );
-    // Répartir le frais fixe du store sur le 1er article, poids sur tous
+    // Le 1er article du store porte tout le totalCost, les suivants 0
     const storeFirstItem: Record<string, boolean> = {};
     const panierWithShipping = panier.map((item: any) => {
       const storeId = item.Clefournisseur?._id || item.createdBy || "unknown";
@@ -769,12 +778,14 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
       if (calc) {
         const isFirst = !storeFirstItem[storeId];
         storeFirstItem[storeId] = true;
-        prixLivraison = isFirst ? (calc.fixedCost || 0) : 0;
-        // frais poids proportionnel à la quantité
-        prixLivraison += (calc.costPerKg || 0) * (item.weight || 0) * (item.quantity || 1);
+        prixLivraison = isFirst ? (calc.totalCost || 0) : 0;
       }
       return { ...item, prixLivraison };
     });
+
+    // Ventilation exacte des frais par boutique — sauvegardée depuis le panier
+    const shippingByStore: { storeId: string; storeName: string; shippingCost: number }[] =
+      JSON.parse(localStorage.getItem("orderShippingByStore") || "[]");
 
     try {
       // 3. Le backend recalcule la réduction, on envoie juste le promoCodeId
@@ -815,6 +826,8 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
           description: deliveryInfo.description,
         },
         prod: panierWithShipping,
+        shippingByStore,
+        ...(selectedZone?._id && { customerZoneId: selectedZone._id }),
         ...(promoCodeId && {
           codePro: true,
           idCodePro: promoCodeId,
@@ -878,7 +891,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
       }
 
       // 6. Nettoyage et succès IMMÉDIAT pour Paiement à la Livraison ou Assisté
-      ["panier", "orderTotal", "paymentInfo", "pendingOrder", "orderShippingZone", "orderCodeP"].forEach((key) =>
+      ["panier", "orderTotal", "paymentInfo", "pendingOrder", "orderShippingZone", "orderShippingCalculations", "orderShippingByStore", "orderCodeP", "pendingOrderBP"].forEach((key) =>
         localStorage.removeItem(key)
       );
 
@@ -1266,6 +1279,8 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
             localStorage.removeItem("paymentInfo");
             localStorage.removeItem("pendingOrder");
             localStorage.removeItem("orderShippingZone");
+            localStorage.removeItem("orderShippingCalculations");
+            localStorage.removeItem("orderShippingByStore");
 
             if (orderCodeP?.isValide) {
               await axios.put(`${BackendUrl}/updateCodePromo`, {
@@ -1641,6 +1656,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces }) => {
               {/* Points Baobab */}
               <PointsRedeemWidget
                 orderAmountFcfa={orderSubtotal}
+                initialPoints={pointsToUse}
                 onPointsChange={(pts, disc) => {
                   setPointsToUse(pts);
                   setPointsDiscount(disc);

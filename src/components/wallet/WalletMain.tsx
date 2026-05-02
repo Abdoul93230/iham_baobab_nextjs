@@ -84,6 +84,7 @@ const TRANSACTION_LABELS: Record<string, { label: string; color: string }> = {
   ADMIN_CREDIT: { label: "Crédit admin", color: "text-green-600" },
   ADMIN_DEBIT: { label: "Débit admin", color: "text-red-500" },
   CANCELLATION: { label: "Annulation commande", color: "text-red-500" },
+  REFUND: { label: "Restitution commande annulée", color: "text-amber-600" },
 };
 
 // ─── Earn section with accordion ─────────────────────────────────────────────

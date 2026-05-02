@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import {
@@ -17,17 +17,19 @@ import { Trees, Zap, ChevronDown, ChevronUp } from "lucide-react";
 interface Props {
   orderAmountFcfa: number;
   onPointsChange: (points: number, discountFcfa: number) => void;
+  initialPoints?: number;
 }
 
-export default function PointsRedeemWidget({ orderAmountFcfa, onPointsChange }: Props) {
+export default function PointsRedeemWidget({ orderAmountFcfa, onPointsChange, initialPoints = 0 }: Props) {
   const dispatch = useDispatch<AppDispatch>();
   const user = useSelector(selectUser);
   const wallet = useSelector(selectWallet);
   const preview = useSelector(selectRedeemPreview);
   const config = useSelector(selectGamificationConfig);
 
-  const [expanded, setExpanded] = useState(false);
-  const [pointsToUse, setPointsToUse] = useState(0);
+  const [expanded, setExpanded] = useState(initialPoints > 0);
+  const [pointsToUse, setPointsToUse] = useState(initialPoints);
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -41,12 +43,32 @@ export default function PointsRedeemWidget({ orderAmountFcfa, onPointsChange }: 
   }, [user?.id, orderAmountFcfa, dispatch]);
 
   useEffect(() => {
-    // Reset when order amount changes
+    // Skip the initial mount — only reset when amount truly changes later
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     setPointsToUse(0);
     onPointsChange(0, 0);
   }, [orderAmountFcfa]);
 
-  if (!config?.enabled || !wallet || wallet.balance <= 0) return null;
+  // Sync initialPoints dès qu'il arrive (ou que preview se charge), clampé au max utilisable
+  useEffect(() => {
+    if (initialPoints <= 0) return;
+    const rate = config?.redemption?.pointsToFcfaRate ?? 20;
+    const maxUsable = preview?.usablePoints ?? initialPoints; // si preview pas encore là, on prend initialPoints tel quel
+    const clamped = Math.min(initialPoints, maxUsable);
+    if (clamped > 0) {
+      setPointsToUse(clamped);
+      onPointsChange(clamped, clamped * rate);
+      setExpanded(true);
+    }
+  }, [initialPoints, preview]);
+
+  // Afficher quand même une bannière si la commande originale avait des BP, même si solde = 0
+  if (!config?.enabled) return null;
+  if (!wallet) return null;
+  if (wallet.balance <= 0 && initialPoints <= 0) return null;
 
   const usable = preview?.usablePoints ?? 0;
   const rate = config?.redemption?.pointsToFcfaRate ?? 20;
@@ -68,6 +90,13 @@ export default function PointsRedeemWidget({ orderAmountFcfa, onPointsChange }: 
 
   return (
     <div className={`rounded-2xl border transition-all ${pointsToUse > 0 ? "border-[#30A08B] bg-[#f0faf7]" : "border-gray-200 bg-white"}`}>
+      {/* Bannière BP commande originale */}
+      {initialPoints > 0 && (
+        <div className="mx-4 mt-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 flex items-center gap-2">
+          <span>🌿</span>
+          <span>Cette commande utilisait <strong>{initialPoints} BP</strong> (−{(initialPoints * (config?.redemption?.pointsToFcfaRate ?? 20)).toLocaleString("fr-FR")} FCFA). Vous pouvez en appliquer à nouveau ci-dessous.</span>
+        </div>
+      )}
       {/* Header */}
       <button
         type="button"

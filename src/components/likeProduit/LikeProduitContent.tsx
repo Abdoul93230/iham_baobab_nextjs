@@ -2,17 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Heart,
   Trash2,
   Share2,
-  Filter,
-  SortDesc,
   ShoppingCart,
   ArrowUpRight,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-// import useAuth from "@/hooks/useAuth";
+import useAuth from "@/hooks/useAuth";
 import { triggerNavProgress } from "@/components/NavigationProgress";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -35,6 +32,7 @@ type FilterCategory = "all" | "Chaussures" | "Vêtements" | "Accessoires";
 
 const LikeProduitContent = () => {
   const router = useRouter();
+  const { user, isAuthenticated, initialized } = useAuth();
 
   const [likedProducts, setLikedProducts] = useState<Product[]>([]);
   const [sortBy, setSortBy] = useState<SortBy>("dateAdded");
@@ -43,44 +41,39 @@ const LikeProduitContent = () => {
   const [showNotification, setShowNotification] = useState<boolean>(false);
   const [notificationMessage, setNotificationMessage] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_Backend_Url;
-  const userId = JSON.parse(localStorage.getItem("userEcomme") || "null")?.id;
-  // const { user, isAuthenticated, signOut } = useAuth();
-  // Fonction pour afficher les notifications
+
   const showToast = (message: string) => {
     setNotificationMessage(message);
     setShowNotification(true);
-    setTimeout(() => {
-      setShowNotification(false);
-    }, 3000);
+    setTimeout(() => setShowNotification(false), 3000);
   };
 
-  // Charger les produits likés au montage du composant
-  const fetchLikedProducts = async () => {
+  const fetchLikedProducts = async (userId: string) => {
     try {
       setIsLoading(true);
       const response = await axios.get(`${API_URL}/likesClient/user/${userId}`);
-      // console.log({data : response.data?.data});
-      
       setLikedProducts(response.data?.data?.map((like: any) => like.produit) || []);
-      setIsLoading(false);
     } catch (err: any) {
-      setError("Erreur lors du chargement des favoris");
-      setIsLoading(false);
       console.error("Erreur:", err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Charger les produits au montage du composant
   useEffect(() => {
-    fetchLikedProducts();
-  }, []);
+    if (!initialized) return;
+    if (!isAuthenticated || !user?.id) {
+      router.push(`/auth/login?returnUrl=${encodeURIComponent("/like-produit")}`);
+      return;
+    }
+    fetchLikedProducts(user.id);
+  }, [initialized, isAuthenticated, user?.id]);
 
   const removeFromLiked = async (productId: string) => {
     try {
-      await axios.delete(`${API_URL}/likes/${userId}/${productId}`);
+      await axios.delete(`${API_URL}/likes/${user?.id}/${productId}`);
       setLikedProducts((prev) =>
         prev.filter((product) => product._id !== productId)
       );
@@ -129,18 +122,10 @@ const LikeProduitContent = () => {
     return text;
   };
 
-  if (isLoading) {
+  if (!initialized || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#30A08B]"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-red-500">
-        {error}
       </div>
     );
   }

@@ -51,6 +51,8 @@ interface Order {
   fraisLivraison?: number;
   codePromo?: string;
   dateValidation?: string;
+  pointsUsed?: number;
+  pointsDiscount?: number;
 }
 
 interface ShippingAddress {
@@ -621,6 +623,20 @@ const CommandeSuivi: React.FC = () => {
                         Code: {order.codePromo}
                       </span>
                     )}
+                  </div>
+                ) : null}
+
+                {order.pointsDiscount && order.pointsDiscount > 0 ? (
+                  <div className="flex flex-col gap-1 bg-amber-50 border border-amber-100 px-3 py-2 rounded-lg">
+                    <div className="flex justify-between items-center text-amber-700">
+                      <span className="font-medium flex items-center gap-1">
+                        🌿 Points Baobab utilisés
+                      </span>
+                      <span className="font-bold">-{formatPrice(order.pointsDiscount)}</span>
+                    </div>
+                    <span className="text-[10px] text-amber-500 font-semibold">
+                      {order.pointsUsed || 0} pts déduits de votre solde
+                    </span>
                   </div>
                 ) : null}
 

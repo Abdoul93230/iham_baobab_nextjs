@@ -26,37 +26,62 @@ const OrderPaymentHandler: React.FC<OrderPaymentHandlerProps> = ({
   const router = useRouter();
 
   const handlePaymentRetry = () => {
-    if (panier) {
-      // Sauvegarder le nouveau panier dans le localStorage
-      setReorderLoading(true);
-      localStorage.setItem("panier", JSON.stringify(panier));
+    if (!panier) return;
+    setReorderLoading(true);
 
-      if (pendingOrder !== null && id !== null)
-        localStorage.setItem(
-          "pendingOrder",
-          JSON.stringify({
-            commandeId: id,
-            transactionId: pendingOrder,
-            timestamp: new Date().getTime(),
-          })
-        );
+    // Reconstruire le panier au format attendu par PanierPage
+    // order.prod = snapshots produit (format backend)
+    // order.nbrProduits = [{produit: id, quantite, tailles, couleurs}]
+    const nbrProduits: any[] = order?.nbrProduits || [];
+    const panierFormatted = panier.map((item: any) => {
+      // Retrouver la quantité et les options choisies depuis nbrProduits
+      const orderItem = nbrProduits.find(
+        (n: any) =>
+          String(n.produit?._id || n.produit) === String(item._id)
+      );
+      return {
+        ...item,
+        quantity: orderItem?.quantite || item.quantite || item.quantity || 1,
+        sizes: orderItem?.tailles || item.tailles || item.sizes || [],
+        colors: orderItem?.couleurs || item.couleurs || item.colors || [],
+      };
+    });
 
-      // IMPORTANT: Ne pas sauvegarder paymentInitiated lors d'une relance de paiement
-      // Cela évite que le useEffect du panier détecte l'ancien statut "échec" et redirige
-      // avant que l'utilisateur puisse refaire le paiement
-      localStorage.removeItem("paymentInitiated");
-        
-      // Sauvegarder les infos du code promo pour pré-remplissage
-      if (order.idCodePro) {
-        localStorage.setItem("idCodePro", order.idCodePro);
-        if (order.codePromo) {
-          localStorage.setItem("appliedPromoCode", order.codePromo);
-        }
-      }
+    localStorage.setItem("panier", JSON.stringify(panierFormatted));
+    localStorage.removeItem("paymentInitiated");
 
-      // Rediriger vers la page panier
-      router.push("/Panier");
+    // Passer la référence de la commande annulée pour que le backend fasse
+    // un PUT /updateCommande (réactivation) plutôt qu'un POST /createCommande
+    if (id && pendingOrder) {
+      localStorage.setItem(
+        "pendingOrder",
+        JSON.stringify({
+          commandeId: id,
+          transactionId: pendingOrder,
+          timestamp: new Date().getTime(),
+        })
+      );
     }
+
+    // Pré-remplir le code promo si présent
+    if (order.idCodePro) {
+      localStorage.setItem("idCodePro", order.idCodePro);
+      if (order.codePromo) {
+        localStorage.setItem("appliedPromoCode", order.codePromo);
+      }
+    }
+
+    // Pré-remplir les BP utilisés sur la commande originale
+    if (order.pointsUsed && order.pointsUsed > 0) {
+      localStorage.setItem("pendingOrderBP", JSON.stringify({
+        pointsUsed: order.pointsUsed,
+        pointsDiscount: order.pointsDiscount || 0,
+      }));
+    } else {
+      localStorage.removeItem("pendingOrderBP");
+    }
+
+    router.push("/Panier");
   };
 
   return (
