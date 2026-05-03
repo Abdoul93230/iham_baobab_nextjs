@@ -8,7 +8,7 @@ import { FaXTwitter } from "react-icons/fa6";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import Image from "next/image";
-import { Phone, Mail, MapPin, ChevronRight, Send } from "lucide-react";
+import { Phone, Mail, MapPin, ChevronRight, Send, CheckCircle, AlertCircle } from "lucide-react";
 
 const SECTIONS = [
   {
@@ -51,33 +51,92 @@ const SOCIALS = [
   { icon: FaLinkedin, href: "#", label: "LinkedIn", color: "#0A66C2" },
 ];
 
+// Indicatifs avec format d'affichage (X = chiffre)
+const COUNTRY_CODES = [
+  { code: "+227", flag: "🇳🇪", name: "Niger",        format: "XX XX XX XX",  digits: 8  },
+  { code: "+223", flag: "🇲🇱", name: "Mali",         format: "XX XX XX XX",  digits: 8  },
+  { code: "+226", flag: "🇧🇫", name: "Burkina Faso", format: "XX XX XX XX",  digits: 8  },
+  { code: "+225", flag: "🇨🇮", name: "Côte d'Ivoire",format: "XX XX XX XX XX",digits: 10 },
+  { code: "+221", flag: "🇸🇳", name: "Sénégal",      format: "XX XXX XX XX", digits: 9  },
+  { code: "+229", flag: "🇧🇯", name: "Bénin",        format: "XX XX XX XX",  digits: 8  },
+  { code: "+228", flag: "🇹🇬", name: "Togo",         format: "XX XX XX XX",  digits: 8  },
+  { code: "+234", flag: "🇳🇬", name: "Nigeria",      format: "XXX XXX XXXX", digits: 10 },
+  { code: "+33",  flag: "🇫🇷", name: "France",       format: "X XX XX XX XX",digits: 10 },
+  { code: "+212", flag: "🇲🇦", name: "Maroc",        format: "XX XX XX XX XX",digits: 10 },
+];
+
+// Formate les digits saisis selon le pattern (groupes séparés par espace)
+function formatPhoneInput(raw: string, format: string): string {
+  const digits = raw.replace(/\D/g, "");
+  const groups = format.split(" ").map(g => g.length);
+  let result = "";
+  let idx = 0;
+  for (let g = 0; g < groups.length; g++) {
+    const chunk = digits.slice(idx, idx + groups[g]);
+    if (!chunk) break;
+    result += (g > 0 && result ? " " : "") + chunk;
+    idx += groups[g];
+  }
+  return result;
+}
+
 const HomeFooter: React.FC = () => {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [nlEmail, setNlEmail] = useState("");
+  const [nlPhone, setNlPhone] = useState("");
+  const [nlMode, setNlMode] = useState<"email" | "phone">("email");
+  const [countryCode, setCountryCode] = useState(COUNTRY_CODES[0]);
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
   const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneInput(e.target.value, countryCode.format);
+    setNlPhone(formatted);
+  };
+
+  const handleCountrySelect = (c: typeof COUNTRY_CODES[0]) => {
+    setCountryCode(c);
+    setNlPhone("");
+    setShowCountryPicker(false);
+  };
 
   const handleNewsletter = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-      setStatus("error");
-      setTimeout(() => setStatus("idle"), 3000);
-      return;
+
+    const emailVal = nlEmail.trim();
+    const rawDigits = nlPhone.replace(/\s/g, "");
+
+    if (nlMode === "email") {
+      if (!emailVal.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+        setErrorMsg("Adresse e-mail invalide.");
+        setStatus("error");
+        setTimeout(() => setStatus("idle"), 3000);
+        return;
+      }
+    } else {
+      if (rawDigits.length < countryCode.digits) {
+        setErrorMsg(`Numéro incomplet — ${countryCode.digits} chiffres requis pour ${countryCode.name}.`);
+        setStatus("error");
+        setTimeout(() => setStatus("idle"), 3000);
+        return;
+      }
     }
+
     setStatus("loading");
     try {
-      if (BackendUrl) {
-        await axios.post(`${BackendUrl}/SendMail`, {
-          senderEmail: "abdoulrazak9323@gmail.com",
-          subject: "Inscription NewsLetter Ihambaobab",
-          message: email,
-          titel: "NewsLetter Ihambaobab",
-        });
-      }
+      await axios.post(`${BackendUrl}/api/newsletter`, {
+        email: nlMode === "email" ? emailVal : undefined,
+        // Envoyer le numéro complet avec indicatif
+        phone: nlMode === "phone" ? `${countryCode.code} ${nlPhone}` : undefined,
+      });
       setStatus("success");
-      setEmail("");
-      setTimeout(() => setStatus("idle"), 4000);
+      setNlEmail("");
+      setNlPhone("");
+      setTimeout(() => setStatus("idle"), 5000);
     } catch {
+      setErrorMsg("Une erreur est survenue. Réessayez.");
       setStatus("error");
       setTimeout(() => setStatus("idle"), 3000);
     }
@@ -86,40 +145,132 @@ const HomeFooter: React.FC = () => {
   return (
     <footer className="bg-[#111827] text-gray-300 mt-8">
       {/* ── Newsletter band ──────────────────────────────────────────────────── */}
-      <div className="bg-gradient-to-r from-[#30A08B] to-[#1d7a6a]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-5">
-          <div>
-            <h3 className="text-white font-black text-xl">Restez connecté !</h3>
-            <p className="text-white/80 text-sm mt-0.5">
-              Promotions exclusives, nouveautés et bons plans direct dans votre boîte mail.
-            </p>
-          </div>
-          <form onSubmit={handleNewsletter} className="flex w-full md:w-auto gap-0">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Votre adresse e-mail"
-              className="flex-1 md:w-72 px-4 py-3 rounded-l-full text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-white/50 placeholder-gray-400"
-            />
-            <button
-              type="submit"
-              disabled={status === "loading"}
-              className="flex items-center gap-2 bg-[#0d1117] text-white px-5 py-3 rounded-r-full text-sm font-bold hover:bg-black transition-colors disabled:opacity-60"
-            >
-              {status === "loading" ? (
-                <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+      <div className="bg-gradient-to-br from-[#30A08B] to-[#1a6b5c]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+            {/* Left: text */}
+            <div className="text-center lg:text-left">
+              <h3 className="text-white font-black text-2xl leading-tight">
+                Restez dans la boucle ! 🎉
+              </h3>
+              <p className="text-white/75 text-sm mt-1.5 max-w-sm">
+                Promos exclusives, nouveautés et bons plans — directement chez vous.
+              </p>
+            </div>
+
+            {/* Right: form */}
+            <div className="w-full max-w-md">
+              {status === "success" ? (
+                <div className="flex flex-col items-center gap-2 bg-white/15 rounded-2xl px-6 py-5 text-center">
+                  <CheckCircle size={32} className="text-white" />
+                  <p className="text-white font-bold text-base">Inscription confirmée !</p>
+                  <p className="text-white/75 text-xs">Merci, vous recevrez bientôt nos offres.</p>
+                </div>
               ) : (
-                <Send size={15} />
+                <form onSubmit={handleNewsletter} className="flex flex-col gap-3">
+                  {/* Toggle email / téléphone */}
+                  <div className="flex items-center bg-white/15 rounded-full p-1 gap-1 self-start mx-auto lg:mx-0">
+                    <button
+                      type="button"
+                      onClick={() => setNlMode("email")}
+                      className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                        nlMode === "email" ? "bg-white text-[#1a6b5c]" : "text-white/80 hover:text-white"
+                      }`}
+                    >
+                      <Mail size={12} /> E-mail
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNlMode("phone")}
+                      className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                        nlMode === "phone" ? "bg-white text-[#1a6b5c]" : "text-white/80 hover:text-white"
+                      }`}
+                    >
+                      <Phone size={12} /> Téléphone
+                    </button>
+                  </div>
+
+                  {/* Input + bouton */}
+                  <div className="flex gap-0 shadow-lg relative">
+                    {nlMode === "email" ? (
+                      <input
+                        type="email"
+                        value={nlEmail}
+                        onChange={(e) => setNlEmail(e.target.value)}
+                        placeholder="votre@email.com"
+                        className="flex-1 px-4 py-3 rounded-l-2xl text-sm text-gray-800 bg-white focus:outline-none placeholder-gray-400"
+                      />
+                    ) : (
+                      <div className="flex flex-1 bg-white rounded-l-2xl overflow-visible relative">
+                        {/* Sélecteur indicatif */}
+                        <button
+                          type="button"
+                          onClick={() => setShowCountryPicker(v => !v)}
+                          className="flex items-center gap-1.5 px-3 py-3 border-r border-gray-200 text-sm text-gray-700 font-medium hover:bg-gray-50 transition-colors shrink-0 rounded-l-2xl"
+                        >
+                          <span className="text-base leading-none">{countryCode.flag}</span>
+                          <span className="text-xs font-bold text-gray-600">{countryCode.code}</span>
+                          <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                        </button>
+
+                        {/* Dropdown pays */}
+                        {showCountryPicker && (
+                          <div className="absolute top-full left-0 mt-1 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 w-64 max-h-60 overflow-y-auto">
+                            {COUNTRY_CODES.map(c => (
+                              <button
+                                key={c.code}
+                                type="button"
+                                onClick={() => handleCountrySelect(c)}
+                                className={`flex items-center gap-3 w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 transition-colors ${countryCode.code === c.code ? 'bg-teal-50 text-teal-700 font-semibold' : 'text-gray-700'}`}
+                              >
+                                <span className="text-lg">{c.flag}</span>
+                                <span className="flex-1 truncate">{c.name}</span>
+                                <span className="text-xs text-gray-400 font-mono">{c.code}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Champ numéro */}
+                        <input
+                          type="tel"
+                          value={nlPhone}
+                          onChange={handlePhoneChange}
+                          placeholder={countryCode.format.replace(/X/g, "0")}
+                          maxLength={countryCode.format.length}
+                          className="flex-1 px-3 py-3 text-sm text-gray-800 bg-transparent focus:outline-none placeholder-gray-400 font-mono tracking-wide"
+                        />
+                      </div>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={status === "loading"}
+                      className="flex items-center gap-2 bg-[#0d1117] text-white px-5 py-3 rounded-r-2xl text-sm font-bold hover:bg-black transition-colors disabled:opacity-60 whitespace-nowrap"
+                    >
+                      {status === "loading" ? (
+                        <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <Send size={14} />
+                      )}
+                      S'abonner
+                    </button>
+                  </div>
+
+                  {/* Error */}
+                  {status === "error" && (
+                    <div className="flex items-center gap-2 text-red-200 text-xs">
+                      <AlertCircle size={13} />
+                      <span>{errorMsg}</span>
+                    </div>
+                  )}
+
+                  <p className="text-white/50 text-[11px] text-center lg:text-left">
+                    Pas de spam. Désinscription possible à tout moment.
+                  </p>
+                </form>
               )}
-              {status === "success" ? "Envoyé !" : "S'abonner"}
-            </button>
-          </form>
-          {status === "error" && (
-            <p className="text-red-200 text-xs md:absolute md:mt-16">
-              E-mail invalide. Réessayez.
-            </p>
-          )}
+            </div>
+          </div>
         </div>
       </div>
 
