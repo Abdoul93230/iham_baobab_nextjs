@@ -18,6 +18,7 @@ export interface ProductCardData {
   rating?: number;
   quantite?: number;
   Clefournisseur?: { name?: string; storeName?: string };
+  ClefType?: string;
 }
 
 interface ProduitPageProps {

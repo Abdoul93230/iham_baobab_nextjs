@@ -37,9 +37,17 @@ const nextConfig: NextConfig = {
         hostname: 'img.freepik.com',
       },
       {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+      {
         protocol: 'http',
         hostname: 'localhost',
         port: '3000',
+      },
+      {
+        protocol: 'https',
+        hostname: 'placehold.co',
       },
     ],
     // Optimisations d'images pour le SEO

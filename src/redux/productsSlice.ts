@@ -88,7 +88,7 @@ export const getCategories = createAsyncThunk(
   "products/getCategories",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${BackendUrl}/getAllCategories`);
+      const response = await axios.get(`${BackendUrl}/getCategoriesWithProducts`);
       return response.data.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || "Error fetching categories");

@@ -24,8 +24,8 @@ interface Article {
   price: number;
   quantity: number;
   shipping?: any;
-  colors: string[];
-  sizes: string[];
+  colors?: string[];
+  sizes?: string[];
 }
 
 interface GroupedArticle {
@@ -234,17 +234,17 @@ const OrderedItems: React.FC<OrderedItemsProps> = ({ items, totalPrice }) => {
                 {variant?.imageUrl && (
                   <img
                     src={variant.imageUrl}
-                    alt={`Couleur ${variant.colors[0]}`}
+                    alt={`Couleur ${variant.colors?.[0] ?? ''}`}
                     className="w-12 h-12 object-cover rounded-md border"
                   />
                 )}
                 <div className="flex-1">
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-gray-600 ml-3">
-                      {variant.colors[0] && `Couleur: ${variant.colors[0]}`}
+                      {variant.colors?.[0] && `Couleur: ${variant.colors[0]}`}
                     </span>
                     <span className="text-sm text-gray-600 ml-3">
-                      {variant.sizes[0] && `Taille: ${variant.sizes[0]}`}
+                      {variant.sizes?.[0] && `Taille: ${variant.sizes[0]}`}
                     </span>
                     <div className="text-sm text-[#30A08B] font-medium ml-3">
                       {variant.quantity && `quantite: ${variant.quantity}`}

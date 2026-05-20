@@ -17,6 +17,7 @@ import {
 import { selectUser } from "@/redux/userSlice";
 import HomeHeader from "@/components/home/HomeHeader";
 import HomeFooter from "@/components/home/HomeFooter";
+import Link from "next/link";
 import {
   Leaf,
   TreePine,
@@ -33,6 +34,10 @@ import {
   ChevronDown,
   ChevronUp,
   Share2,
+  LogIn,
+  UserPlus,
+  Sparkles,
+  Lock,
 } from "lucide-react";
 
 // ─── Level config ──────────────────────────────────────────────────────────────
@@ -258,9 +263,121 @@ export default function WalletMain() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
-        Connectez-vous pour accéder à votre wallet.
-      </div>
+      <>
+        <HomeHeader />
+        <main className="min-h-screen bg-gradient-to-b from-[#f0faf7] to-white">
+          {/* Hero */}
+          <div className="relative overflow-hidden bg-gradient-to-br from-[#30A08B] to-[#1d7a6a] px-4 pt-14 pb-20 text-center">
+            <div className="absolute inset-0 opacity-10">
+              {[...Array(6)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute rounded-full bg-white"
+                  style={{
+                    width: `${60 + i * 40}px`,
+                    height: `${60 + i * 40}px`,
+                    top: `${10 + i * 12}%`,
+                    left: `${5 + i * 15}%`,
+                    opacity: 0.3 - i * 0.04,
+                  }}
+                />
+              ))}
+            </div>
+            <div className="relative max-w-lg mx-auto">
+              <div className="w-20 h-20 bg-white/20 rounded-3xl flex items-center justify-center mx-auto mb-5 shadow-lg">
+                <Trees size={40} className="text-white" />
+              </div>
+              <h1 className="text-3xl font-black text-white mb-2 drop-shadow">Baobab Points</h1>
+              <p className="text-white/80 text-base leading-relaxed">
+                Gagnez des points à chaque achat et transformez-les en réductions.
+              </p>
+              <div className="mt-3 inline-flex items-center gap-2 bg-white/20 rounded-full px-4 py-1.5">
+                <Sparkles size={14} className="text-yellow-300" />
+                <span className="text-white text-sm font-semibold">50 BP offerts à votre 1ère commande</span>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA principal */}
+          <div className="max-w-sm mx-auto px-4 -mt-8 relative z-10 mb-8">
+            <div className="bg-white rounded-3xl shadow-xl p-6 border border-gray-100">
+              <div className="flex items-center gap-2 text-amber-600 bg-amber-50 rounded-xl px-3 py-2 mb-5">
+                <Lock size={14} />
+                <span className="text-xs font-semibold">Connexion requise pour accéder à vos points</span>
+              </div>
+
+              <Link
+                href="/auth/login?redirect=/wallet"
+                className="flex items-center justify-center gap-2 w-full bg-[#30A08B] hover:bg-[#27897a] text-white font-bold py-3.5 rounded-2xl transition-all active:scale-95 shadow-md shadow-[#30A08B]/30 mb-3"
+              >
+                <LogIn size={18} />
+                Se connecter
+              </Link>
+
+              <Link
+                href="/auth/register?redirect=/wallet"
+                className="flex items-center justify-center gap-2 w-full bg-white border-2 border-[#30A08B] text-[#30A08B] font-bold py-3.5 rounded-2xl hover:bg-[#30A08B]/5 transition-all active:scale-95"
+              >
+                <UserPlus size={18} />
+                Créer un compte
+              </Link>
+
+              <p className="text-center text-xs text-gray-400 mt-4">
+                Déjà <span className="font-semibold text-[#30A08B]">50 BP</span> vous attendent à l'inscription
+              </p>
+            </div>
+          </div>
+
+          {/* Avantages */}
+          <div className="max-w-lg mx-auto px-4 mb-10">
+            <h2 className="text-center text-base font-bold text-gray-700 mb-4">Comment gagner des BP ?</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { icon: ShoppingBag, color: "bg-green-50 text-green-600", label: "À chaque achat", desc: "2 BP / 1 000 FCFA" },
+                { icon: Zap,         color: "bg-teal-50 text-teal-600",   label: "Check-in quotidien", desc: "+1 BP par jour" },
+                { icon: Users,       color: "bg-indigo-50 text-indigo-600", label: "Parrainage", desc: "25 BP par ami" },
+                { icon: Star,        color: "bg-yellow-50 text-yellow-600", label: "Avis produit", desc: "2 à 5 BP" },
+              ].map(({ icon: Icon, color, label, desc }) => (
+                <div key={label} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
+                    <Icon size={18} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-gray-800 leading-tight">{label}</div>
+                    <div className="text-xs text-gray-500">{desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Niveaux */}
+          <div className="max-w-lg mx-auto px-4 mb-14">
+            <h2 className="text-center text-base font-bold text-gray-700 mb-4">3 niveaux, plus de bonus</h2>
+            <div className="space-y-3">
+              {[
+                { icon: Leaf,     bg: "from-green-400 to-emerald-500", label: "Graine",       range: "0 – 499 BP",   bonus: "Taux normal" },
+                { icon: TreePine, bg: "from-teal-500 to-[#30A08B]",    label: "Arbre",        range: "500 – 2 499 BP", bonus: "×1.25 BP" },
+                { icon: Trees,    bg: "from-amber-400 to-yellow-500",  label: "Grand Baobab", range: "2 500 BP+",    bonus: "×1.5 BP" },
+              ].map(({ icon: Icon, bg, label, range, bonus }) => (
+                <div key={label} className={`bg-gradient-to-r ${bg} rounded-2xl p-4 flex items-center gap-4 text-white shadow-md`}>
+                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Icon size={20} className="text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-bold text-sm">{label}</div>
+                    <div className="text-white/75 text-xs">{range}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs font-bold bg-white/20 rounded-lg px-2 py-1">{bonus}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </main>
+        <HomeFooter />
+      </>
     );
   }
 
