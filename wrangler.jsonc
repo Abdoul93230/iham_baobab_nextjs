@@ -2,5 +2,5 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "iham-baobab",
   "main": ".open-next/worker.js",
-  "compatibility_date": "2026-06-02"
+  "compatibility_date": "2025-01-01"
 }

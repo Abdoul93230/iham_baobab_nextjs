@@ -69,7 +69,7 @@ const nextConfig: NextConfig = {
   
   // Généreration statique pour les pages importantes
   experimental: {
-    optimizeCss: true,
+    // optimizeCss: true,
     optimizePackageImports: ['lucide-react', 'react-icons'],
   },
 
@@ -134,14 +134,14 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  turbopack: {
-    rules: {
-      '*.svg': {
-        loaders: ['@svgr/webpack'],
-        as: '*.js',
-      },
-    },
-  },
+  // turbopack: {
+  //   rules: {
+  //     '*.svg': {
+  //       loaders: ['@svgr/webpack'],
+  //       as: '*.js',
+  //     },
+  //   },
+  // },
 };
 
 export default nextConfig;
