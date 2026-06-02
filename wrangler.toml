@@ -1,7 +1,8 @@
-name = "iham-baobab"
+name = "ihambaobab"
 main = ".open-next/worker.js"
-compatibility_date = "2025-01-01"
+compatibility_date = "2025-04-01"
 compatibility_flags = ["nodejs_compat"]
 
-[site]
-bucket = ".open-next/assets"
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
