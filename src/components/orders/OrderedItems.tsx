@@ -20,7 +20,9 @@ interface OrderedItemsProps {
 interface Article {
   _id: string;
   name: string;
-  imageUrl: string;
+  imageUrl?: string;
+  image1?: string;
+  image2?: string;
   price: number;
   quantity: number;
   shipping?: any;
