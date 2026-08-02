@@ -293,6 +293,48 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
     }
   }, []);
 
+  // Recalcul du shipping au montage depuis l'API pour éviter les montants périmés du localStorage
+  useEffect(() => {
+    const refreshShipping = async () => {
+      if (typeof window === 'undefined') return;
+      const zone = (() => { try { return JSON.parse(localStorage.getItem("orderShippingZone") || "null"); } catch { return null; } })();
+      if (!zone?._id) return;
+
+      const panier: any[] = (() => { try { return JSON.parse(localStorage.getItem("panier") || "[]"); } catch { return []; } })();
+      if (!panier.length) return;
+
+      // Grouper par boutique — même logique de poids que le backend (shipping.weight || 0.5)
+      const storeWeights: Record<string, { sellerId: string; weight: number }> = {};
+      for (const item of panier) {
+        const storeId = item.Clefournisseur?._id || item.createdBy || "unknown";
+        if (!storeWeights[storeId]) storeWeights[storeId] = { sellerId: storeId, weight: 0 };
+        storeWeights[storeId].weight += ((item.shipping?.weight ?? item.poids) || 0.5) * (item.quantity || 1);
+      }
+
+      try {
+        const results = await Promise.all(
+          Object.values(storeWeights).map(({ sellerId, weight }) =>
+            axios.post(`${BackendUrl}/api/shipping2/calculate`, { sellerId, customerZoneId: zone._id, weight }, { timeout: 8000 })
+              .then(r => r.data?.data?.totalCost || 0)
+              .catch(() => 0)
+          )
+        );
+        const freshShipping = results.reduce((s, c) => s + c, 0);
+        const currentSubtotal = (() => { try { return parseFloat(localStorage.getItem("orderSubtotal") || "0"); } catch { return 0; } })();
+        const promoDiscount = (() => { try { return parseFloat(localStorage.getItem("promoDiscount") || "0"); } catch { return 0; } })();
+
+        setOrderShippingCost(freshShipping);
+        const freshTotal = Math.max(0, currentSubtotal - promoDiscount + freshShipping);
+        setOrderTotal(freshTotal);
+        localStorage.setItem("orderShippingCost", String(freshShipping));
+        localStorage.setItem("orderTotal", String(freshTotal));
+      } catch {
+        // Silencieux : si le recalcul échoue, on garde les valeurs du localStorage
+      }
+    };
+    refreshShipping();
+  }, []);
+
   function generateUniqueID() {
     const now = new Date();
     const year = now.getFullYear();

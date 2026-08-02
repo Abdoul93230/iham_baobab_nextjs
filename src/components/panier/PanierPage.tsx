@@ -101,23 +101,9 @@ const PanierPage: React.FC = () => {
     };
   }, []);
 
+  // Même logique de poids que le backend : shipping.weight || poids || 0.5
   const calculateProductWeight = useMemo(
-    () => (article: any) => {
-      if (article.shipping?.dimensions) {
-        const { length, width, height } = article.shipping.dimensions;
-        if (length && width && height) {
-          const volume = (length * width * height) / 1000;
-          return Math.max(0.1, volume * 0.5);
-        }
-      }
-      const categoryWeights: Record<string, number> = {
-        mode: 0.5,
-        electronique: 1.5,
-        maison: 2.0,
-        sport: 1.0,
-      };
-      return categoryWeights[article.ClefType || "mode"] || 0.5;
-    },
+    () => (article: any) => (article.shipping?.weight ?? article.poids) || 0.5,
     []
   );
 
