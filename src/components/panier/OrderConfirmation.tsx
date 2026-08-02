@@ -312,8 +312,9 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
       }
 
       try {
+        const storeEntries = Object.values(storeWeights);
         const results = await Promise.all(
-          Object.values(storeWeights).map(({ sellerId, weight }) =>
+          storeEntries.map(({ sellerId, weight }) =>
             axios.post(`${BackendUrl}/api/shipping2/calculate`, { sellerId, customerZoneId: zone._id, weight }, { timeout: 8000 })
               .then(r => r.data?.data?.totalCost || 0)
               .catch(() => 0)
@@ -321,7 +322,14 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
         );
         const freshShipping = results.reduce((s, c) => s + c, 0);
         const currentSubtotal = (() => { try { return parseFloat(localStorage.getItem("orderSubtotal") || "0"); } catch { return 0; } })();
-        const promoDiscount = (() => { try { return parseFloat(localStorage.getItem("promoDiscount") || "0"); } catch { return 0; } })();
+        // orderCodeP n'est pas encore dans le state ici (effet au montage) — on lit depuis localStorage
+        const savedCodeP = (() => { try { return JSON.parse(localStorage.getItem("orderCodeP") || "null"); } catch { return null; } })();
+        const promoDiscount = savedCodeP?.isValide ? (savedCodeP.discount || 0) : 0;
+
+        // Mettre à jour shippingCalculations par boutique (utilisé pour panierWithShipping au submit)
+        const freshCalcs: Record<string, any> = {};
+        storeEntries.forEach(({ sellerId }, i) => { freshCalcs[sellerId] = { totalCost: results[i] }; });
+        localStorage.setItem("orderShippingCalculations", JSON.stringify(freshCalcs));
 
         setOrderShippingCost(freshShipping);
         const freshTotal = Math.max(0, currentSubtotal - promoDiscount + freshShipping);
