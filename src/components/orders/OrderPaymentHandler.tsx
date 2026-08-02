@@ -57,10 +57,14 @@ const OrderPaymentHandler: React.FC<OrderPaymentHandlerProps> = ({
         "pendingOrder",
         JSON.stringify({
           commandeId: id,
-          transactionId: pendingOrder,
+          transactionId: pendingOrder,  // null ici → le backend bascule vers createCommande
           timestamp: new Date().getTime(),
         })
       );
+    }
+    // Si pas de référence disponible, ne pas setter pendingOrder — createCommande sera appelé directement
+    else if (id && !pendingOrder) {
+      localStorage.removeItem("pendingOrder");
     }
 
     // Pré-remplir le code promo si présent

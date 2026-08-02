@@ -56,7 +56,7 @@ const likesSlice = createSlice({
       })
       .addCase(fetchUserLikes.fulfilled, (state, action) => {
         state.loading = false;
-        state.likedProducts = action.payload.map((like: any) => like.produit._id);
+        state.likedProducts = action.payload.filter((like: any) => like.produit != null).map((like: any) => like.produit._id);
       })
       .addCase(fetchUserLikes.rejected, (state, action) => {
         state.loading = false;

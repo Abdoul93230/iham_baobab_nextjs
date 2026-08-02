@@ -308,12 +308,24 @@ const HomeMain: React.FC<HomeMainProps> = () => {
                   >
                     {DATA_Pubs.map((pub: any, i: number) => (
                       <SwiperSlide key={i} className="!h-full">
-                        <div className="relative w-full h-full">
+                        <div className="relative w-full h-full overflow-hidden">
+                          {/* Fond flouté — remplit l'espace */}
+                          <Image
+                            src={pub.image}
+                            alt=""
+                            fill
+                            sizes="(max-width: 768px) 100vw, 1280px"
+                            className="object-cover scale-110 blur-xl opacity-60"
+                            priority={i === 0}
+                            aria-hidden
+                          />
+                          {/* Image principale — entière, sans coupure */}
                           <Image
                             src={pub.image}
                             alt={`Bannière ${i + 1}`}
                             fill
-                            className="object-cover object-center"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 80vw, 1280px"
+                            className="object-contain relative z-10"
                             priority={i === 0}
                           />
                         </div>

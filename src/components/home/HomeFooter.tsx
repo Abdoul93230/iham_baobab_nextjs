@@ -281,7 +281,7 @@ const HomeFooter: React.FC = () => {
           {/* Brand column */}
           <div className="lg:col-span-2">
             <div className="relative w-44 h-14 mb-4 bg-white/10 rounded-xl p-2">
-              <Image src="/LogoText.png" alt="IhamBaobab" fill className="object-contain" />
+              <Image src="/LogoText.png" alt="IhamBaobab" fill sizes="176px" className="object-contain" />
             </div>
             <p className="text-sm text-gray-400 leading-relaxed max-w-xs">
               La marketplace de référence au Niger. Achetez et vendez en toute confiance, partout au pays.
@@ -391,7 +391,8 @@ const HomeFooter: React.FC = () => {
                   alt={alt}
                   width={36}
                   height={22}
-                  className="object-contain w-full h-full"
+                  style={{ width: '100%', height: 'auto' }}
+                  className="object-contain"
                 />
               </div>
             ))}

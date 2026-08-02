@@ -323,6 +323,7 @@ export const selectGamificationConfig = (s: { gamification: GamificationState })
 export const selectTransactions = (s: { gamification: GamificationState }) => s.gamification.transactions;
 export const selectCheckinResult = (s: { gamification: GamificationState }) => s.gamification.checkinResult;
 export const selectRedeemPreview = (s: { gamification: GamificationState }) => s.gamification.redeemPreview;
-export const selectActiveEvents = (s: { gamification: GamificationState }) => s.gamification.config?.activeEvents ?? [];
+const EMPTY_EVENTS: NonNullable<GamificationState['config']>['activeEvents'] = [];
+export const selectActiveEvents = (s: { gamification: GamificationState }) => s.gamification.config?.activeEvents ?? EMPTY_EVENTS;
 
 export default gamificationSlice.reducer;

@@ -87,7 +87,7 @@ const OrderedItems: React.FC<OrderedItemsProps> = ({ items, totalPrice }) => {
         groups[productId] = {
           productId,
           name: article.name,
-          imageUrl: article.imageUrl,
+          imageUrl: article.image1 || article.image2 || article.imageUrl || "",
           shipping: article.shipping,
           variants: [],
           totalQuantity: 0,
@@ -231,9 +231,9 @@ const OrderedItems: React.FC<OrderedItemsProps> = ({ items, totalPrice }) => {
                 className="flex items-center justify-between border-b pb-4"
               >
                 {/* Image de la couleur si elle existe */}
-                {variant?.imageUrl && (
+                {(variant?.image1 || variant?.imageUrl) && (
                   <img
-                    src={variant.imageUrl}
+                    src={variant.image1 || variant.imageUrl}
                     alt={`Couleur ${variant.colors?.[0] ?? ''}`}
                     className="w-12 h-12 object-cover rounded-md border"
                   />

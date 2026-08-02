@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import ProduitDetailMain from "@/components/ProduitDetail/ProduitDetailMain";
 import HomeHeader from "@/components/home/HomeHeader";
 import HomeFooter from "@/components/home/HomeFooter";
@@ -18,6 +18,16 @@ export default function ProduitDetailPageClient({ productId, serverData }: Produ
 
   useEffect(() => {
     window.scrollTo(0, 0);
+  }, [productId]);
+
+  // Enregistre une vue — une seule fois par montage réel (guard contre StrictMode double-invoke)
+  const viewTracked = useRef(false);
+  useEffect(() => {
+    if (!productId || viewTracked.current) return;
+    viewTracked.current = true;
+    fetch(`${process.env.NEXT_PUBLIC_Backend_Url}/productView/${productId}`, {
+      method: 'POST',
+    }).catch(() => {});
   }, [productId]);
 
   // Hydratation immédiate du store Redux avec les données serveur

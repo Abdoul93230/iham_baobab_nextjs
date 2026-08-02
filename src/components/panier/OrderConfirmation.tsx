@@ -248,7 +248,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
 
     handledPaymentRef.current = transactionId;
 
-    ["panier", "orderTotal", "paymentInfo", "pendingOrder", "orderShippingZone", "orderShippingCalculations", "orderShippingByStore", "orderCodeP", "paymentInitiated", "pendingOrderBP"].forEach((key) =>
+    ["panier", "orderTotal", "orderSubtotal", "orderShippingCost", "paymentInfo", "pendingOrder", "orderShippingZone", "orderShippingCalculations", "orderShippingByStore", "orderCodeP", "paymentInitiated", "pendingOrderBP"].forEach((key) =>
       localStorage.removeItem(key)
     );
 
@@ -733,6 +733,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
   // Version optimisée de handlePaymentSubmit avec gestion des alertes
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitStatus.loading) return;
     setSubmitStatus({ loading: true, error: null, success: false });
     setMessage("Veuillez patienter...");
     setOnSubmit(true);
@@ -891,7 +892,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
       }
 
       // 6. Nettoyage et succès IMMÉDIAT pour Paiement à la Livraison ou Assisté
-      ["panier", "orderTotal", "paymentInfo", "pendingOrder", "orderShippingZone", "orderShippingCalculations", "orderShippingByStore", "orderCodeP", "pendingOrderBP"].forEach((key) =>
+      ["panier", "orderTotal", "orderSubtotal", "orderShippingCost", "paymentInfo", "pendingOrder", "orderShippingZone", "orderShippingCalculations", "orderShippingByStore", "orderCodeP", "pendingOrderBP"].forEach((key) =>
         localStorage.removeItem(key)
       );
 
@@ -1244,10 +1245,17 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
 
       const pendingPayment = localStorage.getItem("paymentInitiated");
       if (pendingPayment) {
-        const { transactionId, method } = JSON.parse(pendingPayment);
+        const { transactionId, method, timestamp } = JSON.parse(pendingPayment);
+
+        // Ignorer les sessions de paiement de plus de 30 minutes
+        if (timestamp && Date.now() - timestamp > 30 * 60 * 1000) {
+          localStorage.removeItem("paymentInitiated");
+          return;
+        }
+
         setTrackedTransactionId(transactionId);
         handledPaymentRef.current = null;
-        
+
         // NE PAS POLER si c'est un paiement manuel
         if (PaymentMethods.CASH_ON_DELIVERY.includes(method) || PaymentMethods.ASSISTED_PAYMENT.includes(method)) {
           localStorage.removeItem("paymentInitiated");
