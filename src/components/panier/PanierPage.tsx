@@ -120,14 +120,22 @@ const PanierPage: React.FC = () => {
   const storeGroups = useMemo(() => {
     const groups: Record<string, StoreGroup> = {};
     articles.forEach((article, idx) => {
-      const storeId = article.Clefournisseur?._id || "unknown";
+      // Si Clefournisseur est un objet populé, on prend son _id
+      // Si c'est une string brute (reorder depuis commande non-populée), on tombe sur createdBy
+      const clef = article.Clefournisseur;
+      const storeId =
+        (typeof clef === "object" && clef !== null ? clef._id : null) ||
+        article.createdBy ||
+        "unknown";
       const storeName =
-        article.Clefournisseur?.storeName || article.Clefournisseur?.name || "Boutique inconnue";
+        (typeof clef === "object" && clef !== null
+          ? clef.storeName || clef.name
+          : null) || "Boutique inconnue";
       if (!groups[storeId]) {
         groups[storeId] = {
           storeId,
           storeName,
-          storeInfo: article.Clefournisseur || {},
+          storeInfo: (typeof clef === "object" && clef !== null ? clef : {}) as any,
           articles: [],
           totalWeight: 0,
           totalValue: 0,

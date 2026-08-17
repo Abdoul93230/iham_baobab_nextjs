@@ -60,18 +60,32 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ order }) => {
       {
         id: 3,
         title: "Traitement",
-        description: order.etatTraitement,
-        icon: order.etatTraitement === "Traité" ? CheckCircle : Clock,
-        isCompleted: order?.etatTraitement === "Traité"|| order?.etatTraitement === "livraison reçu",
+        description: (() => {
+          if (order.etatTraitement === "annulé") return "Annulée";
+          if (["reçu par le livreur", "en cours de livraison", "livraison reçu", "livré", "Traité"].includes(order.etatTraitement))
+            return "Pris en charge";
+          if (order.etatTraitement === "traitement") return "En cours de traitement";
+          return "En attente de traitement";
+        })(),
+        icon: ["reçu par le livreur", "en cours de livraison", "livraison reçu", "livré", "Traité"].includes(order.etatTraitement)
+          ? CheckCircle
+          : order.etatTraitement === "annulé" ? AlertCircle : Clock,
+        isCompleted: ["reçu par le livreur", "en cours de livraison", "livraison reçu", "livré", "Traité"].includes(order.etatTraitement),
+        isError: order.etatTraitement === "annulé",
       },
       {
         id: 4,
         title: "Livraison",
-        description: order.statusLivraison,
+        description: (() => {
+          if (order.etatTraitement === "annulé") return "Annulée";
+          if (order.etatTraitement === "livré" || order.etatTraitement === "livraison reçu" || order.etatTraitement === "Traité") return "Livrée";
+          if (order.etatTraitement === "en cours de livraison") return "En cours de livraison";
+          if (order.etatTraitement === "reçu par le livreur") return "Remis au livreur";
+          return "En attente";
+        })(),
         icon: Truck,
-        isCompleted:
-          order.statusLivraison !== "en cours" &&
-          order.statusLivraison !== "échec",
+        isCompleted: ["livré", "livraison reçu", "Traité"].includes(order.etatTraitement),
+        isError: order.etatTraitement === "annulé",
       },
     ];
     return statuses;

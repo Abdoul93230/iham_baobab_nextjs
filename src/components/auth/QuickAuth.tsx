@@ -62,6 +62,7 @@ const QuickAuth: React.FC<QuickAuthProps> = ({ initialMode = "auto" }) => {
   const [phoneError, setPhoneError] = useState("");
   const [name, setName] = useState("");
   const [refCode, setRefCode] = useState("");
+  const [otpChannel, setOtpChannel] = useState<"sms" | "whatsapp">("sms");
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -183,11 +184,11 @@ const QuickAuth: React.FC<QuickAuthProps> = ({ initialMode = "auto" }) => {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_Backend_Url}/auth/send-otp`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: fullPhone, name: name.trim(), refCode: refCode.trim() || undefined }),
+        body: JSON.stringify({ phone: fullPhone, name: name.trim(), refCode: refCode.trim() || undefined, channel: otpChannel }),
       });
       const data = await res.json();
       if (!res.ok) { showAlert("error", data?.message || "Impossible d'envoyer le code OTP"); return; }
-      router.push(buildVerifyUrl({ type: "quick-register", phone: fullPhone, name: name.trim(), refCode: refCode.trim() || undefined, attemptsRemaining: data?.data?.attemptsRemaining, cooldownSeconds: data?.data?.cooldownSeconds, expiresInSeconds: data?.data?.expiresInSeconds }));
+      router.push(buildVerifyUrl({ type: "quick-register", phone: fullPhone, name: name.trim(), refCode: refCode.trim() || undefined, channel: otpChannel, attemptsRemaining: data?.data?.attemptsRemaining, cooldownSeconds: data?.data?.cooldownSeconds, expiresInSeconds: data?.data?.expiresInSeconds }));
     } catch (e) { showAlert("error", getErrorMessage(e)); }
     finally { setIsLoading(false); }
   };
@@ -397,6 +398,57 @@ const QuickAuth: React.FC<QuickAuthProps> = ({ initialMode = "auto" }) => {
               <p className="mt-1.5 text-xs text-gray-400">Entrez le code d'un ami pour gagner des Baobab Points à votre première commande.</p>
             </div>
           )}
+
+          {/* Canal OTP (register) — temporairement désactivé, SMS uniquement */}
+          {/* {step === "register" && (
+            <div className="mb-6">
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                Recevoir le code de vérification par
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setOtpChannel("sms")}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all text-left ${
+                    otpChannel === "sms"
+                      ? "border-[#30A08B] bg-[#30A08B]/5 shadow-sm"
+                      : "border-gray-200 bg-white hover:border-gray-300"
+                  }`}
+                >
+                  <span className="text-xl">💬</span>
+                  <div>
+                    <p className={`text-sm font-semibold leading-tight ${otpChannel === "sms" ? "text-[#30A08B]" : "text-gray-700"}`}>SMS</p>
+                    <p className="text-xs text-gray-400">Message texte</p>
+                  </div>
+                  {otpChannel === "sms" && (
+                    <div className="ml-auto w-4 h-4 rounded-full bg-[#30A08B] flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                    </div>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOtpChannel("whatsapp")}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all text-left ${
+                    otpChannel === "whatsapp"
+                      ? "border-[#25D366] bg-[#25D366]/5 shadow-sm"
+                      : "border-gray-200 bg-white hover:border-gray-300"
+                  }`}
+                >
+                  <span className="text-xl">📱</span>
+                  <div>
+                    <p className={`text-sm font-semibold leading-tight ${otpChannel === "whatsapp" ? "text-[#25D366]" : "text-gray-700"}`}>WhatsApp</p>
+                    <p className="text-xs text-gray-400">Message WhatsApp</p>
+                  </div>
+                  {otpChannel === "whatsapp" && (
+                    <div className="ml-auto w-4 h-4 rounded-full bg-[#25D366] flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                    </div>
+                  )}
+                </button>
+              </div>
+            </div>
+          )} */}
 
           {/* Password field (login) */}
           {step === "login" && (

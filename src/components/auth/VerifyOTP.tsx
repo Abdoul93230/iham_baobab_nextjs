@@ -55,6 +55,7 @@ const VerifyOTP: React.FC = () => {
   const phone    = searchParams.get("phone") || "";
   const name     = searchParams.get("name")  || "";
   const refCode  = searchParams.get("refCode") || "";
+  const channel  = (searchParams.get("channel") || "sms") as "sms" | "whatsapp";
   const redirect = searchParams.get("redirect") || "/";
 
   const [step, setStep]         = useState<Step>("verify-otp");
@@ -150,7 +151,7 @@ const VerifyOTP: React.FC = () => {
     setIsLoading(true);
     try {
       const endpoint = flowType === "password-reset" ? "/auth/request-password-reset-otp" : "/auth/send-otp";
-      const body     = flowType === "password-reset" ? { phone } : { phone, name: name || null };
+      const body     = flowType === "password-reset" ? { phone } : { phone, name: name || null, channel };
       const res  = await fetch(`${process.env.NEXT_PUBLIC_Backend_Url}${endpoint}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -308,7 +309,18 @@ const VerifyOTP: React.FC = () => {
               <div className="mb-8">
                 <h1 className="text-2xl sm:text-3xl font-black text-gray-900 leading-tight">Code de vérification</h1>
                 <p className="text-gray-500 text-sm mt-1.5">
-                  Entrez le code envoyé au <span className="font-semibold text-gray-700">{phone}</span>
+                  Code envoyé{" "}
+                  {/* Canal WhatsApp temporairement désactivé — SMS uniquement */}
+                  {/* {channel === "whatsapp" ? (
+                    <span className="inline-flex items-center gap-1 font-semibold text-[#25D366]">
+                      <span>📱</span> via WhatsApp
+                    </span>
+                  ) : ( */}
+                    <span className="inline-flex items-center gap-1 font-semibold text-gray-700">
+                      <span>💬</span> par SMS
+                    </span>
+                  {/* )} */}{" "}
+                  au <span className="font-semibold text-gray-700">{phone}</span>
                 </p>
               </div>
 

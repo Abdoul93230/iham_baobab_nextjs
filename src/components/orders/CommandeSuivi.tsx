@@ -172,10 +172,12 @@ const CommandeSuivi: React.FC = () => {
   // Fonction pour vérifier si la commande peut être relancée
   const canReorder = (): boolean => {
     const orderType = getOrderType();
+    // "payé à la livraison" garde le bouton : l'acheteur peut toujours payer en ligne
+    const finalPaidStatuses = ["payé", "recu", "payé par téléphone"];
     return (
       orderType === "cancelled" ||
       order?.statusPayment === "échec" ||
-      (order?.statusPayment !== "payé" && order?.statusPayment !== "recu")
+      !finalPaidStatuses.includes(order?.statusPayment || "")
     );
   };
 
@@ -317,29 +319,31 @@ const CommandeSuivi: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
             {/* Section des actions selon le type de commande */}
             <div className="flex flex-col sm:flex-row gap-4 mb-4 md:mb-0">
-              {/* Gestion des paiements échoués */}
-              {(order?.statusPayment === "échec" ||
-                (order?.statusPayment !== "recu" &&
-                  order?.statusPayment !== "payé")) ? (
-                <OrderPaymentHandler
-                  panier={order?.prod || null}
-                  pendingOrder={order?.reference || null}
-                  id={order?._id || null}
-                  setReorderLoading={setReorderLoading}
-                  isReOrder={false}
-                  order={order}
-                />
-              ) : canReorder() ? (
-                <OrderPaymentHandler
-                  panier={order?.prod || null}
-                  pendingOrder={order?.reference || null}
-                  id={order?._id || null}
-                  reorderLoading={reorderLoading}
-                  setReorderLoading={setReorderLoading}
-                  isReOrder={true}
-                  order={order}
-                />
-              ) : null}
+              {/* Masquer tout paiement quand la livraison est terminée */}
+              {!["livré", "livraison reçu", "Traité"].includes(order?.etatTraitement || "") && (
+                (order?.statusPayment === "échec" ||
+                  (order?.statusPayment !== "recu" &&
+                    order?.statusPayment !== "payé")) ? (
+                  <OrderPaymentHandler
+                    panier={order?.prod || null}
+                    pendingOrder={order?.reference || null}
+                    id={order?._id || null}
+                    setReorderLoading={setReorderLoading}
+                    isReOrder={false}
+                    order={order}
+                  />
+                ) : canReorder() ? (
+                  <OrderPaymentHandler
+                    panier={order?.prod || null}
+                    pendingOrder={order?.reference || null}
+                    id={order?._id || null}
+                    reorderLoading={reorderLoading}
+                    setReorderLoading={setReorderLoading}
+                    isReOrder={true}
+                    order={order}
+                  />
+                ) : null
+              )}
             </div>
 
             <div>

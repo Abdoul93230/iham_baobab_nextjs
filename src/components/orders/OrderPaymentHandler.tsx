@@ -50,6 +50,31 @@ const OrderPaymentHandler: React.FC<OrderPaymentHandlerProps> = ({
     localStorage.setItem("panier", JSON.stringify(panierFormatted));
     localStorage.removeItem("paymentInitiated");
 
+    // Pré-remplir les montants depuis la commande originale pour que OrderConfirmation
+    // parte avec des valeurs correctes (évite l'affichage de 0 avant le recalcul async)
+    const fraisLivraison = order.fraisLivraison || 0;
+    const reduction = order.reduction || 0;
+    const pointsDiscount = order.pointsDiscount || 0;
+    const prixTotal = order.prixTotal || (order.prix - fraisLivraison + reduction + pointsDiscount);
+    localStorage.setItem("orderSubtotal", String(prixTotal));
+    localStorage.setItem("orderShippingCost", String(fraisLivraison));
+    localStorage.setItem("orderTotal", String(order.prix || 0));
+
+    // Pré-remplir la zone depuis livraisonDetails de la commande si disponible
+    if (order.livraisonDetails?.region) {
+      const existingZone = localStorage.getItem("orderShippingZone");
+      if (!existingZone) {
+        // Conserver la zone de la session si présente, sinon stocker les infos livraison
+        // pour que refreshShipping dans OrderConfirmation puisse recalculer
+        localStorage.setItem("orderLivraisonRegion", order.livraisonDetails.region);
+      }
+    }
+
+    // Pré-remplir shippingByStore depuis la commande originale
+    if (order.shippingByStore?.length > 0) {
+      localStorage.setItem("orderShippingByStore", JSON.stringify(order.shippingByStore));
+    }
+
     // Passer la référence de la commande annulée pour que le backend fasse
     // un PUT /updateCommande (réactivation) plutôt qu'un POST /createCommande
     if (id && pendingOrder) {
