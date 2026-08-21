@@ -284,7 +284,7 @@ const HomeFooter: React.FC = () => {
               <Image src="/LogoText.png" alt="IhamBaobab" fill sizes="176px" className="object-contain" />
             </div>
             <p className="text-sm text-gray-400 leading-relaxed max-w-xs">
-              La marketplace de référence au Niger. Achetez et vendez en toute confiance, partout au pays.
+              La marketplace de référence au Niger. Achetez et vendez en toute confiance, partout au pays ORACLE.
             </p>
             {/* Contact info */}
             <div className="mt-5 space-y-2.5 text-sm">
