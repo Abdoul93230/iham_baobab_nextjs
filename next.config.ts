@@ -57,10 +57,8 @@ const nextConfig: NextConfig = {
     // Augmenter les timeouts pour les images externes (Cloudinary)
     minimumCacheTTL: 60,
     dangerouslyAllowSVG: true,
-    contentDispositionType: 'attachment',
-    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     // Désactiver l'optimisation pour les images Cloudinary (déjà optimisées)
-    unoptimized: false,
+    unoptimized: true,
   },
 
   // Optimisations pour le SEO et les performances
