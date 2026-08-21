@@ -1,0 +1,93 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: frontend-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Deploy frontend
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh \
+            -i ~/.ssh/deploy_key \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" 'bash -se' <<'REMOTE'
+          set -e
+
+          cd /opt/ihambaobab/frontend
+
+          echo "===== GIT ====="
+          git fetch origin
+          git reset --hard origin/main
+
+          echo "===== ENV ====="
+          test -f .env
+
+          set -a
+          . ./.env
+          set +a
+
+          echo "===== DOCKER BUILD ====="
+          docker build \
+            --build-arg NEXT_PUBLIC_Backend_Url="$NEXT_PUBLIC_Backend_Url" \
+            --build-arg NEXT_PUBLIC_Images_Url="$NEXT_PUBLIC_Images_Url" \
+            --build-arg NEXT_PUBLIC_Environment="$NEXT_PUBLIC_Environment" \
+            --build-arg NEXT_PUBLIC_Socket_Url="$NEXT_PUBLIC_Socket_Url" \
+            --build-arg NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
+            --build-arg NEXT_PUBLIC_SITE_NAME="$NEXT_PUBLIC_SITE_NAME" \
+            --build-arg NEXT_PUBLIC_SITE_DESCRIPTION="$NEXT_PUBLIC_SITE_DESCRIPTION" \
+            --build-arg NEXT_PUBLIC_FACEBOOK_PAGE="$NEXT_PUBLIC_FACEBOOK_PAGE" \
+            --build-arg NEXT_PUBLIC_TWITTER_HANDLE="$NEXT_PUBLIC_TWITTER_HANDLE" \
+            --build-arg NEXT_PUBLIC_INSTAGRAM_PAGE="$NEXT_PUBLIC_INSTAGRAM_PAGE" \
+            -t ihambaobab-frontend:latest .
+
+          echo "===== STOP OLD CONTAINER ====="
+          docker stop ihambaobab-frontend 2>/dev/null || true
+          docker rm ihambaobab-frontend 2>/dev/null || true
+
+          echo "===== START NEW CONTAINER ====="
+          docker run -d \
+            --name ihambaobab-frontend \
+            --restart unless-stopped \
+            --network ihambaobab-network \
+            -p 3000:3000 \
+            ihambaobab-frontend:latest
+
+          echo "===== WAIT FOR FRONTEND ====="
+          for i in $(seq 1 30); do
+            if curl -fsSI http://127.0.0.1:3000/ >/dev/null 2>&1; then
+              echo "Frontend OK"
+              exit 0
+            fi
+
+            sleep 2
+          done
+
+          echo "Frontend failed to start"
+          docker logs --tail 100 ihambaobab-frontend
+          exit 1
+          REMOTE
