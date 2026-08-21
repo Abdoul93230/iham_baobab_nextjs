@@ -280,11 +280,11 @@ const HomeFooter: React.FC = () => {
 
           {/* Brand column */}
           <div className="lg:col-span-2">
-            <div className="relative w-44 h-14 mb-4 bg-white/10 rounded-xl p-2">
-              <Image src="/LogoText.png" alt="IhamBaobab" fill sizes="176px" className="object-contain" />
+            <div className="mb-4 bg-white/10 rounded-xl overflow-hidden" style={{ position: 'relative', width: 176, height: 56 }}>
+              <Image src="/LogoText.png" alt="IhamBaobab" fill style={{ objectFit: 'cover', objectPosition: '45% 50%' }} />
             </div>
             <p className="text-sm text-gray-400 leading-relaxed max-w-xs">
-              La marketplace de référence au Niger. Achetez et vendez en toute confiance, partout au pays ORACLE.
+              La marketplace de référence au Niger. Achetez et vendez en toute confiance, partout au pays.
             </p>
             {/* Contact info */}
             <div className="mt-5 space-y-2.5 text-sm">

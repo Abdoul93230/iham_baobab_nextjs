@@ -53,6 +53,7 @@ interface Order {
   dateValidation?: string;
   pointsUsed?: number;
   pointsDiscount?: number;
+  paymentDetails?: { failureReason?: string | null };
 }
 
 interface ShippingAddress {
@@ -512,6 +513,43 @@ const CommandeSuivi: React.FC = () => {
           {activeTab === "map" && orderType !== "cancelled" && (
             <div className="bg-white rounded-lg">
               <OrderTracking order={order} />
+            </div>
+          )}
+
+          {/* Informations supplémentaires pour paiements échoués */}
+          {order?.statusPayment === "échec" && (
+            <div className="mt-8">
+              <h2 className="font-semibold text-lg mb-4">Échec du paiement</h2>
+              <div className="bg-red-50 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-red-800 font-medium">Paiement non traité</p>
+                    {order.paymentDetails?.failureReason ? (
+                      <p className="text-red-700 text-sm mt-2 font-medium bg-red-100 rounded px-3 py-2">
+                        {order.paymentDetails.failureReason}
+                      </p>
+                    ) : (
+                      <>
+                        <p className="text-red-600 text-sm mt-1">
+                          Le paiement n'a pas pu être traité. Les raisons possibles incluent :
+                        </p>
+                        <ul className="text-red-600 text-sm mt-2 list-disc list-inside space-y-1">
+                          <li>Fonds insuffisants sur le compte</li>
+                          <li>Carte expirée ou invalide</li>
+                          <li>Problème de réseau durant la transaction</li>
+                          <li>Limites de transaction dépassées</li>
+                        </ul>
+                      </>
+                    )}
+                    <div className="mt-4 p-3 bg-white rounded border border-red-200">
+                      <p className="text-red-800 text-sm font-medium">
+                        💡 Astuce : Vous pouvez réessayer le paiement en cliquant sur "Faire le paiement" ci-dessus.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

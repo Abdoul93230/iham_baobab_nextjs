@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { AlertCircle, Check } from "lucide-react";
+import { AlertCircle, Check, User, Mail, MapPin, Home, MessageSquare, Lock, ShoppingCart, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import axios from "axios";
@@ -78,7 +78,7 @@ const COUNTRY_CODES = [
 
 // Utilitaires
 const PaymentMethods = {
-  CARD: ["Visa", "master Card"],
+  CARD: ["Visa", "master Card", "paiement_en_ligne"],
   MOBILE_WALLET: ["zeyna", "mynita", "amana"],
   MOBILE_MONEY: ["Mobile Money"],
   CASH_ON_DELIVERY: ["payé à la livraison"],
@@ -1484,6 +1484,8 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
 
   const getPaymentDescription = () => {
     switch (selectedPayment) {
+      case "paiement_en_ligne":
+        return "Paiement sécurisé en ligne. Carte bancaire (Visa, Mastercard), Mobile Money, MyNita et Amanata acceptés. Vous serez redirigé vers notre page de paiement sécurisée.";
       case "master Card":
         return "Paiement sécurisé immédiat. Vos données sont chiffrées.";
       case "Visa":
@@ -1531,275 +1533,331 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
         text={message?.length > 0 ? message : undefined}
         loading={submitStatus.loading}
       >
-        <div className="min-h-screen flex justify-center items-center">
-          <div className="container rounded-lg p-2 overflow-hidden">
+        <div className="min-h-screen bg-gray-50/60 py-4 lg:py-8 px-4 pb-28 lg:pb-8">
+          <div className="max-w-5xl mx-auto">
+
+            {/* Alerts */}
             {submitStatus.error && (
-              <div className={`mb-4 p-1 rounded bg-red-100 text-red-700`}>
-                <p className="flex items-center">
-                  <AlertCircle className="mr-2 h-4 w-4" />
-                  {submitStatus.error}
-                </p>
+              <div className="mb-5 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <p className="text-sm">{submitStatus.error}</p>
               </div>
             )}
             {submitStatus.success && (
-              <div className={`mb-4 p-1 rounded bg-green-100 text-green-700`}>
-                <p className="flex items-center">
-                  <Check className="mr-2 h-4 w-4" />
-                  Commande enregistrée avec succès
-                </p>
+              <div className="mb-5 p-3 rounded-xl bg-green-50 border border-green-200 text-green-700 flex items-center gap-2">
+                <Check className="h-4 w-4 flex-shrink-0" />
+                <p className="text-sm">Commande enregistrée avec succès</p>
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 sm:grid-cols-1 gap-4 mx-auto">
-              {/* Première carte - Informations de livraison */}
-              <div className="w-full p-4 sm:p-6 md:p-3 transition-all duration-300">
-                <h2 className="text-xl sm:text-2xl font-semibold text-[#B17236] border-b-2 border-[#30A08B] pb-2 mb-4">
-                  Informations de livraison
-                </h2>
-                <div className="space-y-4">
-                  <div>
-                    <label
-                      htmlFor="name"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Nom complet
-                    </label>
-                    <input
-                      type="text"
-                      id="name"
-                      name="name"
-                      value={deliveryInfo.name}
-                      onChange={handleDeliveryChange}
-                      className="mt-1 p-3 border border-gray-300 rounded-lg w-full"
-                      placeholder="Votre nom complet"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="email"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={deliveryInfo.email}
-                      onChange={handleDeliveryChange}
-                      className="mt-1 p-3 border border-gray-300 rounded-lg w-full"
-                      placeholder="Votre email"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="numero"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Numéro de téléphone
-                    </label>
-                    <div className="mt-1 flex">
-                      {/* Sélecteur d'indicatif de pays */}
-                      <select
-                        name="countryCode"
-                        value={deliveryInfo.countryCode}
-                        onChange={handleDeliveryChange}
-                        className="p-3 border border-gray-300 rounded-l-lg bg-gray-50 text-sm w-32"
-                      >
-                        {COUNTRY_CODES.map((country) => (
-                          <option key={country.code} value={country.code}>
-                            {country.flag} {country.code}
-                          </option>
-                        ))}
-                      </select>
-                      {/* Champ de numéro */}
-                      <input
-                        type="tel"
-                        id="numero"
-                        name="numero"
-                        value={deliveryInfo.numero}
-                        onChange={handleDeliveryChange}
-                        className="flex-1 p-3 border border-l-0 border-gray-300 rounded-r-lg"
-                        placeholder="87727501"
-                        maxLength={15}
-                      />
-                    </div>
-                    {/* Affichage du numéro complet */}
-                    {deliveryInfo.numero && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        Numéro complet: {deliveryInfo.countryCode}{deliveryInfo.numero}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="region"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Région {selectedZone && "(sélectionnée dans le panier)"}
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        id="region"
-                        name="region"
-                        value={deliveryInfo.region}
-                        onChange={handleDeliveryChange}
-                        readOnly={!!selectedZone}
-                        className={`mt-1 p-3 border border-gray-300 rounded-lg w-full ${selectedZone
-                          ? 'bg-gray-100 cursor-not-allowed text-gray-600'
-                          : 'bg-white'
-                          }`}
-                        placeholder="Votre région"
-                      />
-                      {selectedZone && (
-                        <button
-                          type="button"
-                          onClick={handleReturnToCart}
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs bg-[#30A08B] text-white px-2 py-1 rounded hover:bg-[#30A08B]/80 transition-colors"
-                        >
-                          Modifier
-                        </button>
-                      )}
-                    </div>
-                    {selectedZone && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        Zone sélectionnée: {
-                          selectedZone.fullPath ||
-                          (selectedZone.country && selectedZone.region && selectedZone.name
-                            ? `${selectedZone.country} > ${selectedZone.region} > ${selectedZone.name}`
-                            : selectedZone.name)
-                        }
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="quartier"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Quartier
-                    </label>
-                    <input
-                      type="text"
-                      id="quartier"
-                      name="quartier"
-                      value={deliveryInfo.quartier}
-                      onChange={handleDeliveryChange}
-                      className="mt-1 p-3 border border-gray-300 rounded-lg w-full"
-                      placeholder="Votre quartier ou précision d'adresse"
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="description"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Instructions de livraison
-                    </label>
-                    <textarea
-                      id="description"
-                      name="description"
-                      value={deliveryInfo.description}
-                      onChange={handleDeliveryChange}
-                      rows={3}
-                      className="mt-1 p-3 border border-gray-300 rounded-lg w-full"
-                      placeholder="Instructions supplémentaires pour la livraison"
-                    ></textarea>
-                  </div>
+            {/* En-tête mobile */}
+            <div className="lg:hidden mb-4">
+              <h1 className="text-lg font-bold text-gray-800">Finaliser la commande</h1>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-1.5 text-xs text-[#30A08B] font-medium">
+                  <span className="w-5 h-5 rounded-full bg-[#30A08B] text-white flex items-center justify-center text-[10px] font-bold">1</span>
+                  Livraison
+                </div>
+                <div className="flex-1 h-px bg-gray-200" />
+                <div className="flex items-center gap-1.5 text-xs text-[#B17236] font-medium">
+                  <span className="w-5 h-5 rounded-full bg-[#B17236] text-white flex items-center justify-center text-[10px] font-bold">2</span>
+                  Paiement
                 </div>
               </div>
-
-              {/* Points Baobab */}
-              <PointsRedeemWidget
-                orderAmountFcfa={orderSubtotal}
-                initialPoints={pointsToUse}
-                onPointsChange={(pts, disc) => {
-                  setPointsToUse(pts);
-                  setPointsDiscount(disc);
-                }}
-              />
-
-              {/* Deuxième carte - Méthode de paiement */}
-              <PaiementPage
-                selectedPayment={selectedPayment}
-                setSelectedPayment={setSelectedPayment}
-                cardDetails={cardDetails}
-                setCardDetails={setCardDetails}
-                mobileDetails={mobileDetails}
-                setMobileDetails={setMobileDetails}
-                submitStatus={submitStatus}
-                setSubmitStatus={setSubmitStatus}
-                onSubmit={onSubmit}
-                setOnSubmit={setOnSubmit}
-                validatePaymentInfo={validatePaymentInfo}
-                handlePress={handlePress}
-                handlePaymentSubmit={handlePaymentSubmit}
-                getPaymentDescription={getPaymentDescription}
-                formatCardNumber={formatCardNumber}
-              />
             </div>
 
-            <motion.button
-              onClick={handlePaymentSubmit}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="mt-6 bg-[#30A08B] text-white p-3 rounded-lg w-full shadow-md hover:bg-opacity-90 transition-all duration-300"
-            >
-              {submitStatus.loading ? (
-                <div style={spinnerStyle} className="animate-spin"></div>
-              ) : (
-                <span>
-                  Confirmer la commande{" "}
-                  {pointsDiscount > 0 ? (
-                    <>
-                      <span className="line-through opacity-60">{orderTotal.toLocaleString('fr-FR')}</span>{" "}
-                      {(orderTotal - pointsDiscount).toLocaleString('fr-FR')}
-                    </>
-                  ) : orderTotal.toLocaleString('fr-FR')}{" "}
-                  FCFA
-                </span>
-              )}
-            </motion.button>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
 
-            {paiementProduit && (
-              <div className="min-h-screen flex justify-center items-center bg-black bg-opacity-10 fixed inset-0 z-50">
-                <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm mx-auto text-center">
-                  <div className="flex justify-center mb-4">
-                    <Check className="h-12 w-12 text-green-600 animate-bounce" />
+              {/* ── Barre latérale — en tête sur mobile (order-first), à droite sur desktop ── */}
+              <div className="flex flex-col gap-3 lg:gap-4 order-first lg:order-last lg:col-start-3 lg:row-start-1 lg:row-span-2">
+
+                {/* Résumé de la commande */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 lg:p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <ShoppingCart className="h-4 w-4 text-[#30A08B]" />
+                    <h3 className="text-sm font-semibold text-gray-700">Résumé de la commande</h3>
                   </div>
-                  <h2 className="text-2xl font-semibold text-green-800 mb-2">
-                    Commande confirmée !
-                  </h2>
-                  <p className="text-gray-700 mb-4">
-                    Merci pour votre commande. Vous recevrez bientôt un e-mail
-                    de confirmation.
-                  </p>
-                  <button
-                    onClick={() => router.push("/commandes")}
-                    className="w-full bg-[#30A08B] text-white py-2 rounded-lg font-semibold hover:bg-[#30A08B]/90 transition duration-200"
-                  >
-                    Mes commandes
-                  </button>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between text-gray-500">
+                      <span>Sous-total</span>
+                      <span className="font-medium text-gray-700">{(orderSubtotal ?? orderTotal)?.toLocaleString('fr-FR')} FCFA</span>
+                    </div>
+                    {pointsDiscount > 0 && (
+                      <div className="flex justify-between text-[#30A08B]">
+                        <span className="flex items-center gap-1">🌳 Réduction Baobab</span>
+                        <span className="font-medium">−{pointsDiscount.toLocaleString('fr-FR')} FCFA</span>
+                      </div>
+                    )}
+                    <div className="border-t border-dashed border-gray-100 pt-2 flex justify-between items-center">
+                      <span className="font-semibold text-gray-800">Total à payer</span>
+                      <span className="font-bold text-[#B17236] text-lg">{(orderTotal - pointsDiscount).toLocaleString('fr-FR')} <span className="text-sm font-semibold">FCFA</span></span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Points Baobab */}
+                <PointsRedeemWidget
+                  orderAmountFcfa={orderSubtotal}
+                  initialPoints={pointsToUse}
+                  onPointsChange={(pts, disc) => {
+                    setPointsToUse(pts);
+                    setPointsDiscount(disc);
+                  }}
+                />
+
+                {/* Sécurité — desktop uniquement */}
+                <div className="hidden lg:block bg-gray-50 rounded-2xl border border-gray-100 p-4 text-center">
+                  <div className="flex items-center justify-center gap-2 text-gray-400 mb-1">
+                    <Shield className="h-4 w-4" />
+                    <span className="text-xs font-semibold">Paiement 100% sécurisé</span>
+                  </div>
+                  <p className="text-xs text-gray-400">Vos données sont chiffrées et protégées</p>
                 </div>
               </div>
-            )}
+
+              {/* ── Colonne principale (2/3) ── */}
+              <div className="lg:col-span-2 flex flex-col gap-4 lg:gap-5">
+
+                {/* Étape 1 — Livraison */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#30A08B] to-[#269078] flex items-center justify-center text-white text-sm font-bold shadow-sm">1</div>
+                    <h2 className="text-base font-semibold text-gray-800">Informations de livraison</h2>
+                    <div className="flex-1 h-px bg-gradient-to-r from-[#30A08B]/20 to-transparent" />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Nom */}
+                    <div className="sm:col-span-2">
+                      <label htmlFor="name" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Nom complet</label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300 pointer-events-none" />
+                        <input
+                          type="text" id="name" name="name"
+                          value={deliveryInfo.name} onChange={handleDeliveryChange}
+                          className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#30A08B]/30 focus:border-[#30A08B] focus:bg-white transition-all duration-200 placeholder:text-gray-300"
+                          placeholder="Votre nom complet"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Email */}
+                    <div>
+                      <label htmlFor="email" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Email</label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300 pointer-events-none" />
+                        <input
+                          type="email" id="email" name="email"
+                          value={deliveryInfo.email} onChange={handleDeliveryChange}
+                          className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#30A08B]/30 focus:border-[#30A08B] focus:bg-white transition-all duration-200 placeholder:text-gray-300"
+                          placeholder="Votre email"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Téléphone */}
+                    <div>
+                      <label htmlFor="numero" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Téléphone</label>
+                      <div className="flex">
+                        <select
+                          name="countryCode" value={deliveryInfo.countryCode} onChange={handleDeliveryChange}
+                          className="py-3 px-2 bg-gray-50 border border-gray-200 border-r-0 rounded-l-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#30A08B]/30 focus:border-[#30A08B] w-28"
+                        >
+                          {COUNTRY_CODES.map((c) => (
+                            <option key={c.code} value={c.code}>{c.flag} {c.code}</option>
+                          ))}
+                        </select>
+                        <input
+                          type="tel" id="numero" name="numero"
+                          value={deliveryInfo.numero} onChange={handleDeliveryChange}
+                          className="flex-1 pl-4 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-r-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#30A08B]/30 focus:border-[#30A08B] focus:bg-white transition-all duration-200 placeholder:text-gray-300"
+                          placeholder="87727501" maxLength={15}
+                        />
+                      </div>
+                      {deliveryInfo.numero && (
+                        <p className="text-xs text-gray-400 mt-1 pl-1">{deliveryInfo.countryCode}{deliveryInfo.numero}</p>
+                      )}
+                    </div>
+
+                    {/* Région */}
+                    <div>
+                      <label htmlFor="region" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+                        Région {selectedZone && <span className="normal-case text-[#30A08B] font-normal">(depuis le panier)</span>}
+                      </label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300 pointer-events-none" />
+                        <input
+                          type="text" id="region" name="region"
+                          value={deliveryInfo.region} onChange={handleDeliveryChange}
+                          readOnly={!!selectedZone}
+                          className={`w-full pl-10 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#30A08B]/30 focus:border-[#30A08B] focus:bg-white transition-all duration-200 placeholder:text-gray-300 ${selectedZone ? 'pr-20 cursor-not-allowed text-gray-500' : 'pr-4'}`}
+                          placeholder="Votre région"
+                        />
+                        {selectedZone && (
+                          <button
+                            type="button" onClick={handleReturnToCart}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-xs bg-[#30A08B] text-white px-2.5 py-1 rounded-lg hover:bg-[#30A08B]/80 transition-colors"
+                          >
+                            Modifier
+                          </button>
+                        )}
+                      </div>
+                      {selectedZone && (
+                        <p className="text-xs text-gray-400 mt-1 pl-1">
+                          {selectedZone.fullPath || (selectedZone.country && selectedZone.region && selectedZone.name ? `${selectedZone.country} > ${selectedZone.region} > ${selectedZone.name}` : selectedZone.name)}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Quartier */}
+                    <div>
+                      <label htmlFor="quartier" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Quartier</label>
+                      <div className="relative">
+                        <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300 pointer-events-none" />
+                        <input
+                          type="text" id="quartier" name="quartier"
+                          value={deliveryInfo.quartier} onChange={handleDeliveryChange}
+                          className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#30A08B]/30 focus:border-[#30A08B] focus:bg-white transition-all duration-200 placeholder:text-gray-300"
+                          placeholder="Votre quartier ou adresse précise"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Instructions */}
+                    <div className="sm:col-span-2">
+                      <label htmlFor="description" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+                        Instructions <span className="normal-case font-normal text-gray-400">(optionnel)</span>
+                      </label>
+                      <div className="relative">
+                        <MessageSquare className="absolute left-3 top-3.5 h-4 w-4 text-gray-300 pointer-events-none" />
+                        <textarea
+                          id="description" name="description"
+                          value={deliveryInfo.description} onChange={handleDeliveryChange}
+                          rows={3}
+                          className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#30A08B]/30 focus:border-[#30A08B] focus:bg-white transition-all duration-200 placeholder:text-gray-300 resize-none"
+                          placeholder="Instructions supplémentaires pour la livraison"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Étape 2 — Paiement */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
+                  <div className="flex items-center gap-3 px-6 pt-6">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#B17236] to-[#9A6130] flex items-center justify-center text-white text-sm font-bold shadow-sm">2</div>
+                    <h2 className="text-base font-semibold text-gray-800">Méthode de paiement</h2>
+                    <div className="flex-1 h-px bg-gradient-to-r from-[#B17236]/20 to-transparent" />
+                  </div>
+                  <PaiementPage
+                    selectedPayment={selectedPayment}
+                    setSelectedPayment={setSelectedPayment}
+                    cardDetails={cardDetails}
+                    setCardDetails={setCardDetails}
+                    mobileDetails={mobileDetails}
+                    setMobileDetails={setMobileDetails}
+                    submitStatus={submitStatus}
+                    setSubmitStatus={setSubmitStatus}
+                    onSubmit={onSubmit}
+                    setOnSubmit={setOnSubmit}
+                    validatePaymentInfo={validatePaymentInfo}
+                    handlePress={handlePress}
+                    handlePaymentSubmit={handlePaymentSubmit}
+                    getPaymentDescription={getPaymentDescription}
+                    formatCardNumber={formatCardNumber}
+                  />
+                </div>
+
+                {/* Bouton de confirmation — desktop uniquement */}
+                <motion.button
+                  onClick={handlePaymentSubmit}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  disabled={submitStatus.loading}
+                  className="hidden lg:flex w-full py-4 rounded-2xl bg-gradient-to-r from-[#30A08B] to-[#269078] text-white font-semibold text-base shadow-lg shadow-[#30A08B]/20 hover:shadow-xl hover:shadow-[#30A08B]/30 transition-all duration-300 items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {submitStatus.loading ? (
+                    <div style={spinnerStyle} className="animate-spin" />
+                  ) : (
+                    <>
+                      <Lock className="h-4 w-4" />
+                      <span>
+                        Confirmer la commande —{" "}
+                        {pointsDiscount > 0 ? (
+                          <>
+                            <span className="line-through opacity-60 font-normal">{orderTotal.toLocaleString('fr-FR')}</span>{" "}
+                            {(orderTotal - pointsDiscount).toLocaleString('fr-FR')}
+                          </>
+                        ) : orderTotal.toLocaleString('fr-FR')}{" "}
+                        FCFA
+                      </span>
+                    </>
+                  )}
+                </motion.button>
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* ── Sticky bottom bar — mobile uniquement ── */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] px-4 py-3 safe-area-inset-bottom">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">Total à payer</p>
+              <p className="text-xl font-bold text-[#B17236] leading-tight">
+                {(orderTotal - pointsDiscount).toLocaleString('fr-FR')}{" "}
+                <span className="text-sm font-semibold">FCFA</span>
+              </p>
+            </div>
+            <motion.button
+              onClick={handlePaymentSubmit}
+              whileTap={{ scale: 0.97 }}
+              disabled={submitStatus.loading}
+              className="flex-shrink-0 bg-gradient-to-r from-[#30A08B] to-[#269078] text-white font-semibold text-sm px-5 py-3.5 rounded-xl shadow-lg shadow-[#30A08B]/25 flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed active:opacity-90 transition-all"
+            >
+              {submitStatus.loading ? (
+                <div style={spinnerStyle} className="animate-spin" />
+              ) : (
+                <>
+                  <Lock className="h-4 w-4" />
+                  Confirmer
+                </>
+              )}
+            </motion.button>
+          </div>
+        </div>
+
+        {/* Modale succès */}
+        {paiementProduit && (
+          <div className="min-h-screen flex justify-center items-center bg-black/40 backdrop-blur-sm fixed inset-0 z-50">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm mx-4 text-center"
+            >
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Check className="h-8 w-8 text-green-600" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-800 mb-2">Commande confirmée !</h2>
+              <p className="text-gray-500 text-sm mb-6">Merci pour votre commande. Vous recevrez bientôt un e-mail de confirmation.</p>
+              <button
+                onClick={() => router.push("/commandes")}
+                className="w-full bg-gradient-to-r from-[#30A08B] to-[#269078] text-white py-3 rounded-xl font-semibold hover:opacity-90 transition duration-200"
+              >
+                Voir mes commandes
+              </button>
+            </motion.div>
+          </div>
+        )}
       </LoadingIndicator>
       <SecurityCodeModal
         isOpen={securityCodeModal.isOpen}
         onClose={() => {
           setSecurityCodeModal({ isOpen: false, code: "", error: "" });
           setHandleSecuritySubmit(null);
-          setSubmitStatus({
-            loading: false,
-            error: "Paiement annulé",
-            success: false,
-          });
+          setSubmitStatus({ loading: false, error: "Paiement annulé", success: false });
         }}
-        onSubmit={handleSecuritySubmit || (() => { })}
+        onSubmit={handleSecuritySubmit || (() => {})}
         error={securityCodeModal.error}
       />
     </>

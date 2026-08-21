@@ -56,7 +56,7 @@ const HeaderMobile: React.FC<HeaderMobileProps> = ({
   const fetchUserLikes = async () => {
     try {
       const response = await axios.get(`${BackendUrl}/likes/user/${userId}`);
-      const likedIds = new Set(response?.data?.data?.map((like: any) => like.produit._id));
+      const likedIds = new Set(response?.data?.data?.filter((like: any) => like.produit?._id).map((like: any) => like.produit._id));
       setLikedProducts(likedIds);
     } catch (error) {
       console.error("Erreur lors du chargement des likes:", error);

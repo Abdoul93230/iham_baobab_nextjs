@@ -231,50 +231,77 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
       >
         <div className="max-w-7xl mx-auto px-3 sm:px-5">
 
-          {/* ── Mobile: Row 1 — Hamburger · Logo · Cart ── */}
-          <div className="md:hidden flex items-center justify-between py-2 gap-2">
-            <button
-              onClick={() => setIsMobileMenuOpen(true)}
-              className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
-              aria-label="Menu"
-            >
-              <Menu size={22} />
-            </button>
+          {/* ── Mobile Header ── */}
+          <div className="md:hidden">
 
-            <div onClick={() => { triggerNavProgress(); router.push("/"); }} className="flex-1 cursor-pointer flex justify-center">
-              <Image
-                src="/LogoText.png"
-                alt="IhamBaobab"
-                width={52}
-                height={48}
-                className="object-contain"
-                priority
-              />
+            {/* Accent line */}
+            <div className="h-[3px] -mx-3 bg-gradient-to-r from-[#30A08B] via-[#B2905F] to-[#B17236]" />
+
+            {/* Row 1: Menu · Logo · Actions */}
+            <div className="flex items-center justify-between py-2 gap-2">
+
+              {/* Hamburger */}
+              <button
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-gray-500 active:bg-gray-100 transition-colors"
+                aria-label="Menu"
+              >
+                <Menu size={21} />
+              </button>
+
+              {/* Logo */}
+              <div onClick={() => { triggerNavProgress(); router.push("/"); }} className="flex-1 flex justify-center cursor-pointer">
+                <div style={{ position: 'relative', width: 120, height: 52, overflow: 'hidden' }}>
+                  <Image src="/LogoText.png" alt="IhamBaobab" fill style={{ objectFit: 'cover', objectPosition: '45% 50%' }} priority />
+                </div>
+              </div>
+
+              {/* Actions: Heart + Cart */}
+              <div className="flex items-center gap-0.5 flex-shrink-0">
+                <button
+                  onClick={() => { triggerNavProgress(); router.push("/like-produit"); }}
+                  className="relative w-9 h-9 rounded-xl flex items-center justify-center text-gray-500 active:bg-rose-50 transition-colors"
+                  aria-label="Favoris"
+                >
+                  <Heart size={20} />
+                  {likedProducts.length > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none">
+                      {likedProducts.length > 9 ? "9+" : likedProducts.length}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => { triggerNavProgress(); router.push("/Panier"); }}
+                  className="relative w-9 h-9 rounded-xl flex items-center justify-center text-gray-500 active:bg-[#f0faf7] transition-colors"
+                  aria-label="Panier"
+                >
+                  <ShoppingCart size={20} />
+                  {panierCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-[#30A08B] text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none">
+                      {panierCount > 9 ? "9+" : panierCount}
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
 
-            <IconAction
-              icon={ShoppingCart}
-              badge={panierCount}
-              onClick={() => { triggerNavProgress(); router.push("/Panier"); }}
-              ariaLabel="Panier"
-            />
-          </div>
+            {/* Row 2: Search */}
+            <div className="pb-3">
+              <SearchBar onSearch={(q) => { triggerNavProgress(); router.push(`/Search?q=${encodeURIComponent(q)}`); }} />
+            </div>
 
-          {/* ── Mobile: Row 2 — Full-width search ── */}
-          <div className="md:hidden pb-2">
-            <SearchBar onSearch={(q) => { triggerNavProgress(); router.push(`/Search?q=${encodeURIComponent(q)}`); }} />
           </div>
 
           {/* ── Desktop: Single row — Logo · Search · Actions ── */}
-          <div className="hidden md:flex items-center gap-3 py-2.5">
+          <div className="hidden md:flex items-center gap-3 py-1.5">
             {/* Logo */}
-            <div onClick={() => { triggerNavProgress(); router.push("/"); }} className="flex-shrink-0 cursor-pointer">
+            <div onClick={() => { triggerNavProgress(); router.push("/"); }} style={{ position: 'relative', width: 140, height: 58, overflow: 'hidden' }}>
               <Image
                 src="/LogoText.png"
                 alt="IhamBaobab"
-                width={56}
-                height={52}
-                className="object-contain"
+                fill
+                style={{ objectFit: 'cover', objectPosition: '45% 50%' }}
                 priority
               />
             </div>

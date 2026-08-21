@@ -52,64 +52,15 @@ const PaiementPage: React.FC<PaiementPageProps> = ({
 
   const paymentMethods = [
     {
-      id: "Visa",
-      name: "Visa",
-      category: "Carte",
-      icon: "💳",
-      color: "from-blue-600 to-blue-800",
-      bgColor: "bg-blue-50",
-      borderColor: "border-blue-200",
-      textColor: "text-blue-700"
-    },
-    {
-      id: "master Card",
-      name: "MasterCard",
-      category: "Carte",
-      icon: "💳",
-      color: "from-red-500 to-red-700",
-      bgColor: "bg-red-50",
-      borderColor: "border-red-200",
-      textColor: "text-red-700"
-    },
-    {
-      id: "Mobile Money",
-      name: "Mobile Money",
-      category: "Mobile",
-      icon: "📱",
-      color: "from-green-500 to-green-700",
-      bgColor: "bg-green-50",
-      borderColor: "border-green-200",
-      textColor: "text-green-700"
-    },
-    // {
-    //   id: "zeyna",
-    //   name: "Zeyna",
-    //   category: "Wallet",
-    //   icon: "💰",
-    //   color: "from-purple-500 to-purple-700",
-    //   bgColor: "bg-purple-50",
-    //   borderColor: "border-purple-200", 
-    //   textColor: "text-purple-700"
-    // },
-    {
-      id: "mynita",
-      name: "MyNita",
-      category: "Wallet",
-      icon: "💰",
-      color: "from-indigo-500 to-indigo-700",
-      bgColor: "bg-indigo-50",
-      borderColor: "border-indigo-200",
-      textColor: "text-indigo-700"
-    },
-    {
-      id: "amana",
-      name: "Amanata",
-      category: "Wallet",
-      icon: "💰",
-      color: "from-yellow-500 to-yellow-700",
-      bgColor: "bg-yellow-50",
-      borderColor: "border-yellow-200",
-      textColor: "text-yellow-700"
+      id: "paiement_en_ligne",
+      name: "Paiement en ligne",
+      category: "En ligne",
+      icon: "🌐",
+      color: "from-[#30A08B] to-[#B17236]",
+      bgColor: "bg-teal-50",
+      borderColor: "border-teal-300",
+      textColor: "text-teal-700",
+      subLabels: ["Visa", "Mastercard", "Mobile Money", "MyNita", "Amanata"],
     },
     {
       id: "payé à la livraison",
@@ -119,7 +70,8 @@ const PaiementPage: React.FC<PaiementPageProps> = ({
       color: "from-orange-500 to-orange-700",
       bgColor: "bg-orange-50",
       borderColor: "border-orange-200",
-      textColor: "text-orange-700"
+      textColor: "text-orange-700",
+      subLabels: [],
     },
     {
       id: "paiement_assiste",
@@ -129,9 +81,9 @@ const PaiementPage: React.FC<PaiementPageProps> = ({
       color: "from-blue-500 to-blue-700",
       bgColor: "bg-blue-50",
       borderColor: "border-blue-200",
-      textColor: "text-blue-700"
-    }
-
+      textColor: "text-blue-700",
+      subLabels: [],
+    },
   ];
 
   const handleCardChange = (field: string, value: string) => {
@@ -287,70 +239,83 @@ const PaiementPage: React.FC<PaiementPageProps> = ({
   };
 
   return (
-    <div className="w-full p-4">
-      {/* Header */}
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold bg-gradient-to-r from-[#B17236] to-[#30A08B] bg-clip-text text-transparent mb-1">
-          Méthode de paiement
-        </h2>
-        <p className="text-sm text-gray-500">Sélectionnez votre mode de paiement</p>
-      </div>
+    <div className="w-full p-4 sm:p-6 pt-4">
 
-      {/* Payment Methods Grid - Petites cartes compactes */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
-        {paymentMethods.map((method) => (
-          <div
-            key={method.id}
-            onClick={() => handlePress(method.id)}
-            className={`relative p-4 rounded-xl cursor-pointer transition-all duration-300 transform hover:scale-105 border-2 ${selectedPayment === method.id
-                ? `${method.borderColor} shadow-lg`
-                : "border-gray-200 hover:border-gray-300"
+      {/* ── Cartes de paiement ── */}
+      {/* Mobile : cartes horizontales empilées | Desktop : grille 3 colonnes */}
+      <div className="flex flex-col sm:grid sm:grid-cols-3 gap-2 sm:gap-3 mb-5">
+        {paymentMethods.map((method) => {
+          const selected = selectedPayment === method.id;
+          return (
+            <div
+              key={method.id}
+              onClick={() => handlePress(method.id)}
+              className={`relative rounded-xl cursor-pointer transition-all duration-200 border-2 active:scale-[0.98] ${
+                selected
+                  ? `${method.borderColor} shadow-md`
+                  : "border-gray-200 hover:border-gray-300"
               }`}
-          >
-            {/* Selection Indicator */}
-            {selectedPayment === method.id && (
-              <div className="absolute -top-1 -right-1 w-5 h-5 bg-[#30A08B] rounded-full flex items-center justify-center">
-                <Check className="h-3 w-3 text-white" />
+            >
+              {/* Fond coloré quand sélectionné */}
+              {selected && (
+                <div className={`absolute inset-0 ${method.bgColor} opacity-20 rounded-xl pointer-events-none`} />
+              )}
+
+              {/* ── Layout mobile : horizontal ── */}
+              <div className="relative flex sm:hidden items-center gap-3 p-3.5">
+                <div className={`flex-shrink-0 w-11 h-11 rounded-xl bg-gradient-to-br ${method.color} flex items-center justify-center text-xl shadow-sm`}>
+                  {method.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-gray-800 text-sm">{method.name}</h3>
+                  {method.subLabels && method.subLabels.length > 0 ? (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {method.subLabels.map((label) => (
+                        <span key={label} className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">{label}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 mt-0.5">{method.category}</p>
+                  )}
+                </div>
+                {selected
+                  ? <div className="flex-shrink-0 w-6 h-6 bg-[#30A08B] rounded-full flex items-center justify-center"><Check className="h-3.5 w-3.5 text-white" /></div>
+                  : <div className="flex-shrink-0 w-6 h-6 rounded-full border-2 border-gray-200" />
+                }
               </div>
-            )}
 
-            {/* Background when selected */}
-            {selectedPayment === method.id && (
-              <div className={`absolute inset-0 ${method.bgColor} opacity-20 rounded-xl`}></div>
-            )}
-
-            <div className="relative text-center">
-              {/* Icon */}
-              <div className={`inline-flex p-2 rounded-lg bg-gradient-to-br ${method.color} text-white text-lg mb-2`}>
-                {method.icon}
+              {/* ── Layout desktop : vertical centré ── */}
+              <div className="relative hidden sm:flex sm:flex-col items-center text-center p-4">
+                {selected && (
+                  <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#30A08B] rounded-full flex items-center justify-center shadow-sm">
+                    <Check className="h-3 w-3 text-white" />
+                  </div>
+                )}
+                <div className={`p-2.5 rounded-xl bg-gradient-to-br ${method.color} text-white text-xl mb-2.5 shadow-sm`}>
+                  {method.icon}
+                </div>
+                <h3 className="font-semibold text-gray-800 text-sm leading-tight">{method.name}</h3>
+                <p className="text-xs text-gray-400 mt-0.5 mb-1.5">{method.category}</p>
+                {method.subLabels && method.subLabels.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-1">
+                    {method.subLabels.map((label) => (
+                      <span key={label} className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">{label}</span>
+                    ))}
+                  </div>
+                )}
               </div>
-
-              {/* Name */}
-              <h3 className="font-medium text-gray-800 text-sm leading-tight">{method.name}</h3>
-              <p className="text-xs text-gray-500 mt-1">{method.category}</p>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* Description */}
+      {/* Description de la méthode sélectionnée */}
       {selectedPayment && (
-        <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-          <div className="flex items-start">
-            <Info className="h-4 w-4 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
-            <p className="text-sm text-blue-800">{getPaymentDescription()}</p>
+        <div className="mb-4 p-3.5 bg-[#30A08B]/5 rounded-xl border border-[#30A08B]/20">
+          <div className="flex items-start gap-2">
+            <Info className="h-4 w-4 text-[#30A08B] mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-gray-700 leading-relaxed">{getPaymentDescription()}</p>
           </div>
-        </div>
-      )}
-
-      {/* Payment Form */}
-      {/* {renderPaymentForm()} */}
-
-      {/* Security Note */}
-      {selectedPayment && (
-        <div className="mt-4 flex items-center justify-center text-xs text-gray-500">
-          <Shield className="h-3 w-3 mr-1" />
-          Paiement 100% sécurisé
         </div>
       )}
     </div>

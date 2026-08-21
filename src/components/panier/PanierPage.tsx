@@ -267,7 +267,7 @@ const PanierPage: React.FC = () => {
       return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedZone?._id]);
+  }, [selectedZone?._id, articles.length]);
 
   // Auto-apply promo code from localStorage
   const articlesHash = useMemo(

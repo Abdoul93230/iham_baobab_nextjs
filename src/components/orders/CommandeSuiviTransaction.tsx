@@ -57,6 +57,7 @@ interface Order {
   pointsDiscount?: number;
   codePromo?: string;
   dateValidation?: string;
+  paymentDetails?: { failureReason?: string | null };
 }
 
 interface ShippingAddress {
@@ -357,7 +358,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
     if (!order) return "unknown";
 
     // Si le statut de la transaction est failed, on considère la commande comme échouée
-    if (liveStatus === "failed") {
+    if (liveStatus === "failed" || order.statusPayment === "échec") {
       return "failed";
     }
 
@@ -880,28 +881,36 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                     <p className="text-red-800 font-medium">
                       {orderType === "failed" ? "Paiement non traité" : "Commande annulée"}
                     </p>
-                    <p className="text-red-600 text-sm mt-1">
-                      {orderType === "failed" ?
-                        "Le paiement n'a pas pu être traité. Les raisons possibles incluent :" :
-                        "Cette commande a été annulée. Les raisons possibles incluent :"}
-                    </p>
-                    <ul className="text-red-600 text-sm mt-2 list-disc list-inside space-y-1">
-                      {orderType === "failed" ? (
-                        <>
-                          <li>Fonds insuffisants sur le compte</li>
-                          <li>Carte expirée ou invalide</li>
-                          <li>Problème de réseau durant la transaction</li>
-                          <li>Limites de transaction dépassées</li>
-                        </>
-                      ) : (
-                        <>
-                          <li>Produit non disponible en stock</li>
-                          <li>Problème de livraison dans votre zone</li>
-                          <li>Annulation à la demande du client</li>
-                          <li>Problème de paiement</li>
-                        </>
-                      )}
-                    </ul>
+                    {orderType === "failed" && order?.paymentDetails?.failureReason ? (
+                      <p className="text-red-700 text-sm mt-2 font-medium bg-red-100 rounded px-3 py-2">
+                        {order.paymentDetails.failureReason}
+                      </p>
+                    ) : (
+                      <>
+                        <p className="text-red-600 text-sm mt-1">
+                          {orderType === "failed" ?
+                            "Le paiement n'a pas pu être traité. Les raisons possibles incluent :" :
+                            "Cette commande a été annulée. Les raisons possibles incluent :"}
+                        </p>
+                        <ul className="text-red-600 text-sm mt-2 list-disc list-inside space-y-1">
+                          {orderType === "failed" ? (
+                            <>
+                              <li>Fonds insuffisants sur le compte</li>
+                              <li>Carte expirée ou invalide</li>
+                              <li>Problème de réseau durant la transaction</li>
+                              <li>Limites de transaction dépassées</li>
+                            </>
+                          ) : (
+                            <>
+                              <li>Produit non disponible en stock</li>
+                              <li>Problème de livraison dans votre zone</li>
+                              <li>Annulation à la demande du client</li>
+                              <li>Problème de paiement</li>
+                            </>
+                          )}
+                        </ul>
+                      </>
+                    )}
                     <div className="mt-4 p-3 bg-white rounded border border-red-200">
                       <p className="text-red-800 text-sm font-medium">
                         💡 Astuce : Vous pouvez {orderType === "failed" ? "réessayer le paiement" : "relancer cette commande"} en cliquant sur le bouton correspondant ci-dessus.

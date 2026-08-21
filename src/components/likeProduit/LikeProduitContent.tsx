@@ -189,8 +189,9 @@ const LikeProduitContent = () => {
             {likedProducts
               .filter(
                 (product) =>
-                  filterCategory === "all" ||
-                  product.category === filterCategory
+                  product != null &&
+                  (filterCategory === "all" ||
+                  product.category === filterCategory)
               )
               .sort((a, b) => {
                 if (sortBy === "price") return a.price - b.price;
