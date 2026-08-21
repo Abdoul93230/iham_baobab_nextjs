@@ -7,7 +7,6 @@ import Image from "next/image";
 import { Search, SlidersHorizontal, X, ShoppingCart, Heart, ChevronDown } from "lucide-react";
 import HomeHeader from "@/components/home/HomeHeader";
 import HomeFooter from "@/components/home/HomeFooter";
-import SearchBar from "@/components/SearchBarNew";
 import { triggerNavProgress } from "@/components/NavigationProgress";
 
 function SearchResults() {
@@ -54,25 +53,20 @@ function SearchResults() {
 
       <main className="max-w-7xl mx-auto px-3 sm:px-5 py-4">
 
-        {/* Search header */}
-        <div className="mb-4">
-          <div className="max-w-xl">
-            <SearchBar onSearch={(q) => { triggerNavProgress(); router.push(`/Search?q=${encodeURIComponent(q)}`); }} />
+        {/* Résumé de la recherche */}
+        {query && (
+          <div className="flex items-center gap-2 mb-4">
+            <p className="text-sm text-gray-500">
+              <span className="font-semibold text-gray-800">{results.length}</span> résultat{results.length !== 1 ? "s" : ""} pour
+            </p>
+            <span className="flex items-center gap-1 bg-[#30A08B]/10 text-[#30A08B] font-semibold text-sm px-3 py-0.5 rounded-full">
+              "{query}"
+              <button onClick={() => router.push("/Search")} className="ml-1 hover:text-[#268070]">
+                <X size={12} />
+              </button>
+            </span>
           </div>
-          {query && (
-            <div className="flex items-center gap-2 mt-3">
-              <p className="text-sm text-gray-500">
-                <span className="font-semibold text-gray-800">{results.length}</span> résultat{results.length !== 1 ? "s" : ""} pour
-              </p>
-              <span className="flex items-center gap-1 bg-[#30A08B]/10 text-[#30A08B] font-semibold text-sm px-3 py-0.5 rounded-full">
-                "{query}"
-                <button onClick={() => router.push("/Search")} className="ml-1 hover:text-[#268070]">
-                  <X size={12} />
-                </button>
-              </span>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Filters + Sort bar */}
         <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 scrollbar-hide">
