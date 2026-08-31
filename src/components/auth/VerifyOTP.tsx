@@ -55,7 +55,8 @@ const VerifyOTP: React.FC = () => {
   const phone    = searchParams.get("phone") || "";
   const name     = searchParams.get("name")  || "";
   const refCode  = searchParams.get("refCode") || "";
-  const channel  = (searchParams.get("channel") || "sms") as "sms" | "whatsapp";
+  // const channel = (searchParams.get("channel") || "sms") as "sms" | "whatsapp"; // DÉSACTIVÉ
+  const channel = "sms" as "sms" | "whatsapp";
   const redirect = searchParams.get("redirect") || "/";
 
   const [step, setStep]         = useState<Step>("verify-otp");

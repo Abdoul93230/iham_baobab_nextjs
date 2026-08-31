@@ -460,49 +460,6 @@ const BoutiqueMain: React.FC<BoutiqueMainProps> = ({ sellerId, storeName }) => {
           </div>
         </div>
 
-        {/* ── Contact + info bar ────────────────────────────────────────── */}
-        <div className="bg-white border-b border-gray-100">
-          <div className="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center justify-center gap-4 text-xs text-gray-500">
-            {sellerInfo.address && (
-              <span className="flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-[#30A08B]" />
-                {sellerInfo.address}
-              </span>
-            )}
-            {sellerInfo.businessPhone && (
-              <a href={`tel:${sellerInfo.businessPhone}`} className="flex items-center gap-1.5 hover:text-[#30A08B]">
-                <Phone className="w-3.5 h-3.5 text-[#30A08B]" />
-                {sellerInfo.businessPhone}
-              </a>
-            )}
-            {sellerInfo.openingHours && (
-              <span className="flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-[#30A08B]" />
-                {sellerInfo.openingHours}
-              </span>
-            )}
-            <div className="flex items-center gap-2">
-              {sellerInfo.website && (
-                <a href={sellerInfo.website} target="_blank" rel="noopener noreferrer"
-                  className="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200">
-                  <Globe className="w-3.5 h-3.5 text-gray-600" />
-                </a>
-              )}
-              {sellerInfo.facebook && (
-                <a href={sellerInfo.facebook} target="_blank" rel="noopener noreferrer"
-                  className="w-7 h-7 bg-blue-50 rounded-full flex items-center justify-center hover:bg-blue-100">
-                  <Facebook className="w-3.5 h-3.5 text-blue-600" />
-                </a>
-              )}
-              {sellerInfo.instagram && (
-                <a href={sellerInfo.instagram} target="_blank" rel="noopener noreferrer"
-                  className="w-7 h-7 bg-pink-50 rounded-full flex items-center justify-center hover:bg-pink-100">
-                  <Instagram className="w-3.5 h-3.5 text-pink-600" />
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
 
         {/* ── Promotion tools ───────────────────────────────────────────── */}
         <div className="max-w-5xl mx-auto px-4 py-4">
@@ -607,96 +564,167 @@ const BoutiqueMain: React.FC<BoutiqueMainProps> = ({ sellerId, storeName }) => {
                 </div>
               )}
 
-              {/* Flash deals */}
-              {promoProducts.length > 0 && (
-                <section>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                        <Zap className="w-4 h-4 text-white" />
+              {products.length < 15 ? (
+                /* ── Petit catalogue (< 15 produits) ── */
+                <>
+                  {/* Offres flash si présentes */}
+                  {promoProducts.length > 0 && (
+                    <section>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                          <Zap className="w-4 h-4 text-white" />
+                        </div>
+                        <h2 className="font-black text-lg text-gray-800">Offres Flash</h2>
                       </div>
-                      <h2 className="font-black text-lg text-gray-800">Offres Flash</h2>
-                    </div>
-                    <button
-                      onClick={() => setActiveTab("all_items")}
-                      className="text-xs text-[#30A08B] font-semibold flex items-center gap-1 hover:underline"
-                    >
-                      Voir tout <ArrowRight className="w-3 h-3" />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {promoProducts.slice(0, 4).map((p) => (
-                      <MiniCard key={p._id} product={p} compact />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* Best sellers */}
-              {hotDeals.length > 0 && (
-                <section>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
-                        <TrendingUp className="w-4 h-4 text-white" />
+                      <div className={`grid gap-4 ${
+                        promoProducts.length === 1 ? "grid-cols-1 max-w-[200px] mx-auto"
+                        : promoProducts.length === 2 ? "grid-cols-2 max-w-sm mx-auto"
+                        : "grid-cols-2 sm:grid-cols-3"
+                      }`}>
+                        {promoProducts.map((p) => (
+                          <MiniCard key={p._id} product={p} compact />
+                        ))}
                       </div>
-                      <h2 className="font-black text-lg text-gray-800">Meilleures ventes</h2>
-                    </div>
-                    <button
-                      onClick={() => setActiveTab("all_items")}
-                      className="text-xs text-[#30A08B] font-semibold flex items-center gap-1 hover:underline"
-                    >
-                      Voir tout <ArrowRight className="w-3 h-3" />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {hotDeals.slice(0, 4).map((p) => (
-                      <MiniCard key={p._id} product={p} />
-                    ))}
-                  </div>
-                </section>
-              )}
+                    </section>
+                  )}
 
-              {/* New arrivals */}
-              {newArrivals.length > 0 && (
-                <section>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
-                        <PlayCircle className="w-4 h-4 text-white" />
+                  {/* Tous les produits — grille adaptée */}
+                  {products.length > 0 && (
+                    <section>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-gradient-to-br from-[#30A08B] to-[#1d7a6a] rounded-full flex items-center justify-center">
+                            <Package className="w-4 h-4 text-white" />
+                          </div>
+                          <h2 className="font-black text-lg text-gray-800">Nos produits</h2>
+                        </div>
+                        <span className="text-xs bg-[#30A08B]/10 text-[#30A08B] font-semibold px-2.5 py-1 rounded-full">
+                          {products.length} article{products.length > 1 ? "s" : ""}
+                        </span>
                       </div>
-                      <h2 className="font-black text-lg text-gray-800">Nouveautés</h2>
-                    </div>
-                    <button
-                      onClick={() => setActiveTab("new_arrivals")}
-                      className="text-xs text-[#30A08B] font-semibold flex items-center gap-1 hover:underline"
-                    >
-                      Voir tout <ArrowRight className="w-3 h-3" />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {newArrivals.slice(0, 4).map((p) => (
-                      <MiniCard key={p._id} product={p} />
-                    ))}
-                  </div>
-                </section>
-              )}
+                      <div className={`grid gap-4 ${
+                        products.length === 1 ? "grid-cols-1 max-w-[200px] mx-auto"
+                        : products.length === 2 ? "grid-cols-2 max-w-sm mx-auto"
+                        : products.length <= 6 ? "grid-cols-2 sm:grid-cols-3"
+                        : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4"
+                      }`}>
+                        {products.map((p) => (
+                          <MiniCard key={p._id} product={p} />
+                        ))}
+                      </div>
+                      <p className="text-center text-xs text-gray-400 mt-6 italic">
+                        De nouveaux produits arrivent bientôt — revenez régulièrement.
+                      </p>
+                    </section>
+                  )}
 
-              {/* All products */}
-              {products.length > 0 && (
-                <section>
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 bg-gradient-to-br from-[#30A08B] to-[#1d7a6a] rounded-full flex items-center justify-center">
-                      <Eye className="w-4 h-4 text-white" />
+                  {products.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                        <Package className="w-7 h-7 text-gray-400" />
+                      </div>
+                      <p className="font-semibold text-gray-600">Aucun produit pour l&apos;instant</p>
+                      <p className="text-sm text-gray-400 max-w-xs">
+                        Cette boutique prépare son catalogue. Revenez bientôt.
+                      </p>
                     </div>
-                    <h2 className="font-black text-lg text-gray-800">Sélectionné pour vous</h2>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {products.slice(0, 8).map((p) => (
-                      <MiniCard key={p._id} product={p} />
-                    ))}
-                  </div>
-                </section>
+                  )}
+                </>
+              ) : (
+                /* ── Catalogue complet (≥ 15 produits) ── */
+                <>
+                  {/* Flash deals */}
+                  {promoProducts.length > 0 && (
+                    <section>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                            <Zap className="w-4 h-4 text-white" />
+                          </div>
+                          <h2 className="font-black text-lg text-gray-800">Offres Flash</h2>
+                        </div>
+                        <button
+                          onClick={() => setActiveTab("all_items")}
+                          className="text-xs text-[#30A08B] font-semibold flex items-center gap-1 hover:underline"
+                        >
+                          Voir tout <ArrowRight className="w-3 h-3" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {promoProducts.slice(0, 4).map((p) => (
+                          <MiniCard key={p._id} product={p} compact />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Best sellers */}
+                  {hotDeals.length > 0 && (
+                    <section>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+                            <TrendingUp className="w-4 h-4 text-white" />
+                          </div>
+                          <h2 className="font-black text-lg text-gray-800">Meilleures ventes</h2>
+                        </div>
+                        <button
+                          onClick={() => setActiveTab("all_items")}
+                          className="text-xs text-[#30A08B] font-semibold flex items-center gap-1 hover:underline"
+                        >
+                          Voir tout <ArrowRight className="w-3 h-3" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {hotDeals.slice(0, 4).map((p) => (
+                          <MiniCard key={p._id} product={p} />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* New arrivals */}
+                  {newArrivals.length > 0 && (
+                    <section>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+                            <PlayCircle className="w-4 h-4 text-white" />
+                          </div>
+                          <h2 className="font-black text-lg text-gray-800">Nouveautés</h2>
+                        </div>
+                        <button
+                          onClick={() => setActiveTab("new_arrivals")}
+                          className="text-xs text-[#30A08B] font-semibold flex items-center gap-1 hover:underline"
+                        >
+                          Voir tout <ArrowRight className="w-3 h-3" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {newArrivals.slice(0, 4).map((p) => (
+                          <MiniCard key={p._id} product={p} />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* All products */}
+                  {products.length > 0 && (
+                    <section>
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-8 h-8 bg-gradient-to-br from-[#30A08B] to-[#1d7a6a] rounded-full flex items-center justify-center">
+                          <Eye className="w-4 h-4 text-white" />
+                        </div>
+                        <h2 className="font-black text-lg text-gray-800">Sélectionné pour vous</h2>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {products.slice(0, 8).map((p) => (
+                          <MiniCard key={p._id} product={p} />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                </>
               )}
             </>
           )}
