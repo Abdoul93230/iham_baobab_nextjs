@@ -59,11 +59,11 @@ const SUBSCRIPTION_CONFIG = {
   PLANS: {
     Starter: {
       name: "Starter",
-      description: "Idéal pour débuter. 2 mois d'essai gratuit.",
+      description: "Idéal pour débuter. 1 mois d'essai gratuit.",
       pricing: {
         monthly: 2000,
         annual: 21600,   // 2000 * 12 - 10%
-        trialMonths: 2,
+        trialMonths: 1,
         annualDiscount: 0.10,
       },
       commission: 3.0,
@@ -176,24 +176,24 @@ const SUBSCRIPTION_CONFIG = {
   DEFAULT_COMMISSION: 3.0,
 
   PAYMENT_METHODS: {
-    mynita:       { phone: "+22790123456", name: "iHambaObab Mynita",       active: true },
-    aman:         { phone: "+22798765432", name: "iHambaObab Aman",         active: true },
+    mynita: { phone: "+22790123456", name: "iHambaObab Mynita", active: true },
+    aman: { phone: "+22798765432", name: "iHambaObab Aman", active: true },
     airtel_money: { phone: "+22787654321", name: "iHambaObab Airtel Money", active: true },
     orange_money: { phone: "+22776543210", name: "iHambaObab Orange Money", active: true },
   },
 
   SUBSCRIPTION_STATUSES: {
-    ACTIVE:    'active'    as SubscriptionStatus,
-    EXPIRED:   'expired'   as SubscriptionStatus,
+    ACTIVE: 'active' as SubscriptionStatus,
+    EXPIRED: 'expired' as SubscriptionStatus,
     SUSPENDED: 'suspended' as SubscriptionStatus,
     CANCELLED: 'cancelled' as SubscriptionStatus,
-    PENDING:   'pending'   as SubscriptionStatus,
-    TRIAL:     'trial'     as SubscriptionStatus,
+    PENDING: 'pending' as SubscriptionStatus,
+    TRIAL: 'trial' as SubscriptionStatus,
   },
 
-  GRACE_PERIOD_DAYS:        7,
-  PAYMENT_DEADLINE_HOURS:   24,
-  RENEWAL_REMINDER_DAYS:    [7, 3, 1],
+  GRACE_PERIOD_DAYS: 7,
+  PAYMENT_DEADLINE_HOURS: 24,
+  RENEWAL_REMINDER_DAYS: [7, 3, 1],
 
   // ─── Utilitaires ──────────────────────────────────────────────
 

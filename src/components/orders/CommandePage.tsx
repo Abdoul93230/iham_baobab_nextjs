@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import { formatCurrency } from "@/lib/utils";
+import { AuthService } from "@/lib/auth";
 
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 
@@ -228,8 +229,14 @@ const CommandePage: React.FC = () => {
           throw new Error("Utilisateur non connecté");
         }
 
+        // Le backend n'autorise la lecture que de ses propres commandes (jeton requis)
+        const token = AuthService.getToken() || userEcomme?.token;
+        if (!token) {
+          throw new Error("Session expirée, veuillez vous reconnecter.");
+        }
         const response = await axios.get(
-          `${BackendUrl}/getCommandesByClefUser/${userEcomme.id}`
+          `${BackendUrl}/getCommandesByClefUser/${userEcomme.id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         setOrders(response.data.commandes);
 
