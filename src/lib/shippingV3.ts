@@ -127,8 +127,9 @@ export function distanceKm(a: { lat: number; lng: number }, b: { lat: number; ln
 export function nearestZone(zones: ZoneV3[], pos: { lat: number; lng: number }): ZoneV3 | null {
   let best: { z: ZoneV3; d: number } | null = null;
   for (const z of zones) {
-    if (!z.center || z.type === "country" || z.type === "region") continue;
-    const d = distanceKm(pos, z.center) - (z.type === "district" ? 0.5 : 0);
+    if (!z.center || z.type === "country") continue;
+    // Région : simple repli quand aucune ville / commune géolocalisée n'est plus proche
+    const d = distanceKm(pos, z.center) - (z.type === "district" ? 0.5 : 0) + (z.type === "region" ? 8 : 0);
     if (!best || d < best.d) best = { z, d };
   }
   return best && best.d <= 40 ? best.z : null;
