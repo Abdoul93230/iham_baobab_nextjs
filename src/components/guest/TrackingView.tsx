@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Check, Loader2, MapPin, Package, Phone, Share2, Truck, XCircle } from "lucide-react";
 import { fetchTracking, shareTracking } from "@/lib/guestSession";
 import { formatCurrency } from "@/lib/utils";
+import { paymentLabel } from "@/lib/orderStatus";
 
 const STEPS = [
   { key: "placed", label: "Commande passée", icon: Package },
@@ -136,7 +137,7 @@ export default function TrackingView({ reference, k }: { reference: string; k: s
         <div className="mt-3 pt-3 border-t border-gray-100 space-y-1 text-sm">
           <div className="flex justify-between text-gray-600"><span>Livraison</span><span>{order.fraisLivraison > 0 ? formatCurrency(order.fraisLivraison) : "Offerte"}</span></div>
           <div className="flex justify-between font-bold text-gray-900"><span>Total</span><span>{formatCurrency(order.prix || 0)}</span></div>
-          <p className="text-xs text-gray-400">Paiement : {order.statusPayment || "—"}</p>
+          <p className="text-xs text-gray-400">Paiement : {paymentLabel(order)}</p>
         </div>
       </div>
 
