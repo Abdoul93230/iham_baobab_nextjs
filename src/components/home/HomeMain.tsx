@@ -17,6 +17,7 @@ import {
 import axios from "axios";
 
 import { ProductCard, ProductCardData } from "@/components/ProduitDetail/ProduitPage";
+import NearbyRail from "@/components/nearby/NearbyRail";
 import SliderPage from "@/components/slider/SliderPage";
 import CategorieMobile from "./CategorieMobile";
 import DailyCheckinBanner from "@/components/wallet/DailyCheckinBanner";
@@ -419,6 +420,9 @@ const HomeMain: React.FC<HomeMainProps> = () => {
       </section>
 
       <div className="max-w-7xl mx-auto px-3 sm:px-6 pb-8 space-y-6">
+
+        {/* ══ PRÈS DE CHEZ VOUS ══════════════════════════════════════════════ */}
+        <NearbyRail />
 
         {/* ══ FEATURED PRODUCTS ═══════════════════════════════════════════════ */}
         <section className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">

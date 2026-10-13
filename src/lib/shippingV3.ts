@@ -221,3 +221,21 @@ export function sellerIdOf(product: any): string | null {
   const id = (c && typeof c === "object" ? c._id : c) || product?.createdBy || null;
   return id ? String(id) : null;
 }
+
+// ─── « Près de chez moi » ────────────────────────────────────────────────────
+
+export interface NearbyPage {
+  destination: { zoneId: string; name: string; label: string };
+  products: any[];
+  total: number;
+  page: number;
+  pages: number;
+  relationBySeller: Record<string, string>;
+  sellerCount: number;
+}
+
+/** Produits des boutiques les plus proches (même quartier → même ville → même région) */
+export async function fetchNearby(zoneId: string, page = 1, limit = 20): Promise<NearbyPage> {
+  const r = await axios.get(`${BackendUrl}/api/shipping-v3/nearby`, { params: { zoneId, page, limit }, timeout: 12000 });
+  return r.data.data;
+}
