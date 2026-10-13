@@ -527,7 +527,7 @@ function ProduitDetailMain({ panierchg }: ProduitDetailMainProps) {
                 <span className="text-3xl font-bold text-[#30A08B]">
                   {product.prix?.toLocaleString()} FCFA
                 </span>
-                {product.prixPromo && product.prixPromo > 0 && (
+                {!!product.prixPromo && product.prixPromo > 0 && (
                   <span className="text-xl text-gray-500 line-through">
                     {product.prixPromo?.toLocaleString()} FCFA
                   </span>

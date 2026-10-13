@@ -135,7 +135,7 @@ const ProduitSimilaires: React.FC<ProduitSimilairesProps> = ({ titre, produits }
                 <p className="text-sm font-semibold text-emerald-600">
                   {produit.prix?.toLocaleString()} FCFA
                 </p>
-                {produit.prixPromo && produit.prixPromo > 0 && (
+                {!!produit.prixPromo && produit.prixPromo > 0 && (
                   <p className="text-xs text-gray-500 line-through">
                     {produit.prixPromo?.toLocaleString()} FCFA
                   </p>

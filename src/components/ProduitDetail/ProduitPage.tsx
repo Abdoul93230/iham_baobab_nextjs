@@ -215,7 +215,8 @@ export const ProductCard: React.FC<{
           )}>
             {(product.prixPromo && product.prixPromo > 0 ? product.prixPromo : product.prix).toLocaleString()} F
           </span>
-          {product.prixPromo && product.prixPromo > 0 && (
+          {/* !! : sans promo, prixPromo vaut 0 et React l'afficherait (« 700 F 0 ») */}
+          {!!product.prixPromo && product.prixPromo > 0 && (
             <span className="text-[11px] text-gray-400 line-through">
               {product.prix.toLocaleString()} F
             </span>
