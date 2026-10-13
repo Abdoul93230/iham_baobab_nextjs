@@ -26,6 +26,7 @@ import ZoneSelector from "./ZoneSelector";
 import { CartQuote, getRememberedZone, getZones, parcelFeeText, quoteCart, rememberZone, zoneLabel, ZoneV3 } from "@/lib/shippingV3";
 import { formatCurrency } from "../../lib/utils";
 import Alert from "../Alert";
+import CheckoutChoiceModal from "@/components/guest/CheckoutChoiceModal";
 import { RootState } from "@/redux/store";
 import { AuthService } from "@/lib/auth";
 
@@ -359,20 +360,10 @@ const PanierPage: React.FC = () => {
     }
   };
 
-  const handleCheckout = () => {
-    if (!selectedZone) {
-      showAlert("warn", "Veuillez sélectionner votre zone de livraison");
-      return;
-    }
-    if (acces === "non") {
-      showAlert("warn", "Veuillez vous connecter d'abord");
-      setTimeout(() => router.push("/auth/login?fromCart=true&returnUrl=/order-confirmation"), 1000);
-      return;
-    }
-    if (blockedStores.length) {
-      showAlert("warn", `${blockedStores[0].storeName} : ${blockedStores[0].message || "livraison indisponible dans votre zone"}`);
-      return;
-    }
+  const [choiceOpen, setChoiceOpen] = useState(false);
+
+  /** Enregistre la livraison choisie pour la page de confirmation */
+  const saveCheckoutData = () => {
     localStorage.setItem("orderShippingZone", JSON.stringify(selectedZone));
     localStorage.setItem("orderShippingCalculations", JSON.stringify(shippingCalculations));
     const shippingByStore = Object.entries(storeGroups).map(([storeId, group]) => ({
@@ -383,6 +374,23 @@ const PanierPage: React.FC = () => {
       quoteRequired: !!shippingCalculations[storeId]?.quoteRequired,
     }));
     localStorage.setItem("orderShippingByStore", JSON.stringify(shippingByStore));
+  };
+
+  const handleCheckout = () => {
+    if (!selectedZone) {
+      showAlert("warn", "Veuillez sélectionner votre zone de livraison");
+      return;
+    }
+    if (blockedStores.length) {
+      showAlert("warn", `${blockedStores[0].storeName} : ${blockedStores[0].message || "livraison indisponible dans votre zone"}`);
+      return;
+    }
+    saveCheckoutData();
+    // Sans compte connecté : choix « avec compte » (mis en avant) ou « sans compte »
+    if (acces === "non") {
+      setChoiceOpen(true);
+      return;
+    }
     router.push("/order-confirmation?fromCart=true");
   };
 
@@ -837,6 +845,14 @@ const PanierPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      <CheckoutChoiceModal
+        open={choiceOpen}
+        onClose={() => setChoiceOpen(false)}
+        onGuest={() => { setChoiceOpen(false); router.push("/order-confirmation?fromCart=true&guest=1"); }}
+        onLogin={() => router.push("/auth/login?fromCart=true&returnUrl=/order-confirmation")}
+        onRegister={() => router.push("/auth/register?fromCart=true&returnUrl=/order-confirmation")}
+      />
 
       {alert.visible && (
         <Alert

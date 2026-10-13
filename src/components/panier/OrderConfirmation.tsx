@@ -20,6 +20,9 @@ import LoadingIndicator from "@/components/LoadingIndicator";
 import PaiementPage from "./PaiementPage";
 import PointsRedeemWidget from "@/components/wallet/PointsRedeemWidget";
 import ZoneSelector from "./ZoneSelector";
+import GuestOtpModal from "@/components/guest/GuestOtpModal";
+import GuestOrderSuccess from "@/components/guest/GuestOrderSuccess";
+import { ensureGuestSession, getGuestSession, OFFLINE_PAYMENTS } from "@/lib/guestSession";
 import { CartQuote, getZones, quoteCart, rememberZone, zoneLabel, ZoneV3 } from "@/lib/shippingV3";
 
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
@@ -99,9 +102,11 @@ interface OrderConfirmationProps {
   codeP?: any;
   setCodeP?: (code: any) => void;
   initialBP?: { pointsUsed: number; pointsDiscount: number } | null;
+  /** Commande sans compte (choisie au panier) */
+  guest?: boolean;
 }
 
-const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP }) => {
+const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP, guest = false }) => {
   const router = useRouter();
   const [selectedPayment, setSelectedPayment] = useState("");
   const [message, setMessage] = useState("");
@@ -177,6 +182,11 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
   const [paiementProduit, setPaiementProduit] = useState(false);
   const [trackedTransactionId, setTrackedTransactionId] = useState<string | null>(null);
   const [pointsToUse, setPointsToUse] = useState(0);
+  // Commande sans compte : vérification du numéro (si nécessaire) et commande créée
+  const [otpOpen, setOtpOpen] = useState(false);
+  const [otpReason, setOtpReason] = useState("");
+  const [createdOrder, setCreatedOrder] = useState<{ reference: string; trackingToken: string } | null>(null);
+  const resumeAfterOtp = useRef(false);
   const [pointsDiscount, setPointsDiscount] = useState(0);
 
   // Sync quand initialBP arrive (chargé après le mount via useEffect de la page parente)
@@ -228,6 +238,19 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
 
   // Récupération utilisateur avec vérification côté client
   const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    if (!guest) return;
+    const g = getGuestSession();
+    if (!g) return;
+    const parsed = parseStoredPhone(g.phone);
+    setDeliveryInfo((prev) => ({
+      ...prev,
+      name: prev.name || g.name || "",
+      numero: prev.numero || parsed.digits,
+      countryCode: prev.numero ? prev.countryCode : parsed.country.dialCode,
+    }));
+  }, [guest]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -744,7 +767,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
 
     // 1. Validation initiale
     const userId = user?.id;
-    if (!userId) {
+    if (!userId && !guest) {
       AlertService.showAlert(
         setSubmitStatus,
         "Veuillez vous connecter pour continuer"
@@ -759,6 +782,30 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
     if (validationErrors.length > 0) {
       AlertService.showAlert(setSubmitStatus, validationErrors.join(", "));
       return;
+    }
+
+    // 1b. Commande sans compte : session liée au numéro, code SMS seulement si nécessaire
+    if (guest && !userId) {
+      const guestPhone = toE164(countryOfDial(deliveryInfo.countryCode), deliveryInfo.numero);
+      try {
+        const r = await ensureGuestSession(guestPhone, deliveryInfo.name);
+        const offline = OFFLINE_PAYMENTS.includes(
+          PaymentMethods.CASH_ON_DELIVERY.includes(selectedPayment) ? "payé à la livraison"
+            : PaymentMethods.ASSISTED_PAYMENT.includes(selectedPayment) ? "payé par téléphone" : ""
+        );
+        if (r.accountExists || (offline && !r.session?.verified)) {
+          setOtpReason(r.accountExists
+            ? "Ce numéro a déjà un compte. Confirmez-le par SMS pour commander sans vous connecter."
+            : "Pour le paiement à la livraison, nous vérifions votre numéro une seule fois.");
+          resumeAfterOtp.current = true;
+          setSubmitStatus({ loading: false, error: null, success: false });
+          setOtpOpen(true);
+          return;
+        }
+      } catch (e: any) {
+        AlertService.showAlert(setSubmitStatus, e?.response?.data?.message || "Impossible de démarrer la commande. Réessayez.");
+        return;
+      }
     }
 
     // 2. Vérification du panier
@@ -794,8 +841,9 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
 
     try {
       // 3. Le backend recalcule la réduction, on envoie juste le promoCodeId
-      const promoDiscount = PromoCodeService.getDiscount();
-      const promoCodeId = PromoCodeService.getPromoCodeId();
+      // Codes promo et Baobab Points : réservés aux comptes
+      const promoDiscount = guest && !userId ? 0 : PromoCodeService.getDiscount();
+      const promoCodeId = guest && !userId ? null : PromoCodeService.getPromoCodeId();
 
       const finalOrderTotal = orderTotal;
 
@@ -841,7 +889,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
           codePro: true,
           idCodePro: promoCodeId,
         }),
-        ...(pointsToUse > 0 && { pointsToUse }),
+        ...(pointsToUse > 0 && !(guest && !userId) && { pointsToUse }),
       };
 
       if (existingOrder) {
@@ -849,7 +897,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
         orderData.newReference = transactionId;
       }
 
-      await axios.post(`${BackendUrl}/createOrUpdateAddress`, {
+      if (userId) await axios.post(`${BackendUrl}/createOrUpdateAddress`, {
         ...deliveryInfo,
         zoneId: selectedZone?._id,
         localityName: selectedZone?.localityName || "",
@@ -866,6 +914,9 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
       if (orderResult.error) {
         AlertService.showAlert(setSubmitStatus, orderResult.error);
         return;
+      }
+      if (orderResult.commande?.reference && orderResult.commande?.trackingToken) {
+        setCreatedOrder({ reference: orderResult.commande.reference, trackingToken: orderResult.commande.trackingToken });
       }
 
       // 5. Traitement du paiement
@@ -1556,15 +1607,15 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
                   </div>
                 </div>
 
-                {/* Points Baobab */}
-                <PointsRedeemWidget
+                {/* Points Baobab (comptes uniquement) */}
+                {!guest && <PointsRedeemWidget
                   orderAmountFcfa={orderSubtotal}
                   initialPoints={pointsToUse}
                   onPointsChange={(pts, disc) => {
                     setPointsToUse(pts);
                     setPointsDiscount(disc);
                   }}
-                />
+                />}
 
                 {/* Sécurité — desktop uniquement */}
                 <div className="hidden lg:block bg-gray-50 rounded-2xl border border-gray-100 p-4 text-center">
@@ -1787,8 +1838,21 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
           </div>
         </div>
 
+        {/* Modale succès — invité : suivi + création du compte */}
+        {paiementProduit && guest && !user?.id && createdOrder && (
+          <div className="min-h-screen flex justify-center items-center bg-black/40 backdrop-blur-sm fixed inset-0 z-50 p-4 overflow-y-auto">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-3xl shadow-2xl p-6 max-w-md w-full">
+              <GuestOrderSuccess
+                reference={createdOrder.reference}
+                trackingToken={createdOrder.trackingToken}
+                onClose={() => router.push("/")}
+              />
+            </motion.div>
+          </div>
+        )}
+
         {/* Modale succès */}
-        {paiementProduit && (
+        {paiementProduit && !(guest && !user?.id && createdOrder) && (
           <div className="min-h-screen flex justify-center items-center bg-black/40 backdrop-blur-sm fixed inset-0 z-50">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -1810,6 +1874,20 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
           </div>
         )}
       </LoadingIndicator>
+      <GuestOtpModal
+        open={otpOpen}
+        phone={toE164(countryOfDial(deliveryInfo.countryCode), deliveryInfo.numero)}
+        name={deliveryInfo.name}
+        reason={otpReason}
+        onClose={() => { setOtpOpen(false); resumeAfterOtp.current = false; }}
+        onVerified={() => {
+          setOtpOpen(false);
+          if (resumeAfterOtp.current) {
+            resumeAfterOtp.current = false;
+            setTimeout(() => handlePaymentSubmit({ preventDefault() {} } as React.FormEvent), 0);
+          }
+        }}
+      />
       <SecurityCodeModal
         isOpen={securityCodeModal.isOpen}
         onClose={() => {

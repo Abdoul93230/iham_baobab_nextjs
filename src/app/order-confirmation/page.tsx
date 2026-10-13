@@ -78,6 +78,8 @@ export default function OrderConfirmationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isAuthenticated } = useAuth();
+  // Commande sans compte (choisie au panier) : la page est accessible sans connexion
+  const guestMode = !isAuthenticated && searchParams.get("guest") === "1";
   const [isClient, setIsClient] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -152,12 +154,12 @@ export default function OrderConfirmationPage() {
   }, [searchParams, router]);
 
   useEffect(() => {
-    if (isClient && isAuthenticated) {
+    if (isClient && (isAuthenticated || guestMode)) {
       loadOrderData();
     } else if (isClient && !isAuthenticated) {
       router.push("/auth/login?redirect=/order-confirmation");
     }
-  }, [isClient, isAuthenticated, loadOrderData]);
+  }, [isClient, isAuthenticated, guestMode, loadOrderData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fonction pour gérer les changements du panier (pour HomeHeader)
   const handleCartChange = () => {
@@ -290,7 +292,7 @@ export default function OrderConfirmationPage() {
   }
 
   return (
-    <ProtectedRoute requireAuth={true}>
+    <ProtectedRoute requireAuth={!guestMode}>
       {/* SEO Configuration */}
       <NextSeo {...dynamicSEO} />
       
@@ -416,6 +418,7 @@ export default function OrderConfirmationPage() {
         >
           <OrderConfirmation
             acces={isAuthenticated ? "oui" : "non"}
+            guest={guestMode}
             total={total}
             codeP={codeP}
             setCodeP={setCodeP}

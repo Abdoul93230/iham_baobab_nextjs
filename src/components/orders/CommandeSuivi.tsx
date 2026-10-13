@@ -29,6 +29,7 @@ import OrderedItems from "./OrderedItems";
 import OrderPaymentHandler from "./OrderPaymentHandler";
 import OrderTracking from "./OrderTracking";
 import { formatCurrency } from "@/lib/utils";
+import { fetchShareLink, shareTracking } from "@/lib/guestSession";
 
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 
@@ -365,6 +366,20 @@ const CommandeSuivi: React.FC = () => {
                   {orderType === "inProgress" && <Clock className="w-3 h-3 inline mr-1" />}
                   {order?.statusPayment === "échec" ? order.etatTraitement : order.statusLivraison === "annulé" ? order.statusLivraison : null}
                 </span>
+                {order?._id ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const url = await fetchShareLink(order._id);
+                        if (url) await shareTracking(url, "Suivez ma commande Ihambaobab");
+                      } catch {}
+                    }}
+                    className="ml-auto text-xs md:text-sm font-semibold text-[#30A08B] bg-[#30A08B]/10 hover:bg-[#30A08B]/15 px-3 py-1.5 rounded-full"
+                  >
+                    Partager le suivi
+                  </button>
+                ) : null}
               </div>
               <div className="text-sm text-gray-600">
                 <div className="flex items-center mb-1">

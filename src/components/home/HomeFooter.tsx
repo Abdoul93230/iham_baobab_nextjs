@@ -24,6 +24,7 @@ const SECTIONS = [
   {
     title: "Service client",
     links: [
+      { label: "Suivre une commande", href: "/suivi" },
       { label: "Contactez-nous", href: "/contact" },
       { label: "Centre d'aide", href: "/centre-aide" },
       { label: "Mes commandes", href: "/commandes" },
