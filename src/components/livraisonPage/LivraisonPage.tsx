@@ -2,6 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import {
+  PHONE_COUNTRIES,
+  DEFAULT_PHONE_COUNTRY,
+  applyPhoneInputChange,
+  parseStoredPhone,
+  validatePhone,
+  toE164,
+  getPhonePlaceholder,
+} from "@/lib/phoneRules";
 
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 
@@ -19,6 +28,8 @@ const LivraisonPage = () => {
     quartier: "",
     description: "",
   });
+  // Indicatif du numéro de livraison (règle commune web/mobile)
+  const [phoneCountry, setPhoneCountry] = useState(DEFAULT_PHONE_COUNTRY);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitStatus, setSubmitStatus] = useState({
@@ -59,10 +70,11 @@ const LivraisonPage = () => {
         );
         const address = addressResponse.data.address;
         if (address) {
+          if (address.numero) setPhoneCountry(parseStoredPhone(address.numero).country);
           setAddressData({
             name: address.name || "",
             email: address.email || "",
-            numero: address.numero || "",
+            numero: address.numero ? parseStoredPhone(address.numero).digits : "",
             region: address.region || "",
             quartier: address.quartier || "",
             description: address.description || "",
@@ -104,8 +116,9 @@ const LivraisonPage = () => {
     if (addressData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addressData.email)) {
       errors.push("L'adresse email n'est pas valide");
     }
-    if (!addressData.numero || addressData.numero.length < 8) {
-      errors.push("Le numéro de téléphone doit contenir au moins 8 chiffres");
+    const phoneCheck = validatePhone(phoneCountry, addressData.numero, true);
+    if (!phoneCheck.isValid) {
+      errors.push(phoneCheck.message);
     }
     if (!addressData.region || addressData.region.length < 3) {
       errors.push("La région doit contenir au moins 3 caractères");
@@ -117,7 +130,14 @@ const LivraisonPage = () => {
   };
 
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setAddressData({ ...addressData, [e.target.id]: e.target.value });
+    if (e.target.id === "numero") {
+      // Chiffres nationaux ; un numéro international collé change l'indicatif
+      const next = applyPhoneInputChange(phoneCountry, e.target.value);
+      setPhoneCountry(next.country);
+      setAddressData({ ...addressData, numero: next.digits });
+    } else {
+      setAddressData({ ...addressData, [e.target.id]: e.target.value });
+    }
     setSubmitStatus({ loading: false, error: null, success: false });
   };
 
@@ -142,6 +162,7 @@ const LivraisonPage = () => {
 
       await axios.post(`${BackendUrl}/createOrUpdateAddress`, {
         ...addressData,
+        numero: toE164(phoneCountry, addressData.numero), // E.164 sans espace (+22787727501)
         clefUser: userId,
       });
 
@@ -354,18 +375,36 @@ const LivraisonPage = () => {
                 >
                   Téléphone de Livraison <span className="text-red-500" aria-label="requis">*</span>
                 </label>
-                <input
-                  type="tel"
-                  id="numero"
-                  name="numero"
-                  value={addressData.numero}
-                  onChange={handleAddressChange}
-                  required
-                  aria-required="true"
-                  aria-describedby="numero-help"
-                  className="w-full px-3 sm:px-4 py-2 text-sm md:text-base rounded-lg border focus:ring-2 focus:ring-[#30A08B] focus:border-transparent transition-all duration-300"
-                  placeholder="90 12 34 56"
-                />
+                <div className="flex">
+                  <select
+                    aria-label="Indicatif pays"
+                    value={phoneCountry.iso}
+                    onChange={(e) => {
+                      const c = PHONE_COUNTRIES.find((x) => x.iso === e.target.value) || DEFAULT_PHONE_COUNTRY;
+                      setPhoneCountry(c);
+                      setAddressData({ ...addressData, numero: applyPhoneInputChange(c, addressData.numero).digits });
+                    }}
+                    className="px-2 py-2 text-sm md:text-base rounded-l-lg border border-r-0 bg-gray-50 focus:ring-2 focus:ring-[#30A08B] focus:border-transparent"
+                  >
+                    {PHONE_COUNTRIES.map((c) => (
+                      <option key={c.iso} value={c.iso}>{c.flag} {c.dialCode}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="tel"
+                    id="numero"
+                    name="numero"
+                    inputMode="tel"
+                    autoComplete="tel-national"
+                    value={applyPhoneInputChange(phoneCountry, addressData.numero).display}
+                    onChange={handleAddressChange}
+                    required
+                    aria-required="true"
+                    aria-describedby="numero-help"
+                    className="flex-1 min-w-0 px-3 sm:px-4 py-2 text-sm md:text-base rounded-r-lg border focus:ring-2 focus:ring-[#30A08B] focus:border-transparent transition-all duration-300"
+                    placeholder={getPhonePlaceholder(phoneCountry)}
+                  />
+                </div>
                 <small id="numero-help" className="text-xs text-gray-500 mt-1 block">
                   Numéro pour contacter lors de la livraison
                 </small>

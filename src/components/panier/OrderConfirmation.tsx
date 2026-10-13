@@ -5,6 +5,16 @@ import { AlertCircle, Check, User, Mail, MapPin, Home, MessageSquare, Lock, Shop
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import axios from "axios";
+import {
+  PHONE_COUNTRIES,
+  DEFAULT_PHONE_COUNTRY,
+  applyPhoneInputChange,
+  parseStoredPhone,
+  validatePhone,
+  toE164,
+  formatPhoneInternational,
+  getPhonePlaceholder,
+} from "@/lib/phoneRules";
 import { io, Socket } from "socket.io-client";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import PaiementPage from "./PaiementPage";
@@ -13,68 +23,9 @@ import PointsRedeemWidget from "@/components/wallet/PointsRedeemWidget";
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 
 // Liste des indicatifs de pays les plus courants
-const COUNTRY_CODES = [
-  { code: "+227", country: "Niger", flag: "🇳🇪" },
-  { code: "+33", country: "France", flag: "🇫🇷" },
-  { code: "+1", country: "États-Unis/Canada", flag: "🇺🇸" },
-  { code: "+44", country: "Royaume-Uni", flag: "🇬🇧" },
-  { code: "+49", country: "Allemagne", flag: "🇩🇪" },
-  { code: "+34", country: "Espagne", flag: "🇪🇸" },
-  { code: "+39", country: "Italie", flag: "🇮🇹" },
-  { code: "+212", country: "Maroc", flag: "🇲🇦" },
-  { code: "+213", country: "Algérie", flag: "🇩🇿" },
-  { code: "+216", country: "Tunisie", flag: "🇹🇳" },
-  { code: "+221", country: "Sénégal", flag: "🇸🇳" },
-  { code: "+223", country: "Mali", flag: "🇲🇱" },
-  { code: "+224", country: "Guinée", flag: "🇬🇳" },
-  { code: "+225", country: "Côte d'Ivoire", flag: "🇨🇮" },
-  { code: "+226", country: "Burkina Faso", flag: "🇧🇫" },
-  { code: "+228", country: "Togo", flag: "🇹🇬" },
-  { code: "+229", country: "Bénin", flag: "🇧🇯" },
-  { code: "+230", country: "Maurice", flag: "🇲🇺" },
-  { code: "+231", country: "Libéria", flag: "🇱🇷" },
-  { code: "+232", country: "Sierra Leone", flag: "🇸🇱" },
-  { code: "+233", country: "Ghana", flag: "🇬🇭" },
-  { code: "+234", country: "Nigéria", flag: "🇳🇬" },
-  { code: "+235", country: "Tchad", flag: "🇹🇩" },
-  { code: "+236", country: "République centrafricaine", flag: "🇨🇫" },
-  { code: "+237", country: "Cameroun", flag: "🇨🇲" },
-  { code: "+238", country: "Cap-Vert", flag: "🇨🇻" },
-  { code: "+239", country: "São Tomé-et-Príncipe", flag: "🇸🇹" },
-  { code: "+240", country: "Guinée équatoriale", flag: "🇬🇶" },
-  { code: "+241", country: "Gabon", flag: "🇬🇦" },
-  { code: "+242", country: "République du Congo", flag: "🇨🇬" },
-  { code: "+243", country: "République démocratique du Congo", flag: "🇨🇩" },
-  { code: "+244", country: "Angola", flag: "🇦🇴" },
-  { code: "+245", country: "Guinée-Bissau", flag: "🇬🇼" },
-  { code: "+246", country: "Territoire britannique de l'océan Indien", flag: "🇮🇴" },
-  { code: "+248", country: "Seychelles", flag: "🇸🇨" },
-  { code: "+249", country: "Soudan", flag: "🇸🇩" },
-  { code: "+250", country: "Rwanda", flag: "🇷🇼" },
-  { code: "+251", country: "Éthiopie", flag: "🇪🇹" },
-  { code: "+252", country: "Somalie", flag: "🇸🇴" },
-  { code: "+253", country: "Djibouti", flag: "🇩🇯" },
-  { code: "+254", country: "Kenya", flag: "🇰🇪" },
-  { code: "+255", country: "Tanzanie", flag: "🇹🇿" },
-  { code: "+256", country: "Ouganda", flag: "🇺🇬" },
-  { code: "+257", country: "Burundi", flag: "🇧🇮" },
-  { code: "+258", country: "Mozambique", flag: "🇲🇿" },
-  { code: "+260", country: "Zambie", flag: "🇿🇲" },
-  { code: "+261", country: "Madagascar", flag: "🇲🇬" },
-  { code: "+262", country: "La Réunion/Mayotte", flag: "🇷🇪" },
-  { code: "+263", country: "Zimbabwe", flag: "🇿🇼" },
-  { code: "+264", country: "Namibie", flag: "🇳🇦" },
-  { code: "+265", country: "Malawi", flag: "🇲🇼" },
-  { code: "+266", country: "Lesotho", flag: "🇱🇸" },
-  { code: "+267", country: "Botswana", flag: "🇧🇼" },
-  { code: "+268", country: "Eswatini", flag: "🇸🇿" },
-  { code: "+269", country: "Comores", flag: "🇰🇲" },
-  { code: "+290", country: "Sainte-Hélène", flag: "🇸🇭" },
-  { code: "+291", country: "Érythrée", flag: "🇪🇷" },
-  { code: "+297", country: "Aruba", flag: "🇦🇼" },
-  { code: "+298", country: "Îles Féroé", flag: "🇫🇴" },
-  { code: "+299", country: "Groenland", flag: "🇬🇱" },
-];
+// Indicatifs, longueurs et formats : règle commune web/mobile (src/lib/phoneRules.ts)
+const countryOfDial = (dialCode: string) =>
+  PHONE_COUNTRIES.find((c) => c.dialCode === dialCode) || DEFAULT_PHONE_COUNTRY;
 
 // Utilitaires
 const PaymentMethods = {
@@ -393,16 +344,9 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
           let phoneNumber = "";
           
           if (address.numero) {
-            const fullNumber = address.numero.toString();
-            // Chercher l'indicatif dans notre liste
-            const foundCountry = COUNTRY_CODES.find(country => fullNumber.startsWith(country.code));
-            if (foundCountry) {
-              countryCode = foundCountry.code;
-              phoneNumber = fullNumber.substring(foundCountry.code.length);
-            } else {
-              // Si aucun indicatif trouvé, supposer que c'est un numéro local
-              phoneNumber = fullNumber;
-            }
+            const parsed = parseStoredPhone(address.numero.toString());
+            countryCode = parsed.country.dialCode;
+            phoneNumber = parsed.digits;
           }
 
           setDeliveryInfo({
@@ -468,15 +412,10 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
       errors.push("L'adresse email n'est pas valide");
     }
 
-    if (!deliveryInfo.numero || deliveryInfo.numero.length < 8) {
-      errors.push("Le numéro de téléphone doit contenir au moins 8 chiffres");
-    }
-
-    // Validation du format international du numéro
-    const fullPhoneNumber = deliveryInfo.countryCode + deliveryInfo.numero;
-    const phoneRegex = /^\+[1-9]\d{1,14}$/; // Format E.164 international
-    if (!phoneRegex.test(fullPhoneNumber)) {
-      errors.push("Le format du numéro de téléphone n'est pas valide");
+    // Longueur et format selon l'indicatif choisi (règle commune)
+    const phoneCheck = validatePhone(countryOfDial(deliveryInfo.countryCode), deliveryInfo.numero, true);
+    if (!phoneCheck.isValid) {
+      errors.push(phoneCheck.message);
     }
 
     if (!deliveryInfo.region || deliveryInfo.region.length < 3) {
@@ -545,10 +484,16 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
 
     // Pour le numéro de téléphone, ne garder que les chiffres
     if (name === 'numero') {
-      const cleanedValue = value.replace(/[^0-9]/g, '');
+      // Chiffres nationaux uniquement ; un numéro international collé change l'indicatif
+      setDeliveryInfo((prev) => {
+        const next = applyPhoneInputChange(countryOfDial(prev.countryCode), value);
+        return { ...prev, numero: next.digits, countryCode: next.country.dialCode };
+      });
+    } else if (name === 'countryCode') {
       setDeliveryInfo((prev) => ({
         ...prev,
-        [name]: cleanedValue,
+        countryCode: value,
+        numero: applyPhoneInputChange(countryOfDial(value), prev.numero).digits,
       }));
     } else {
       setDeliveryInfo((prev) => ({
@@ -873,7 +818,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
           email: deliveryInfo.email || null,
           region: deliveryInfo.region,
           quartier: deliveryInfo.quartier,
-          numero: deliveryInfo.countryCode + deliveryInfo.numero,
+          numero: toE164(countryOfDial(deliveryInfo.countryCode), deliveryInfo.numero),
           description: deliveryInfo.description,
         },
         prod: panierWithShipping,
@@ -893,7 +838,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
 
       await axios.post(`${BackendUrl}/createOrUpdateAddress`, {
         ...deliveryInfo,
-        numero: deliveryInfo.countryCode + deliveryInfo.numero, // Numéro complet international
+        numero: toE164(countryOfDial(deliveryInfo.countryCode), deliveryInfo.numero), // Numéro complet international
         email: deliveryInfo.email !== "" ? deliveryInfo.email : null,
         clefUser: userId,
       });
@@ -1663,19 +1608,20 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
                           name="countryCode" value={deliveryInfo.countryCode} onChange={handleDeliveryChange}
                           className="py-3 px-2 bg-gray-50 border border-gray-200 border-r-0 rounded-l-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#30A08B]/30 focus:border-[#30A08B] w-28"
                         >
-                          {COUNTRY_CODES.map((c) => (
-                            <option key={c.code} value={c.code}>{c.flag} {c.code}</option>
+                          {PHONE_COUNTRIES.map((c) => (
+                            <option key={c.iso} value={c.dialCode}>{c.flag} {c.dialCode}</option>
                           ))}
                         </select>
                         <input
                           type="tel" id="numero" name="numero"
-                          value={deliveryInfo.numero} onChange={handleDeliveryChange}
+                          value={applyPhoneInputChange(countryOfDial(deliveryInfo.countryCode), deliveryInfo.numero).display} onChange={handleDeliveryChange}
+                          inputMode="tel" autoComplete="tel-national"
                           className="flex-1 pl-4 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-r-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#30A08B]/30 focus:border-[#30A08B] focus:bg-white transition-all duration-200 placeholder:text-gray-300"
-                          placeholder="87727501" maxLength={15}
+                          placeholder={getPhonePlaceholder(countryOfDial(deliveryInfo.countryCode))}
                         />
                       </div>
                       {deliveryInfo.numero && (
-                        <p className="text-xs text-gray-400 mt-1 pl-1">{deliveryInfo.countryCode}{deliveryInfo.numero}</p>
+                        <p className="text-xs text-gray-400 mt-1 pl-1">{formatPhoneInternational(toE164(countryOfDial(deliveryInfo.countryCode), deliveryInfo.numero))}</p>
                       )}
                     </div>
 
