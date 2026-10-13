@@ -13,15 +13,24 @@ const STEPS = [
   { key: "done", label: "Livrée", icon: Check },
 ];
 
-/** Étape à partir des statuts de la commande (mêmes libellés que le reste du site) */
-function stageOf(o: any) {
+const PAY_WAITING = ["en_attente", "en attente", "en cours", "pending"];
+const PAY_FAILED = ["échec", "echec", "failed"];
+
+/**
+ * Étape réelle de la commande. statusLivraison vaut « en cours » dès la création :
+ * on ne s'y fie pas, seul etatTraitement (mis à jour par l'équipe) fait avancer la livraison,
+ * et une commande en ligne non payée reste à « Commande passée ».
+ */
+function stageOf(o: any): { cancelled: boolean; step: number; payment?: "failed" | "waiting" } {
   const etat = String(o?.etatTraitement || "").toLowerCase();
   const livr = String(o?.statusLivraison || "").toLowerCase();
+  const pay = String(o?.statusPayment || "").toLowerCase();
   if (etat.includes("annul") || livr.includes("annul")) return { cancelled: true, step: 0 };
-  if (livr.includes("livr") && !livr.includes("cours") || etat.includes("livrée") || etat.includes("livré")) return { cancelled: false, step: 3 };
-  if (etat.includes("livraison") || livr.includes("cours")) return { cancelled: false, step: 2 };
-  if (etat.includes("traitement") || etat.includes("prépar") || etat.includes("reçu") || etat.includes("confirm")) return { cancelled: false, step: 1 };
-  return { cancelled: false, step: 0 };
+  if (["livraison reçu", "livré", "livrée", "traité"].includes(etat) || ["livré", "livrée"].includes(livr)) return { cancelled: false, step: 3 };
+  if (["reçu par le livreur", "en cours de livraison"].includes(etat)) return { cancelled: false, step: 2 };
+  if (PAY_FAILED.includes(pay)) return { cancelled: false, step: 0, payment: "failed" };
+  if (PAY_WAITING.includes(pay)) return { cancelled: false, step: 0, payment: "waiting" };
+  return { cancelled: false, step: 1 };
 }
 
 /** Suivi public d'une commande (lien partageable) */
@@ -85,6 +94,14 @@ export default function TrackingView({ reference, k }: { reference: string; k: s
             })}
           </ol>
         )}
+        {!st.cancelled && st.payment ? (
+          <p className={`mt-5 text-sm rounded-xl p-3 flex items-start gap-2 ${st.payment === "failed" ? "text-red-700 bg-red-50" : "text-[#8a5a2b] bg-[#B17236]/10"}`}>
+            {st.payment === "failed" ? <XCircle size={16} className="mt-0.5 shrink-0" /> : <Loader2 size={16} className="mt-0.5 shrink-0" />}
+            {st.payment === "failed"
+              ? "Paiement non abouti : la commande n'est pas encore validée et ne sera pas préparée. Repassez-la ou contactez-nous."
+              : "Paiement en attente : la préparation commence dès sa confirmation."}
+          </p>
+        ) : null}
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-2 text-sm">
