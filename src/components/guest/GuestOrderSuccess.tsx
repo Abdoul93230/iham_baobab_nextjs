@@ -15,11 +15,14 @@ export default function GuestOrderSuccess({
   reference,
   trackingToken,
   pointsHint,
+  callback = false,
   onClose,
 }: {
   reference: string;
   trackingToken: string;
   pointsHint?: number;
+  /** SMS non reçu : commande à confirmer par appel */
+  callback?: boolean;
   onClose?: () => void;
 }) {
   const router = useRouter();
@@ -66,6 +69,11 @@ export default function GuestOrderSuccess({
         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"><Check className="h-8 w-8 text-green-600" /></div>
         <h2 className="text-xl font-bold text-gray-800">Commande confirmée !</h2>
         <p className="text-sm text-gray-500 mt-1">Référence <strong>{reference}</strong>. Le livreur vous appellera.</p>
+        {callback ? (
+          <p className="mt-3 text-xs text-left rounded-xl bg-[#B17236]/10 text-gray-700 p-3">
+            📞 Le code SMS n'est pas arrivé : notre équipe vous appelle très vite pour confirmer la commande avant sa préparation.
+          </p>
+        ) : null}
       </div>
 
       <div className="rounded-2xl border border-gray-200 p-3">

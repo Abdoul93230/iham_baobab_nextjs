@@ -226,7 +226,9 @@ const CommandePage: React.FC = () => {
       try {
         const userEcomme = JSON.parse(localStorage.getItem("userEcomme") || "{}");
         if (!userEcomme?.id) {
-          throw new Error("Utilisateur non connecté");
+          // Sans compte : retrouver ses commandes avec son numéro
+          router.replace("/suivi");
+          return;
         }
 
         // Le backend n'autorise la lecture que de ses propres commandes (jeton requis)

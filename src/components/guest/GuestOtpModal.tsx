@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Loader2, ShieldCheck, X } from "lucide-react";
+import { Loader2, PhoneCall, ShieldCheck, X } from "lucide-react";
 import { sendGuestOtp, verifyGuestOtp, GuestSession } from "@/lib/guestSession";
 import { formatPhoneInternational } from "@/lib/phoneRules";
 
 /**
  * Vérification du numéro par SMS (1 seule fois par appareil, valable 90 jours).
  * Le code est envoyé à l'ouverture ; renvoi possible après le délai.
+ * SMS jamais reçu (ou envoi en échec) : `onCallback` → commande confirmée par appel de l'équipe.
  */
 export default function GuestOtpModal({
   open,
@@ -16,6 +17,7 @@ export default function GuestOtpModal({
   reason = "Pour le paiement à la livraison, nous vérifions votre numéro une seule fois.",
   onClose,
   onVerified,
+  onCallback,
 }: {
   open: boolean;
   phone: string;
@@ -23,6 +25,7 @@ export default function GuestOtpModal({
   reason?: string;
   onClose: () => void;
   onVerified: (s: GuestSession) => void;
+  onCallback?: () => void;
 }) {
   const [code, setCode] = useState("");
   const [sending, setSending] = useState(false);
@@ -30,6 +33,10 @@ export default function GuestOtpModal({
   const [error, setError] = useState("");
   const [cooldown, setCooldown] = useState(0);
   const sentFor = useRef<string | null>(null);
+  // Option « confirmer par appel » : 30 s après l'envoi (ou tout de suite si l'envoi échoue)
+  const [callbackAvail, setCallbackAvail] = useState(false);
+  const [fallbackIn, setFallbackIn] = useState(0);
+  const [askCallback, setAskCallback] = useState(false);
 
   const send = async () => {
     setSending(true);
@@ -37,10 +44,12 @@ export default function GuestOtpModal({
     try {
       const d = await sendGuestOtp(phone, name);
       setCooldown(d.cooldownSeconds || 60);
+      if (d.callbackAvailable) { setCallbackAvail(true); setFallbackIn(30); }
     } catch (e: any) {
       const d = e?.response?.data;
       setError(d?.message || "Envoi impossible. Vérifiez le numéro.");
       if (d?.data?.cooldownSeconds) setCooldown(d.data.cooldownSeconds);
+      if (d?.data?.callbackAvailable) { setCallbackAvail(true); setFallbackIn(0); }
     } finally {
       setSending(false);
     }
@@ -50,6 +59,8 @@ export default function GuestOtpModal({
     if (open && sentFor.current !== phone) {
       sentFor.current = phone;
       setCode("");
+      setAskCallback(false);
+      setCallbackAvail(false);
       send();
     }
     if (!open) sentFor.current = null;
@@ -60,6 +71,12 @@ export default function GuestOtpModal({
     const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
     return () => clearTimeout(t);
   }, [cooldown]);
+
+  useEffect(() => {
+    if (fallbackIn <= 0) return;
+    const t = setTimeout(() => setFallbackIn((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [fallbackIn]);
 
   const verify = async (value = code) => {
     if (!/^\d{6}$/.test(value)) return;
@@ -118,6 +135,22 @@ export default function GuestOtpModal({
         >
           {sending ? "Envoi…" : cooldown > 0 ? `Renvoyer le code dans ${cooldown}s` : "Renvoyer le code"}
         </button>
+        {onCallback && callbackAvail && fallbackIn <= 0 ? (
+          askCallback ? (
+            <div className="mt-3 rounded-2xl bg-[#B17236]/10 p-3 text-sm text-gray-700">
+              <p className="font-semibold text-gray-900 flex items-center gap-1.5"><PhoneCall size={15} className="text-[#B17236]" /> Confirmation par appel</p>
+              <p className="mt-1 text-xs leading-relaxed">
+                Votre commande est enregistrée et notre équipe vous appelle au <strong>{formatPhoneInternational(phone)}</strong> pour la confirmer avant sa préparation. Gardez votre téléphone à portée de main.
+              </p>
+              <button onClick={onCallback} className="mt-3 w-full py-2.5 rounded-xl bg-[#B17236] text-white font-semibold">Commander, je serai joignable</button>
+              <button onClick={() => setAskCallback(false)} className="mt-1 w-full py-1.5 text-xs text-gray-500">Attendre encore le SMS</button>
+            </div>
+          ) : (
+            <button onClick={() => setAskCallback(true)} className="mt-1 w-full py-2 text-sm font-medium text-[#B17236] underline underline-offset-2">
+              Je n'ai pas reçu le code
+            </button>
+          )
+        ) : null}
         <p className="text-[11px] text-center text-gray-400 mt-1">Astuce : le paiement en ligne ne demande pas de code.</p>
       </div>
     </div>

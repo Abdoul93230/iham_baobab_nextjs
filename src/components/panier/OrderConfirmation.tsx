@@ -185,8 +185,10 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP,
   // Commande sans compte : vérification du numéro (si nécessaire) et commande créée
   const [otpOpen, setOtpOpen] = useState(false);
   const [otpReason, setOtpReason] = useState("");
-  const [createdOrder, setCreatedOrder] = useState<{ reference: string; trackingToken: string } | null>(null);
+  const [createdOrder, setCreatedOrder] = useState<{ reference: string; trackingToken: string; phoneConfirmation?: string } | null>(null);
   const resumeAfterOtp = useRef(false);
+  // SMS jamais reçu : la commande part avec confirmation par appel de l'équipe
+  const phoneCallbackRef = useRef(false);
   const [pointsDiscount, setPointsDiscount] = useState(0);
 
   // Sync quand initialBP arrive (chargé après le mount via useEffect de la page parente)
@@ -793,7 +795,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP,
           PaymentMethods.CASH_ON_DELIVERY.includes(selectedPayment) ? "payé à la livraison"
             : PaymentMethods.ASSISTED_PAYMENT.includes(selectedPayment) ? "payé par téléphone" : ""
         );
-        if (r.accountExists || (offline && !r.session?.verified)) {
+        if (r.accountExists || (offline && !r.session?.verified && !phoneCallbackRef.current)) {
           setOtpReason(r.accountExists
             ? "Ce numéro a déjà un compte. Confirmez-le par SMS pour commander sans vous connecter."
             : "Pour le paiement à la livraison, nous vérifions votre numéro une seule fois.");
@@ -869,6 +871,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP,
           ? "payé à la livraison" : PaymentMethods.ASSISTED_PAYMENT.includes(selectedPayment)
           ? "payé par téléphone"
           : "en_attente",
+        ...(phoneCallbackRef.current ? { phoneCallback: true } : {}),
         reference: transactionId,
         livraisonDetails: {
           customerName: deliveryInfo.name,
@@ -916,7 +919,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP,
         return;
       }
       if (orderResult.commande?.reference && orderResult.commande?.trackingToken) {
-        setCreatedOrder({ reference: orderResult.commande.reference, trackingToken: orderResult.commande.trackingToken });
+        setCreatedOrder({ reference: orderResult.commande.reference, trackingToken: orderResult.commande.trackingToken, phoneConfirmation: orderResult.commande.phoneConfirmation });
       }
 
       // 5. Traitement du paiement
@@ -1845,6 +1848,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP,
               <GuestOrderSuccess
                 reference={createdOrder.reference}
                 trackingToken={createdOrder.trackingToken}
+                callback={createdOrder.phoneConfirmation === "pending"}
                 onClose={() => router.push("/")}
               />
             </motion.div>
@@ -1880,7 +1884,14 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP,
         name={deliveryInfo.name}
         reason={otpReason}
         onClose={() => { setOtpOpen(false); resumeAfterOtp.current = false; }}
+        onCallback={() => {
+          setOtpOpen(false);
+          phoneCallbackRef.current = true;
+          resumeAfterOtp.current = false;
+          setTimeout(() => handlePaymentSubmit({ preventDefault() {} } as React.FormEvent), 0);
+        }}
         onVerified={() => {
+          phoneCallbackRef.current = false;
           setOtpOpen(false);
           if (resumeAfterOtp.current) {
             resumeAfterOtp.current = false;

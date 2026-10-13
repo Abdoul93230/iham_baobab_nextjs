@@ -145,7 +145,10 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
         ]
       : []),
     { icon: Home, label: "Mon compte", href: acces === "oui" ? "/profile" : "/auth/login?returnUrl=/profile" },
-    { icon: Package, label: "Mes commandes", href: acces === "oui" ? "/commandes" : "/auth/login?returnUrl=/commandes" },
+    // Sans compte : retrouver / suivre ses commandes avec son numéro (aucune connexion requise)
+    acces === "oui"
+      ? { icon: Package, label: "Mes commandes", href: "/commandes" }
+      : { icon: Package, label: "Suivre une commande", href: "/suivi" },
     { icon: Trees, label: "Baobab Points", href: acces === "oui" ? "/wallet" : "/auth/login?returnUrl=/wallet" },
     { icon: Heart, label: "Inviter des amis", href: acces === "oui" ? "/invite-ami" : "/auth/login?returnUrl=/invite-ami" },
     { icon: Truck, label: "Mes adresses", href: acces === "oui" ? "/livraison" : "/auth/login?returnUrl=/livraison" },
@@ -156,6 +159,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
 
   const helpOpts = [
     { icon: HelpCircle, label: "Centre d'aide", href: "/centre-aide" },
+    { icon: Package, label: "Suivre une commande", href: "/suivi" },
     { icon: Truck, label: "Adresse de livraison", href: "/livraison" },
     { icon: Bell, label: "Notifications", href: "/" },
     { icon: Shield, label: "Confidentialité", href: "/confidentialite" },

@@ -94,6 +94,11 @@ export default function TrackingView({ reference, k }: { reference: string; k: s
             })}
           </ol>
         )}
+        {!st.cancelled && order.phoneConfirmation === "pending" ? (
+          <p className="mt-5 text-sm rounded-xl p-3 text-[#8a5a2b] bg-[#B17236]/10">
+            📞 Notre équipe va vous appeler pour confirmer cette commande avant sa préparation.
+          </p>
+        ) : null}
         {!st.cancelled && st.payment ? (
           <p className={`mt-5 text-sm rounded-xl p-3 flex items-start gap-2 ${st.payment === "failed" ? "text-red-700 bg-red-50" : "text-[#8a5a2b] bg-[#B17236]/10"}`}>
             {st.payment === "failed" ? <XCircle size={16} className="mt-0.5 shrink-0" /> : <Loader2 size={16} className="mt-0.5 shrink-0" />}
