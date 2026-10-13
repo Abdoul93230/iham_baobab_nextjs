@@ -16,6 +16,7 @@ import {
 import axios from "axios";
 import { formatCurrency } from "@/lib/utils";
 import { AuthService } from "@/lib/auth";
+import { orderStatusLabel } from "@/lib/orderStatus";
 
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 
@@ -142,7 +143,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isHovered, onHove
             <div>
               <p className="text-sm font-medium text-gray-500">État</p>
               <p className="mt-1 font-semibold text-gray-900">
-                {order.etatTraitement}
+                {orderStatusLabel(order)}
               </p>
             </div>
             <div>
