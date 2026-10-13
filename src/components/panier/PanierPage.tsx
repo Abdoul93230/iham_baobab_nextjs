@@ -23,7 +23,7 @@ import axios from "axios";
 import Image from "next/image";
 import { useSelector } from "react-redux";
 import ZoneSelector from "./ZoneSelector";
-import { CartQuote, getRememberedZone, getZones, parcelFeeText, quoteCart, rememberZone, ZoneV3 } from "@/lib/shippingV3";
+import { CartQuote, getRememberedZone, getZones, parcelFeeText, quoteCart, rememberZone, zoneLabel, ZoneV3 } from "@/lib/shippingV3";
 import { formatCurrency } from "../../lib/utils";
 import Alert from "../Alert";
 import { RootState } from "@/redux/store";
@@ -165,7 +165,8 @@ const PanierPage: React.FC = () => {
         const zoneId = r.data?.address?.zoneId;
         if (!zoneId) return;
         const z = (await getZones()).find((x) => x._id === String(zoneId));
-        if (z && alive) setSelectedZone(z);
+        const locality = r.data?.address?.localityName;
+        if (z && alive) setSelectedZone(locality ? { ...z, localityName: locality } : z);
       } catch {}
     })();
     return () => { alive = false; };
@@ -641,7 +642,7 @@ const PanierPage: React.FC = () => {
                         <span className="flex items-center gap-1.5 text-gray-600 min-w-0">
                           <Truck className="w-3.5 h-3.5 text-[#30A08B] flex-shrink-0" />
                           <span className="truncate">
-                            {parcel.origin?.name || group.storeName} → {selectedZone.name}
+                            {parcel.origin?.name || group.storeName} → {zoneLabel(selectedZone).title}
                             {parcel.deliverable && parcel.delay?.label ? <span className="text-gray-400"> · {parcel.delay.label}</span> : null}
                           </span>
                         </span>

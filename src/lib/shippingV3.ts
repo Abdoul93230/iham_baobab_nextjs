@@ -14,6 +14,8 @@ export interface ZoneV3 {
   fullPath: string;
   aliases?: string[];
   center?: { lat: number; lng: number };
+  /** Localité du client absente de la liste (la zone est alors la ville / région la plus proche) */
+  localityName?: string;
 }
 
 export interface ParcelQuote {
@@ -78,9 +80,13 @@ export async function getZones(): Promise<ZoneV3[]> {
 export const normalize = (s: string) =>
   String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
-/** Libellé lisible : « Yantala Bas » + « Commune 1, Niamey » */
-export function zoneLabel(z: Pick<ZoneV3, "name" | "fullPath">) {
+/** Libellé lisible : « Yantala Bas » + « Commune 1, Niamey » (ou « Maijirgui » + « près de Tessaoua, Maradi ») */
+export function zoneLabel(z: Pick<ZoneV3, "name" | "fullPath"> & { localityName?: string }) {
   const parts = String(z.fullPath || z.name).split(" > ");
+  if (z.localityName) {
+    const around = [z.name, ...parts.slice(1, -1).reverse()].filter((x, i, a) => a.indexOf(x) === i).join(", ");
+    return { title: z.localityName, subtitle: `près de ${around}` };
+  }
   const context = parts.slice(1, -1).reverse().join(", ");
   return { title: z.name, subtitle: context || (parts[0] !== z.name ? parts[0] : "") };
 }
@@ -145,6 +151,11 @@ export function getBrowserPosition(): Promise<{ lat: number; lng: number; accura
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
     );
   });
+}
+
+/** Signale une localité absente de la liste (pour que l'équipe l'ajoute) — sans bloquer le client */
+export function requestLocality(name: string, nearZoneId: string) {
+  axios.post(`${BackendUrl}/api/shipping-v3/zone-requests`, { name, nearZoneId }, { timeout: 8000 }).catch(() => {});
 }
 
 // ─── Zone mémorisée ──────────────────────────────────────────────────────────

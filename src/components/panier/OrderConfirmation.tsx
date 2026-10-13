@@ -361,7 +361,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
           // Zone enregistrée avec l'adresse, si le panier n'en a pas fourni
           if (!selectedZone && address.zoneId) {
             const z = (await getZones()).find((x) => x._id === String(address.zoneId));
-            if (z) changeZone(z);
+            if (z) changeZone(address.localityName ? { ...z, localityName: address.localityName } : z);
           }
         } else if (selectedZone) {
           // Si pas d'adresse sauvegardée mais zone sélectionnée dans le panier
@@ -830,6 +830,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
           numero: toE164(countryOfDial(deliveryInfo.countryCode), deliveryInfo.numero),
           description: deliveryInfo.description,
           zoneId: selectedZone?._id,
+          localityName: selectedZone?.localityName || "",
           landmark: deliveryInfo.landmark,
           ...(deliveryLocation ? { location: deliveryLocation } : {}),
         },
@@ -851,6 +852,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
       await axios.post(`${BackendUrl}/createOrUpdateAddress`, {
         ...deliveryInfo,
         zoneId: selectedZone?._id,
+        localityName: selectedZone?.localityName || "",
         ...(deliveryLocation ? { location: deliveryLocation } : {}),
         numero: toE164(countryOfDial(deliveryInfo.countryCode), deliveryInfo.numero), // Numéro complet international
         email: deliveryInfo.email !== "" ? deliveryInfo.email : null,

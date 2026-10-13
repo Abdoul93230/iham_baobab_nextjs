@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, LocateFixed, Loader2, MapPin, Search, X } from "lucide-react";
-import { getBrowserPosition, getZones, nearestZone, searchZones, zoneLabel, ZoneV3 } from "@/lib/shippingV3";
+import { ArrowLeft, Check, ChevronDown, Home, LocateFixed, Loader2, MapPin, Search, X } from "lucide-react";
+import { getBrowserPosition, getZones, nearestZone, requestLocality, searchZones, zoneLabel, ZoneV3 } from "@/lib/shippingV3";
 
 interface ZoneSelectorProps {
   selectedZone: ZoneV3 | null;
@@ -13,7 +13,8 @@ interface ZoneSelectorProps {
 
 /**
  * Choix de la zone de livraison : quartier ou ville, recherche instantanée
- * (noms officiels et autres noms), ou position GPS → zone la plus proche.
+ * (noms officiels et autres noms), position GPS → zone la plus proche,
+ * ou localité absente de la liste → ville / région la plus proche + nom saisi.
  */
 const ZoneSelector: React.FC<ZoneSelectorProps> = ({
   selectedZone,
@@ -28,6 +29,9 @@ const ZoneSelector: React.FC<ZoneSelectorProps> = ({
   const [q, setQ] = useState("");
   const [locating, setLocating] = useState(false);
   const [active, setActive] = useState(0);
+  // Mode « Ma localité n'est pas dans la liste »
+  const [missing, setMissing] = useState(false);
+  const [locality, setLocality] = useState("");
   const boxRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
@@ -52,11 +56,19 @@ const ZoneSelector: React.FC<ZoneSelectorProps> = ({
   const results = useMemo(() => searchZones(zones, q), [zones, q]);
   useEffect(() => setActive(0), [q]);
 
+  const reset = () => { setOpen(false); setQ(""); setError(""); setMissing(false); setLocality(""); };
+
   const pick = (z: ZoneV3, meta?: { location?: { lat: number; lng: number; accuracy: number } }) => {
-    onSelect(z, meta);
-    setOpen(false);
-    setQ("");
-    setError("");
+    const name = locality.trim();
+    if (missing) {
+      if (name.length < 2) { setError("Écrivez d’abord le nom de votre localité."); return; }
+      requestLocality(name, z._id);
+      onSelect({ ...z, localityName: name }, meta);
+    } else {
+      const { localityName: _drop, ...plain } = z; // eslint-disable-line @typescript-eslint/no-unused-vars
+      onSelect(plain, meta);
+    }
+    reset();
   };
 
   const locate = async () => {
@@ -74,6 +86,13 @@ const ZoneSelector: React.FC<ZoneSelectorProps> = ({
     } finally {
       setLocating(false);
     }
+  };
+
+  const startMissing = () => {
+    setMissing(true);
+    setLocality(q.trim());
+    setQ("");
+    setError("");
   };
 
   const onKey = (e: React.KeyboardEvent) => {
@@ -115,6 +134,28 @@ const ZoneSelector: React.FC<ZoneSelectorProps> = ({
       {open && (
         <div className="absolute z-50 w-full mt-1.5 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
           <div className="p-2.5 border-b border-gray-100 space-y-2">
+            {missing ? (
+              <>
+                <button type="button" onClick={() => { setMissing(false); setError(""); }} className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700">
+                  <ArrowLeft className="h-3.5 w-3.5" /> Retour à la liste
+                </button>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">1. Nom de votre village, quartier ou localité</label>
+                  <div className="relative">
+                    <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      autoFocus
+                      value={locality}
+                      maxLength={100}
+                      onChange={(e) => { setLocality(e.target.value); setError(""); }}
+                      placeholder="Ex. Maijirgui"
+                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#30A08B]/30 focus:border-[#30A08B]"
+                    />
+                  </div>
+                </div>
+                <label className="block text-xs font-semibold text-gray-700">2. Ville ou région la plus proche</label>
+              </>
+            ) : null}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
@@ -122,8 +163,8 @@ const ZoneSelector: React.FC<ZoneSelectorProps> = ({
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 onKeyDown={onKey}
-                placeholder="Ex. Yantala, Tessaoua, Konni…"
-                autoFocus
+                placeholder={missing ? "Ex. Tessaoua, Maradi, Dosso…" : "Ex. Yantala, Tessaoua, Konni…"}
+                autoFocus={!missing}
                 className="w-full pl-9 pr-8 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#30A08B]/30 focus:border-[#30A08B]"
                 role="combobox"
                 aria-controls="zone-options"
@@ -135,29 +176,33 @@ const ZoneSelector: React.FC<ZoneSelectorProps> = ({
                 </button>
               ) : null}
             </div>
-            <button
-              type="button"
-              onClick={locate}
-              disabled={locating}
-              className="w-full flex items-center justify-center gap-2 py-2 text-sm font-medium text-[#30A08B] bg-[#30A08B]/5 hover:bg-[#30A08B]/10 rounded-lg transition-colors disabled:opacity-60"
-            >
-              {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
-              {locating ? "Localisation…" : "Utiliser ma position"}
-            </button>
+            {!missing ? (
+              <button
+                type="button"
+                onClick={locate}
+                disabled={locating}
+                className="w-full flex items-center justify-center gap-2 py-2 text-sm font-medium text-[#30A08B] bg-[#30A08B]/5 hover:bg-[#30A08B]/10 rounded-lg transition-colors disabled:opacity-60"
+              >
+                {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
+                {locating ? "Localisation…" : "Utiliser ma position"}
+              </button>
+            ) : (
+              <p className="text-[11px] text-gray-500 px-0.5">Les frais sont calculés jusqu’à cette ville. Notre équipe ajoutera votre localité à la liste.</p>
+            )}
             {error ? <p className="text-xs text-amber-700 px-1">{error}</p> : null}
           </div>
 
-          <ul id="zone-options" ref={listRef} role="listbox" className="max-h-72 overflow-y-auto py-1">
+          <ul id="zone-options" ref={listRef} role="listbox" className="max-h-64 overflow-y-auto py-1">
             {loading ? (
               <li className="flex items-center justify-center gap-2 p-5 text-sm text-gray-500">
                 <Loader2 className="h-4 w-4 animate-spin text-[#30A08B]" /> Chargement des zones…
               </li>
             ) : results.length ? (
               <>
-                {!q ? <li className="px-3 pt-1 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Villes et communes · tapez votre quartier</li> : null}
+                {!q ? <li className="px-3 pt-1 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">{missing ? "Villes et communes" : "Villes et communes · tapez votre quartier"}</li> : null}
                 {results.map((z, i) => {
                   const l = zoneLabel(z);
-                  const on = selectedZone?._id === z._id;
+                  const on = !missing && selectedZone?._id === z._id && !selectedZone?.localityName;
                   return (
                     <li key={z._id} data-idx={i} role="option" aria-selected={on}>
                       <button
@@ -178,12 +223,19 @@ const ZoneSelector: React.FC<ZoneSelectorProps> = ({
                 })}
               </>
             ) : (
-              <li className="p-5 text-center text-sm text-gray-500">
-                Aucune zone « {q} ».<br />
-                <span className="text-xs">Choisissez la ville la plus proche : le livreur vous appellera.</span>
-              </li>
+              <li className="p-4 text-center text-sm text-gray-500">Aucune zone « {q} »</li>
             )}
           </ul>
+
+          {!missing ? (
+            <button
+              type="button"
+              onClick={startMissing}
+              className="w-full border-t border-gray-100 px-3 py-2.5 text-sm font-medium text-[#B17236] hover:bg-[#B17236]/5 flex items-center justify-center gap-1.5"
+            >
+              <Home className="h-4 w-4" /> Ma localité n’est pas dans la liste
+            </button>
+          ) : null}
         </div>
       )}
     </div>

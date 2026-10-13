@@ -89,7 +89,7 @@ const LivraisonPage = () => {
           if (address.location?.lat != null) setLocation(address.location);
           if (address.zoneId) {
             const z = (await getZones().catch(() => [] as ZoneV3[])).find((x) => x._id === String(address.zoneId));
-            if (z) setZone(z);
+            if (z) setZone(address.localityName ? { ...z, localityName: address.localityName } : z);
           }
         }
         setLoading(false);
@@ -172,6 +172,7 @@ const LivraisonPage = () => {
       await axios.post(`${BackendUrl}/createOrUpdateAddress`, {
         ...addressData,
         zoneId: zone?._id,
+        localityName: zone?.localityName || "",
         ...(location ? { location } : {}),
         numero: toE164(phoneCountry, addressData.numero), // E.164 sans espace (+22787727501)
         clefUser: userId,
