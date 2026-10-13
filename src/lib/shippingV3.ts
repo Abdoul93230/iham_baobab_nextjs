@@ -173,3 +173,51 @@ export function parcelFeeText(p: ParcelQuote, format: (n: number) => string) {
   if (p.free) return "Offerte";
   return format(p.fee || 0);
 }
+
+// ─── Ville d'expédition des boutiques (badge « 📍 ville ») ───────────────────
+
+export interface OriginBadge {
+  city: string;
+  detail: string | null;
+  regionId: string | null;
+  source: string;
+}
+
+const originCache = new Map<string, OriginBadge | null>();
+const originWaiters = new Map<string, ((v: OriginBadge | null) => void)[]>();
+let originTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Regroupe les demandes de toutes les cartes affichées en un seul appel (fenêtre de 40 ms) */
+export function loadSellerOrigin(sellerId: string): Promise<OriginBadge | null> {
+  if (!sellerId || !/^[a-f\d]{24}$/i.test(sellerId)) return Promise.resolve(null);
+  if (originCache.has(sellerId)) return Promise.resolve(originCache.get(sellerId) ?? null);
+  return new Promise((resolve) => {
+    originWaiters.set(sellerId, [...(originWaiters.get(sellerId) || []), resolve]);
+    if (originTimer) return;
+    originTimer = setTimeout(async () => {
+      originTimer = null;
+      const batch = [...originWaiters.entries()];
+      originWaiters.clear();
+      const ids = batch.map(([id]) => id);
+      let data: Record<string, OriginBadge | null> = {};
+      try {
+        for (let i = 0; i < ids.length; i += 200) {
+          const r = await axios.get(`${BackendUrl}/api/shipping-v3/origins`, { params: { ids: ids.slice(i, i + 200).join(",") }, timeout: 10000 });
+          data = { ...data, ...(r.data?.data || {}) };
+        }
+      } catch {}
+      for (const [id, resolvers] of batch) {
+        const v = data[id] ?? null;
+        if (id in data) originCache.set(id, v);
+        resolvers.forEach((fn) => fn(v));
+      }
+    }, 40);
+  });
+}
+
+/** Identifiant de la boutique d'un produit (Clefournisseur peuplé ou brut) */
+export function sellerIdOf(product: any): string | null {
+  const c = product?.Clefournisseur;
+  const id = (c && typeof c === "object" ? c._id : c) || product?.createdBy || null;
+  return id ? String(id) : null;
+}

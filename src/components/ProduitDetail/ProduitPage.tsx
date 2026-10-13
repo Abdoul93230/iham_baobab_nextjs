@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Heart, ShoppingCart, Star, Zap, Eye } from "lucide-react";
+import { Heart, ShoppingCart, Star, Zap, Eye, MapPin } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchUserLikes, toggleLike } from "@/redux/likesSlice";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { triggerNavProgress } from "@/components/NavigationProgress";
+import useSellerOrigin from "@/hooks/useSellerOrigin";
+import { sellerIdOf } from "@/lib/shippingV3";
 
 export interface ProductCardData {
   _id: string;
@@ -17,7 +19,8 @@ export interface ProductCardData {
   image1: string;
   rating?: number;
   quantite?: number;
-  Clefournisseur?: { name?: string; storeName?: string };
+  Clefournisseur?: { _id?: string; name?: string; storeName?: string } | string;
+  createdBy?: string;
   ClefType?: string;
 }
 
@@ -64,6 +67,8 @@ export const ProductCard: React.FC<{
   const [isLiking, setIsLiking] = useState(false);
 
   const isLiked = likedProducts.includes(product._id);
+  const origin = useSellerOrigin(sellerIdOf(product));
+  const store = typeof product.Clefournisseur === "object" ? product.Clefournisseur : undefined;
   const discount =
     product.prixPromo && product.prixPromo > 0
       ? calcDiscount(product.prix, product.prixPromo)
@@ -166,10 +171,17 @@ export const ProductCard: React.FC<{
 
       {/* ── Info ── */}
       <div className="p-3 flex flex-col gap-1 flex-1">
-        {/* Seller name */}
-        {product.Clefournisseur?.storeName && (
-          <p className="text-[10px] text-gray-400 truncate font-medium uppercase tracking-wide">
-            {product.Clefournisseur.storeName}
+        {/* Boutique · 📍 ville d'expédition */}
+        {(store?.storeName || origin) && (
+          <p className="text-[10px] text-gray-400 truncate font-medium flex items-center gap-1 min-w-0">
+            {store?.storeName ? <span className="uppercase tracking-wide truncate">{store.storeName}</span> : null}
+            {store?.storeName && origin ? <span aria-hidden>·</span> : null}
+            {origin ? (
+              <span className="inline-flex items-center gap-0.5 text-[#B17236] normal-case flex-shrink-0" title={`Expédié depuis ${origin.city}`}>
+                <MapPin size={10} />
+                {origin.city}
+              </span>
+            ) : null}
           </p>
         )}
 

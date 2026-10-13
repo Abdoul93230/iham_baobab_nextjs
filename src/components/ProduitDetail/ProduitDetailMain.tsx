@@ -11,6 +11,8 @@ import { FaWhatsapp, FaInstagram, FaFacebook, FaLinkedin } from "react-icons/fa"
 import ProduitSimilaires from "./ProduitSimilaires";
 import CommentaireProduit from "./CommentaireProduit";
 import CountryPage from "./CountryPage";
+import DeliveryEstimate from "./DeliveryEstimate";
+import { sellerIdOf } from "@/lib/shippingV3";
 import axios from "axios";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { useRouter } from "next/navigation";
@@ -132,19 +134,6 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
     setActiveImageIndex(0);
     setQuantity(1);
   }, [productId, produit]);
-
-  // IP-based country detection
-  useEffect(() => {
-    if (!BackendUrl) return;
-    (async () => {
-      try {
-        const ip = await axios.get("https://ifconfig.me/ip");
-        const r = await axios.get(`${BackendUrl}/proxy/ip-api`, { headers: { "Client-IP": ip.data } });
-        setRegionClient((r.data.regionName || "Niamey").toLowerCase());
-        setPays((r.data.country || "Niger").toLowerCase());
-      } catch {}
-    })();
-  }, [BackendUrl]);
 
   const showAlert = (type: typeof alert.type, message: string) => {
     setAlert({ visible: true, type, message });
@@ -569,27 +558,8 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
               ))}
             </div>
 
-            {/* Delivery info */}
-            <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
-                  <Truck size={15} className="text-[#30A08B]" /> Livraison vers
-                </h3>
-                <button
-                  onClick={() => setIsCountryOpen(true)}
-                  className="flex items-center gap-1 text-xs text-[#30A08B] font-semibold hover:underline"
-                >
-                  <MapPin size={12} /> {pays.toUpperCase()}
-                </button>
-              </div>
-              {!westAfricanCountries.includes(pays.toLowerCase()) ? (
-                <p className="text-xs text-red-600 bg-red-50 rounded-lg p-2">
-                  Cet article ne peut pas être livré à cette adresse.
-                </p>
-              ) : (
-                <p className="text-xs text-green-600">✓ Livraison disponible dans votre zone</p>
-              )}
-            </div>
+            {/* Livraison : d'où, vers où, frais et délai réels */}
+            <DeliveryEstimate productId={produit._id} sellerId={sellerIdOf(produit)} quantity={quantity} />
 
             {/* Seller info */}
             {produit.Clefournisseur && (
