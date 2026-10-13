@@ -523,7 +523,7 @@ const PanierPage: React.FC = () => {
                     {group.articles.map(({ article, originalIndex }) => {
                       const price = article.prixPromo || article.prix || article.price || 0;
                       const origPrice = article.prix || article.price || 0;
-                      const hasPromo = article.prixPromo && article.prixPromo < origPrice;
+                      const hasPromo = !!(article.prixPromo && article.prixPromo < origPrice);
                       const qty = article.quantity || 0;
                       const stock = getAvailableStock(article);
                       const isUnavailable = unavailableProducts.has(

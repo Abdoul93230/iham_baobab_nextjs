@@ -45,7 +45,7 @@ function SearchResults() {
   ))] as string[];
 
   const price = (p: any) => p.prixPromo && p.prixPromo < p.prix ? p.prixPromo : p.prix;
-  const hasPromo = (p: any) => p.prixPromo && p.prixPromo < p.prix;
+  const hasPromo = (p: any) => !!(p.prixPromo && p.prixPromo < p.prix);
 
   return (
     <div className="min-h-screen bg-gray-50">

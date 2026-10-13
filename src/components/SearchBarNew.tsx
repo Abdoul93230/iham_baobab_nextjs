@@ -173,7 +173,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
               <ul className="pb-2">
                 {searchResults.map((p) => {
                   const price = p.prixPromo || p.prix || 0;
-                  const hasPromo = p.prixPromo && p.prixPromo < p.prix;
+                  const hasPromo = !!(p.prixPromo && p.prixPromo < p.prix);
                   return (
                     <li key={p._id}>
                       <button
