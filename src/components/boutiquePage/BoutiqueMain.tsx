@@ -40,6 +40,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import axios from "axios";
+import OriginBadge from "@/components/OriginBadge";
 import Image from "next/image";
 
 import {
@@ -394,6 +395,7 @@ const BoutiqueMain: React.FC<BoutiqueMainProps> = ({ sellerId, storeName }) => {
               <h1 className="text-2xl sm:text-3xl font-black text-white">
                 {sellerInfo.storeName || `${sellerInfo.userName2 || ""} ${sellerInfo.name || ""}`}
               </h1>
+              <OriginBadge sellerId={sellerInfo._id} tone="light" showDetail className="text-sm font-medium mt-1" />
               {sellerInfo.storeDescription && (
                 <p className="text-white/75 text-sm mt-1 max-w-sm line-clamp-2">
                   {sellerInfo.storeDescription}

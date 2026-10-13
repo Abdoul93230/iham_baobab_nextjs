@@ -12,6 +12,7 @@ import ProduitSimilaires from "./ProduitSimilaires";
 import CommentaireProduit from "./CommentaireProduit";
 import CountryPage from "./CountryPage";
 import DeliveryEstimate from "./DeliveryEstimate";
+import OriginBadge from "@/components/OriginBadge";
 import { sellerIdOf } from "@/lib/shippingV3";
 import axios from "axios";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
@@ -578,9 +579,7 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
                   <p className="text-sm font-bold text-gray-800 truncate">
                     {produit.Clefournisseur.storeName || produit.Clefournisseur.name}
                   </p>
-                  {produit.Clefournisseur.city && (
-                    <p className="text-xs text-gray-400">{produit.Clefournisseur.city}</p>
-                  )}
+                  <OriginBadge sellerId={sellerIdOf(produit)} className="text-xs" showDetail />
                   {produit.Clefournisseur.isvalid && (
                     <span className="text-[10px] text-green-600 font-medium">✓ Boutique vérifiée</span>
                   )}
