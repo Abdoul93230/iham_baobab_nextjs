@@ -28,6 +28,7 @@ import axios from "axios";
 import OrderedItems from "./OrderedItems";
 import OrderPaymentHandler from "./OrderPaymentHandler";
 import OrderTracking from "./OrderTracking";
+import { deliveryLabel, orderStatusLabel, paymentLabel } from "@/lib/orderStatus";
 import { formatCurrency } from "@/lib/utils";
 import { fetchShareLink, shareTracking } from "@/lib/guestSession";
 
@@ -364,7 +365,7 @@ const CommandeSuivi: React.FC = () => {
                   {orderType === "cancelled" && <XCircle className="w-3 h-3 inline mr-1" />}
                   {orderType === "completed" && <CheckCircle className="w-3 h-3 inline mr-1" />}
                   {orderType === "inProgress" && <Clock className="w-3 h-3 inline mr-1" />}
-                  {order?.statusPayment === "échec" ? order.etatTraitement : order.statusLivraison === "annulé" ? order.statusLivraison : null}
+                  {orderStatusLabel(order)}
                 </span>
                 {order?._id ? (
                   <button
@@ -389,7 +390,7 @@ const CommandeSuivi: React.FC = () => {
                 </div>
                 <div className="flex items-center">
                   <Clock className="w-4 h-4 mr-1" />
-                  Status: {(order.statusPayment === "en attente" || order.statusPayment === "en_attente" || order.statusPayment === "en attente") ? "En attente du paiement" : order.statusLivraison}
+                  Statut : {orderStatusLabel(order)}
                 </div>
               </div>
             </div>
@@ -493,12 +494,12 @@ const CommandeSuivi: React.FC = () => {
                             ? "text-green-600"
                             : "text-gray-600"
                         }`}>
-                        {order.statusLivraison}
+                        {deliveryLabel(order)}
                       </p>
                     </div>
                     <div>
                       <p className="font-medium">État du traitement</p>
-                      <p className="text-gray-600">{order.statusLivraison === "annulé" ? order.statusLivraison : order.etatTraitement}</p>
+                      <p className="text-gray-600">{orderStatusLabel(order)}</p>
                     </div>
                     <div>
                       <p className="font-medium">Référence</p>
@@ -633,11 +634,10 @@ const CommandeSuivi: React.FC = () => {
                     }`}></div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900">
-                      Statut actuel : {order.etatTraitement}
+                      Statut actuel : {orderStatusLabel(order)}
                     </p>
                     <p className="text-xs text-gray-500">
-                      Livraison : {order.statusLivraison} | Paiement : {order.statusPayment === "payé par téléphone"
-                        ? "Paiement assisté" : order.statusPayment}
+                      Livraison : {deliveryLabel(order)} | Paiement : {paymentLabel(order)}
                     </p>
                   </div>
                 </div>
