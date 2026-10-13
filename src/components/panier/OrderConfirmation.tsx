@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { AlertCircle, Check, User, Mail, MapPin, Home, MessageSquare, Lock, ShoppingCart, Shield } from "lucide-react";
+import { AlertCircle, Check, User, Mail, MapPin, Home, MessageSquare, Lock, ShoppingCart, Shield, Truck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import axios from "axios";
@@ -19,6 +19,8 @@ import { io, Socket } from "socket.io-client";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import PaiementPage from "./PaiementPage";
 import PointsRedeemWidget from "@/components/wallet/PointsRedeemWidget";
+import ZoneSelector from "./ZoneSelector";
+import { CartQuote, getZones, quoteCart, rememberZone, zoneLabel, ZoneV3 } from "@/lib/shippingV3";
 
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 
@@ -162,7 +164,11 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
     region: "",
     quartier: "",
     description: "",
+    landmark: "",
   });
+  const [deliveryLocation, setDeliveryLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const [shippingQuote, setShippingQuote] = useState<CartQuote | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
   const [submitStatus, setSubmitStatus] = useState({
     loading: false,
     error: null as string | null,
@@ -244,55 +250,47 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
     }
   }, []);
 
-  // Recalcul du shipping au montage depuis l'API pour éviter les montants périmés du localStorage
+  // Devis v3 : recalculé au montage et à chaque changement de zone (prix affiché = prix facturé)
   useEffect(() => {
-    const refreshShipping = async () => {
-      if (typeof window === 'undefined') return;
-      const zone = (() => { try { return JSON.parse(localStorage.getItem("orderShippingZone") || "null"); } catch { return null; } })();
-      if (!zone?._id) return;
-
-      const panier: any[] = (() => { try { return JSON.parse(localStorage.getItem("panier") || "[]"); } catch { return []; } })();
-      if (!panier.length) return;
-
-      // Grouper par boutique — même logique de poids que le backend (shipping.weight || 0.5)
-      const storeWeights: Record<string, { sellerId: string; weight: number }> = {};
-      for (const item of panier) {
-        const storeId = item.Clefournisseur?._id || item.createdBy || "unknown";
-        if (!storeWeights[storeId]) storeWeights[storeId] = { sellerId: storeId, weight: 0 };
-        storeWeights[storeId].weight += ((item.shipping?.weight ?? item.poids) || 0.5) * (item.quantity || 1);
-      }
-
+    if (typeof window === 'undefined' || !selectedZone?._id) return;
+    const panier: any[] = (() => { try { return JSON.parse(localStorage.getItem("panier") || "[]"); } catch { return []; } })();
+    if (!panier.length) return;
+    let alive = true;
+    setQuoteLoading(true);
+    (async () => {
       try {
-        const storeEntries = Object.values(storeWeights);
-        const results = await Promise.all(
-          storeEntries.map(({ sellerId, weight }) =>
-            axios.post(`${BackendUrl}/api/shipping2/calculate`, { sellerId, customerZoneId: zone._id, weight }, { timeout: 8000 })
-              .then(r => r.data?.data?.totalCost || 0)
-              .catch(() => 0)
-          )
-        );
-        const freshShipping = results.reduce((s, c) => s + c, 0);
+        const q = await quoteCart(selectedZone._id, panier.filter((i) => i._id).map((i) => ({ productId: String(i._id), quantity: i.quantity || 1 })));
+        if (!alive) return;
+        setShippingQuote(q);
+        const calcs: Record<string, any> = {};
+        for (const p of q.parcels) calcs[p.sellerId] = { totalCost: p.deliverable ? p.fee || 0 : 0, delay: p.delay?.label || null, quoteRequired: p.quoteRequired };
+        localStorage.setItem("orderShippingCalculations", JSON.stringify(calcs));
+        localStorage.setItem("orderShippingByStore", JSON.stringify(q.parcels.map((p) => ({ storeId: p.sellerId, storeName: p.storeName, shippingCost: p.deliverable ? p.fee || 0 : 0, delay: p.delay?.label || null, quoteRequired: p.quoteRequired }))));
         const currentSubtotal = (() => { try { return parseFloat(localStorage.getItem("orderSubtotal") || "0"); } catch { return 0; } })();
-        // orderCodeP n'est pas encore dans le state ici (effet au montage) — on lit depuis localStorage
         const savedCodeP = (() => { try { return JSON.parse(localStorage.getItem("orderCodeP") || "null"); } catch { return null; } })();
         const promoDiscount = savedCodeP?.isValide ? (savedCodeP.discount || 0) : 0;
-
-        // Mettre à jour shippingCalculations par boutique (utilisé pour panierWithShipping au submit)
-        const freshCalcs: Record<string, any> = {};
-        storeEntries.forEach(({ sellerId }, i) => { freshCalcs[sellerId] = { totalCost: results[i] }; });
-        localStorage.setItem("orderShippingCalculations", JSON.stringify(freshCalcs));
-
-        setOrderShippingCost(freshShipping);
-        const freshTotal = Math.max(0, currentSubtotal - promoDiscount + freshShipping);
+        const freshTotal = Math.max(0, currentSubtotal - promoDiscount + q.totalFee);
+        setOrderShippingCost(q.totalFee);
         setOrderTotal(freshTotal);
-        localStorage.setItem("orderShippingCost", String(freshShipping));
+        localStorage.setItem("orderShippingCost", String(q.totalFee));
         localStorage.setItem("orderTotal", String(freshTotal));
       } catch {
-        // Silencieux : si le recalcul échoue, on garde les valeurs du localStorage
+        if (alive) setShippingQuote(null);
+      } finally {
+        if (alive) setQuoteLoading(false);
       }
-    };
-    refreshShipping();
-  }, []);
+    })();
+    return () => { alive = false; };
+  }, [selectedZone?._id]);
+
+  const changeZone = (z: ZoneV3, meta?: { location?: { lat: number; lng: number; accuracy: number } }) => {
+    setSelectedZone(z);
+    rememberZone(z);
+    localStorage.setItem("orderShippingZone", JSON.stringify(z));
+    if (meta?.location) setDeliveryLocation(meta.location);
+  };
+
+  const blockedParcels = (shippingQuote?.parcels || []).filter((p) => !p.deliverable && !p.quoteRequired);
 
   function generateUniqueID() {
     const now = new Date();
@@ -357,7 +355,14 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
             region: regionValue,
             quartier: address.quartier || "",
             description: address.description || "",
+            landmark: address.landmark || "",
           });
+          if (address.location?.lat != null) setDeliveryLocation(address.location);
+          // Zone enregistrée avec l'adresse, si le panier n'en a pas fourni
+          if (!selectedZone && address.zoneId) {
+            const z = (await getZones()).find((x) => x._id === String(address.zoneId));
+            if (z) changeZone(z);
+          }
         } else if (selectedZone) {
           // Si pas d'adresse sauvegardée mais zone sélectionnée dans le panier
           let regionValue = "";
@@ -418,12 +423,16 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
       errors.push(phoneCheck.message);
     }
 
-    if (!deliveryInfo.region || deliveryInfo.region.length < 3) {
-      errors.push("La région doit contenir au moins 3 caractères");
+    if (!selectedZone?._id) {
+      errors.push("Choisissez votre quartier ou votre ville de livraison");
     }
 
-    if (!deliveryInfo.quartier || deliveryInfo.quartier.length < 2) {
-      errors.push("Le quartier doit contenir au moins 2 caractères");
+    if (blockedParcels.length) {
+      errors.push(`${blockedParcels[0].storeName} : ${blockedParcels[0].message || "livraison indisponible dans votre zone"}`);
+    }
+
+    if (shippingQuote?.quoteRequired && !(PaymentMethods.CASH_ON_DELIVERY.includes(selectedPayment) || PaymentMethods.ASSISTED_PAYMENT.includes(selectedPayment))) {
+      errors.push("Livraison sur devis : choisissez le paiement à la livraison ou le paiement assisté");
     }
 
     return errors;
@@ -817,9 +826,12 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
           customerName: deliveryInfo.name,
           email: deliveryInfo.email || null,
           region: deliveryInfo.region,
-          quartier: deliveryInfo.quartier,
+          quartier: deliveryInfo.quartier || selectedZone?.name,
           numero: toE164(countryOfDial(deliveryInfo.countryCode), deliveryInfo.numero),
           description: deliveryInfo.description,
+          zoneId: selectedZone?._id,
+          landmark: deliveryInfo.landmark,
+          ...(deliveryLocation ? { location: deliveryLocation } : {}),
         },
         prod: panierWithShipping,
         shippingByStore,
@@ -838,6 +850,8 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
 
       await axios.post(`${BackendUrl}/createOrUpdateAddress`, {
         ...deliveryInfo,
+        zoneId: selectedZone?._id,
+        ...(deliveryLocation ? { location: deliveryLocation } : {}),
         numero: toE164(countryOfDial(deliveryInfo.countryCode), deliveryInfo.numero), // Numéro complet international
         email: deliveryInfo.email !== "" ? deliveryInfo.email : null,
         clefUser: userId,
@@ -1625,46 +1639,44 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP 
                       )}
                     </div>
 
-                    {/* Région */}
-                    <div>
-                      <label htmlFor="region" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-                        Région {selectedZone && <span className="normal-case text-[#30A08B] font-normal">(depuis le panier)</span>}
+                    {/* Zone de livraison */}
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+                        Quartier ou ville de livraison
                       </label>
-                      <div className="relative">
-                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300 pointer-events-none" />
-                        <input
-                          type="text" id="region" name="region"
-                          value={deliveryInfo.region} onChange={handleDeliveryChange}
-                          readOnly={!!selectedZone}
-                          className={`w-full pl-10 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#30A08B]/30 focus:border-[#30A08B] focus:bg-white transition-all duration-200 placeholder:text-gray-300 ${selectedZone ? 'pr-20 cursor-not-allowed text-gray-500' : 'pr-4'}`}
-                          placeholder="Votre région"
-                        />
-                        {selectedZone && (
-                          <button
-                            type="button" onClick={handleReturnToCart}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-xs bg-[#30A08B] text-white px-2.5 py-1 rounded-lg hover:bg-[#30A08B]/80 transition-colors"
-                          >
-                            Modifier
-                          </button>
-                        )}
-                      </div>
-                      {selectedZone && (
-                        <p className="text-xs text-gray-400 mt-1 pl-1">
-                          {selectedZone.fullPath || (selectedZone.country && selectedZone.region && selectedZone.name ? `${selectedZone.country} > ${selectedZone.region} > ${selectedZone.name}` : selectedZone.name)}
-                        </p>
-                      )}
+                      <ZoneSelector selectedZone={selectedZone as ZoneV3 | null} onSelect={changeZone} className="w-full" />
+                      {selectedZone ? (
+                        <div className="mt-2 space-y-1">
+                          {quoteLoading ? (
+                            <p className="text-xs text-gray-400 pl-1">Calcul des frais…</p>
+                          ) : shippingQuote ? (
+                            shippingQuote.parcels.map((p) => (
+                              <p key={p.sellerId} className={`text-xs pl-1 flex items-center gap-1.5 ${p.deliverable ? "text-gray-500" : p.quoteRequired ? "text-amber-700" : "text-red-600"}`}>
+                                <Truck className="h-3.5 w-3.5 flex-shrink-0 text-[#30A08B]" />
+                                <span className="truncate">
+                                  {p.storeName} · {p.origin?.name || "?"} → {zoneLabel(selectedZone).title}
+                                  {p.deliverable ? ` · ${p.delay?.label || ""} · ${p.free ? "offerte" : `${(p.fee || 0).toLocaleString("fr-FR")} F`}` : ` · ${p.message || "non livrable"}`}
+                                </span>
+                              </p>
+                            ))
+                          ) : null}
+                          {deliveryLocation ? <p className="text-xs text-[#30A08B] pl-1">📍 Position enregistrée pour le livreur</p> : null}
+                        </div>
+                      ) : null}
                     </div>
 
-                    {/* Quartier */}
-                    <div>
-                      <label htmlFor="quartier" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Quartier</label>
+                    {/* Point de repère */}
+                    <div className="sm:col-span-2">
+                      <label htmlFor="landmark" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+                        Point de repère <span className="normal-case font-normal text-gray-400">(recommandé)</span>
+                      </label>
                       <div className="relative">
                         <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300 pointer-events-none" />
                         <input
-                          type="text" id="quartier" name="quartier"
-                          value={deliveryInfo.quartier} onChange={handleDeliveryChange}
+                          type="text" id="landmark" name="landmark" maxLength={200}
+                          value={deliveryInfo.landmark} onChange={handleDeliveryChange}
                           className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#30A08B]/30 focus:border-[#30A08B] focus:bg-white transition-all duration-200 placeholder:text-gray-300"
-                          placeholder="Votre quartier ou adresse précise"
+                          placeholder="Ex. derrière la pharmacie, portail bleu, près de la mosquée"
                         />
                       </div>
                     </div>

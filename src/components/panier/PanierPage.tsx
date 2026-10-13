@@ -23,23 +23,13 @@ import axios from "axios";
 import Image from "next/image";
 import { useSelector } from "react-redux";
 import ZoneSelector from "./ZoneSelector";
+import { CartQuote, getRememberedZone, getZones, parcelFeeText, quoteCart, rememberZone, ZoneV3 } from "@/lib/shippingV3";
 import { formatCurrency } from "../../lib/utils";
 import Alert from "../Alert";
 import { RootState } from "@/redux/store";
 import { AuthService } from "@/lib/auth";
 
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
-
-interface Zone {
-  _id: string;
-  name: string;
-  type: string;
-  fullPath?: string;
-  country?: string;
-  region?: string;
-  city?: string;
-  isActive: boolean;
-}
 
 interface StoreGroup {
   storeId: string;
@@ -54,11 +44,12 @@ interface StoreGroup {
 interface ShippingCalculation {
   storeId: string;
   totalCost: number;
-  fixedCost?: number;
-  weightCost?: number;
-  costPerKg?: number;
-  success?: boolean;
-  appliedPolicy?: { zone: string; type: string; error?: string };
+  deliverable: boolean;
+  quoteRequired: boolean;
+  message?: string | null;
+  delay?: string | null;
+  free?: { name: string; amount: number } | null;
+  origin?: string | null;
 }
 
 const PanierPage: React.FC = () => {
@@ -68,12 +59,12 @@ const PanierPage: React.FC = () => {
   const [codePromo, setCodePromo] = useState("");
   const [reduction, setReduction] = useState(0);
   const [message, setMessage] = useState("");
-  const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
+  const [selectedZone, setSelectedZone] = useState<ZoneV3 | null>(null);
+  const [quote, setQuote] = useState<CartQuote | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState("");
   const [rond, setRond] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [shippingCalculations, setShippingCalculations] = useState<Record<string, ShippingCalculation>>({});
-  const [unavailableProducts, setUnavailableProducts] = useState<Set<string>>(new Set());
-  const [codeP, setCodeP] = useState<any>(null);
+    const [codeP, setCodeP] = useState<any>(null);
   const [total, setTotal] = useState(0);
   const [alert, setAlert] = useState({
     visible: false,
@@ -153,65 +144,6 @@ const PanierPage: React.FC = () => {
 
   const storeGroupsArray = useMemo(() => Object.values(storeGroups), [storeGroups]);
 
-  // Shipping calculations
-  const calculateShippingForStore = async (
-    storeId: string,
-    totalWeight: number,
-    customerZoneId: string
-  ) => {
-    try {
-      const response = await axios.post(
-        `${BackendUrl}/api/shipping2/calculate`,
-        { sellerId: storeId, customerZoneId, weight: totalWeight },
-        { timeout: 10000 }
-      );
-      if (response.data?.success && response.data?.data) {
-        return {
-          success: true,
-          fixedCost: response.data.data.fixedCost || 0,
-          weightCost: response.data.data.weightCost || 0,
-          costPerKg: response.data.data.costPerKg || 250,
-          totalCost: response.data.data.totalCost || 0,
-          appliedPolicy: response.data.data.appliedPolicy || { zone: "API", type: "calculated" },
-        };
-      }
-      throw new Error("Invalid API response");
-    } catch {
-      return {
-        success: false,
-        fixedCost: 1000,
-        costPerKg: 250,
-        weightCost: 250 * totalWeight,
-        totalCost: 1000 + 250 * totalWeight,
-        appliedPolicy: { zone: "Politique par défaut", type: "fallback" },
-      };
-    }
-  };
-
-  const recalculateAllShipping = async (
-    grouped: Record<string, StoreGroup>,
-    customerZone: Zone
-  ) => {
-    if (!customerZone) return;
-    const calculations: Record<string, any> = {};
-    const unavailable = new Set<string>();
-    for (const [storeId, storeGroup] of Object.entries(grouped)) {
-      const result = await calculateShippingForStore(
-        storeId,
-        storeGroup.totalWeight,
-        customerZone._id
-      );
-      calculations[storeId] = result;
-      if (result.totalCost === 0) {
-        storeGroup.articles.forEach(({ article }) =>
-          unavailable.add(`${storeId}-${article._id}`)
-        );
-      }
-    }
-    setShippingCalculations(calculations);
-    setUnavailableProducts(unavailable);
-  };
-
   const showAlert = (
     type: "info" | "success" | "warning" | "error" | "warn",
     msg: string
@@ -220,54 +152,86 @@ const PanierPage: React.FC = () => {
     setTimeout(() => setAlert({ visible: false, type: "info", message: "" }), 5000);
   };
 
-  // IP-based zone detection on mount
+  // ── Zone de livraison : dernière zone choisie, sinon celle de l'adresse enregistrée ──
   useEffect(() => {
-    const detect = async () => {
-      setLoading(true);
+    const remembered = getRememberedZone();
+    if (remembered) { setSelectedZone(remembered); return; }
+    const userId = AuthService.getUserData()?.id;
+    if (!userId) return;
+    let alive = true;
+    (async () => {
       try {
-        const ip = await axios.get("https://ifconfig.me/ip", { timeout: 5000 });
-        const geo = await axios.get(`${BackendUrl}/proxy/ip-api`, {
-          headers: { "Client-IP": ip.data },
-          timeout: 5000,
-        });
-        const region = geo.data.regionName || "Niamey";
-        const country = geo.data.country || "Niger";
-        let zone = null;
-        try {
-          const r = await axios.get(`${BackendUrl}/api/shipping2/zones/search`, {
-            params: { q: region, limit: 1 },
-            timeout: 5000,
-          });
-          if (r.data.success && r.data.data.length > 0) {
-            zone = r.data.data[0];
-          } else {
-            const r2 = await axios.get(`${BackendUrl}/api/shipping2/zones/search`, {
-              params: { q: country, limit: 1 },
-              timeout: 5000,
-            });
-            if (r2.data.success && r2.data.data.length > 0) zone = r2.data.data[0];
-          }
-        } catch {
-          showAlert("info", "Sélectionnez votre zone de livraison.");
-        }
-        setSelectedZone(zone);
-        if (zone) await recalculateAllShipping(storeGroups, zone);
-      } catch {
-        showAlert("warning", "Impossible de détecter votre zone. Veuillez la sélectionner.");
-      }
-      setLoading(false);
-    };
-    detect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        const r = await axios.get(`${BackendUrl}/getAddressByUserKey/${userId}`);
+        const zoneId = r.data?.address?.zoneId;
+        if (!zoneId) return;
+        const z = (await getZones()).find((x) => x._id === String(zoneId));
+        if (z && alive) setSelectedZone(z);
+      } catch {}
+    })();
+    return () => { alive = false; };
   }, []);
 
+  const chooseZone = (z: ZoneV3) => {
+    setSelectedZone(z);
+    rememberZone(z);
+  };
+
+  // ── Devis unique pour tout le panier (même calcul que la commande) ──
+  const quoteKey = useMemo(
+    () => articles.map((a) => `${a._id}:${a.quantity || 0}`).sort().join(","),
+    [articles]
+  );
   useEffect(() => {
-    if (selectedZone && Object.keys(storeGroups).length > 0) {
-      const t = setTimeout(() => recalculateAllShipping(storeGroups, selectedZone), 100);
-      return () => clearTimeout(t);
-    }
+    if (!selectedZone?._id || !articles.length) { setQuote(null); return; }
+    let alive = true;
+    setQuoteLoading(true);
+    setQuoteError("");
+    const t = setTimeout(async () => {
+      try {
+        const items = articles
+          .filter((a) => a._id && (a.quantity || 0) > 0)
+          .map((a) => ({ productId: String(a._id), quantity: a.quantity }));
+        const q = await quoteCart(selectedZone._id, items);
+        if (alive) setQuote(q);
+      } catch {
+        if (alive) { setQuote(null); setQuoteError("Calcul des frais indisponible. Réessayez dans un instant."); }
+      } finally {
+        if (alive) setQuoteLoading(false);
+      }
+    }, 250);
+    return () => { alive = false; clearTimeout(t); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedZone?._id, articles.length]);
+  }, [selectedZone?._id, quoteKey]);
+
+  /** Frais par boutique (forme conservée pour la page de confirmation) */
+  const shippingCalculations = useMemo(() => {
+    const out: Record<string, ShippingCalculation> = {};
+    for (const p of quote?.parcels || []) {
+      out[p.sellerId] = {
+        storeId: p.sellerId,
+        totalCost: p.deliverable ? p.fee || 0 : 0,
+        deliverable: p.deliverable,
+        quoteRequired: p.quoteRequired,
+        message: p.message,
+        delay: p.delay?.label || null,
+        free: p.free ? { name: p.free.name, amount: p.free.amount } : null,
+        origin: p.origin?.name || null,
+      };
+    }
+    return out;
+  }, [quote]);
+
+  const parcelOf = (storeId: string) => quote?.parcels.find((p) => p.sellerId === storeId) || null;
+  const blockedStores = (quote?.parcels || []).filter((p) => !p.deliverable && !p.quoteRequired);
+  const unavailableProducts = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of blockedStores) {
+      storeGroups[p.sellerId]?.articles.forEach(({ article }) => set.add(`${p.sellerId}-${article._id}`));
+    }
+    return set;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quote, storeGroups]);
+  const freeHint = (quote?.parcels || []).map((p) => p.freeHint).find(Boolean) || null;
 
   // Auto-apply promo code from localStorage
   const articlesHash = useMemo(
@@ -295,7 +259,6 @@ const PanierPage: React.FC = () => {
     const updated = articles.filter((_, i) => i !== idx);
     setArticles(updated);
     localStorage.setItem("panier", JSON.stringify(updated));
-    if (selectedZone) setTimeout(() => recalculateAllShipping(storeGroups, selectedZone), 100);
   };
 
   const updateQuantity = (idx: number, newQty: number) => {
@@ -308,7 +271,6 @@ const PanierPage: React.FC = () => {
     const updated = articles.map((a, i) => (i === idx ? { ...a, quantity: newQty } : a));
     setArticles(updated);
     localStorage.setItem("panier", JSON.stringify(updated));
-    if (selectedZone) setTimeout(() => recalculateAllShipping(storeGroups, selectedZone), 100);
   };
 
   // Totals
@@ -318,8 +280,7 @@ const PanierPage: React.FC = () => {
       0
     );
 
-  const calculerTotalFraisExpedition = () =>
-    Object.values(shippingCalculations).reduce((sum, c: any) => sum + (c.totalCost || 0), 0);
+  const calculerTotalFraisExpedition = () => quote?.totalFee || 0;
 
   const calculerTotal = () =>
     calculerSousTotal() - reduction + calculerTotalFraisExpedition();
@@ -333,7 +294,7 @@ const PanierPage: React.FC = () => {
       localStorage.setItem("orderShippingCost", calculerTotalFraisExpedition().toString());
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [articles.length, reduction, Object.keys(shippingCalculations).length]);
+  }, [articles.length, quoteKey, reduction, quote?.totalFee]);
 
   const appliquerCodePromo = async (codeToApply?: string, silent = false) => {
     const finalCode = typeof codeToApply === "string" ? codeToApply : codePromo;
@@ -407,12 +368,18 @@ const PanierPage: React.FC = () => {
       setTimeout(() => router.push("/auth/login?fromCart=true&returnUrl=/order-confirmation"), 1000);
       return;
     }
+    if (blockedStores.length) {
+      showAlert("warn", `${blockedStores[0].storeName} : ${blockedStores[0].message || "livraison indisponible dans votre zone"}`);
+      return;
+    }
     localStorage.setItem("orderShippingZone", JSON.stringify(selectedZone));
     localStorage.setItem("orderShippingCalculations", JSON.stringify(shippingCalculations));
     const shippingByStore = Object.entries(storeGroups).map(([storeId, group]) => ({
       storeId,
       storeName: group.storeName,
       shippingCost: shippingCalculations[storeId]?.totalCost || 0,
+      delay: shippingCalculations[storeId]?.delay || null,
+      quoteRequired: !!shippingCalculations[storeId]?.quoteRequired,
     }));
     localStorage.setItem("orderShippingByStore", JSON.stringify(shippingByStore));
     router.push("/order-confirmation?fromCart=true");
@@ -421,18 +388,11 @@ const PanierPage: React.FC = () => {
   const canCheckout =
     articles.length > 0 &&
     !!selectedZone &&
-    Object.keys(shippingCalculations).length > 0;
+    !!quote &&
+    !quoteLoading &&
+    blockedStores.length === 0;
 
   // ── Render ─────────────────────────────────────────────────────────────────
-
-  if (loading && articles.length === 0) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
-        <div className="w-10 h-10 border-4 border-[#30A08B] border-t-transparent rounded-full animate-spin" />
-        <p className="text-gray-500 text-sm">Chargement de votre panier…</p>
-      </div>
-    );
-  }
 
   if (articles.length === 0) {
     return (
@@ -482,26 +442,30 @@ const PanierPage: React.FC = () => {
               </div>
               <ZoneSelector
                 selectedZone={selectedZone}
-                onSelect={setSelectedZone}
-                placeholder="Sélectionner votre zone…"
+                onSelect={chooseZone}
                 className="w-full"
               />
-              {selectedZone ? (
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-green-700 bg-green-50 px-3 py-2 rounded-lg">
-                  <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span className="truncate">{selectedZone.fullPath || selectedZone.name}</span>
-                </div>
-              ) : (
+              {!selectedZone ? (
                 <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">
                   <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-                  Sélectionnez votre zone pour calculer les frais d'expédition
+                  Choisissez votre quartier ou votre ville pour voir les frais et le délai
                 </div>
-              )}
+              ) : quoteError ? (
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-red-700 bg-red-50 px-3 py-2 rounded-lg">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                  {quoteError}
+                </div>
+              ) : freeHint ? (
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-[#1f7a69] bg-[#30A08B]/10 px-3 py-2 rounded-lg">
+                  <Truck className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>Plus que <strong>{formatCurrency(freeHint.remaining)}</strong> d’articles dans une boutique pour la livraison offerte</span>
+                </div>
+              ) : null}
             </div>
 
             {/* Store groups */}
             {storeGroupsArray.map((group) => {
-              const shippingCalc = shippingCalculations[group.storeId];
+              const parcel = parcelOf(group.storeId);
               return (
                 <div
                   key={group.storeId}
@@ -525,21 +489,22 @@ const PanierPage: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-gray-800 leading-none">{group.storeName}</p>
-                        {group.storeInfo.city && (
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {group.storeInfo.city}, {group.storeInfo.region || "Niger"}
+                        {parcel?.origin?.name || group.storeInfo.city ? (
+                          <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {parcel?.origin?.name || group.storeInfo.city}
                           </p>
-                        )}
+                        ) : null}
                       </div>
                     </div>
-                    {shippingCalc ? (
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                    {parcel ? (
+                      <div className={`flex items-center gap-1.5 text-xs ${parcel.deliverable ? "text-gray-500" : "text-red-600"}`}>
                         <Truck className="w-3.5 h-3.5 text-[#30A08B]" />
-                        <span className="font-medium text-[#30A08B]">
-                          {formatCurrency(shippingCalc.totalCost)}
+                        <span className={`font-semibold ${parcel.free ? "text-green-600" : parcel.deliverable ? "text-[#30A08B]" : ""}`}>
+                          {parcelFeeText(parcel, formatCurrency)}
                         </span>
                       </div>
-                    ) : loading ? (
+                    ) : quoteLoading && selectedZone ? (
                       <div className="w-3.5 h-3.5 border-2 border-[#30A08B]/30 border-t-[#30A08B] rounded-full animate-spin" />
                     ) : null}
                   </div>
@@ -669,16 +634,27 @@ const PanierPage: React.FC = () => {
                     })}
                   </div>
 
-                  {/* Store shipping footer */}
-                  {shippingCalc && (
-                    <div className="flex items-center justify-between px-4 py-2.5 bg-[#30A08B]/5 border-t border-[#30A08B]/10 text-xs">
-                      <span className="flex items-center gap-1.5 text-gray-500">
-                        <Truck className="w-3.5 h-3.5 text-[#30A08B]" />
-                        Livraison depuis {group.storeName}
-                      </span>
-                      <span className="font-semibold text-[#30A08B]">
-                        {formatCurrency(shippingCalc.totalCost)}
-                      </span>
+                  {/* Pied de boutique : depuis → vers, délai, frais */}
+                  {parcel && selectedZone && (
+                    <div className={`px-4 py-2.5 border-t text-xs ${parcel.deliverable ? "bg-[#30A08B]/5 border-[#30A08B]/10" : parcel.quoteRequired ? "bg-amber-50 border-amber-100" : "bg-red-50 border-red-100"}`}>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="flex items-center gap-1.5 text-gray-600 min-w-0">
+                          <Truck className="w-3.5 h-3.5 text-[#30A08B] flex-shrink-0" />
+                          <span className="truncate">
+                            {parcel.origin?.name || group.storeName} → {selectedZone.name}
+                            {parcel.deliverable && parcel.delay?.label ? <span className="text-gray-400"> · {parcel.delay.label}</span> : null}
+                          </span>
+                        </span>
+                        <span className={`font-semibold flex-shrink-0 ${parcel.free ? "text-green-600" : parcel.deliverable ? "text-[#30A08B]" : parcel.quoteRequired ? "text-amber-700" : "text-red-600"}`}>
+                          {parcel.free ? (
+                            <><span className="line-through text-gray-400 font-normal mr-1">{formatCurrency(parcel.free.amount)}</span>Offerte</>
+                          ) : parcelFeeText(parcel, formatCurrency)}
+                        </span>
+                      </div>
+                      {!parcel.deliverable && parcel.message ? <p className={`mt-1 ${parcel.quoteRequired ? "text-amber-700" : "text-red-600"}`}>{parcel.message}</p> : null}
+                      {parcel.deliverable && parcel.freeHint ? (
+                        <p className="mt-1 text-[#1f7a69]">Ajoutez {formatCurrency(parcel.freeHint.remaining)} chez {group.storeName} pour la livraison offerte</p>
+                      ) : null}
                     </div>
                   )}
                 </div>
@@ -761,33 +737,30 @@ const PanierPage: React.FC = () => {
                   </div>
                 )}
 
-                {Object.keys(shippingCalculations).length > 0 ? (
+                {quote ? (
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-sm text-gray-600">
                       <span>Livraison</span>
-                      <span className="font-medium text-gray-800">
-                        {formatCurrency(calculerTotalFraisExpedition())}
+                      <span className={`font-medium ${quote.totalFee === 0 && quote.parcels.some((p) => p.free) ? "text-green-600" : "text-gray-800"}`}>
+                        {quote.totalFee === 0 && quote.parcels.some((p) => p.free) ? "Offerte" : formatCurrency(quote.totalFee)}
+                        {quote.quoteRequired ? " + devis" : ""}
                       </span>
                     </div>
-                    {storeGroupsArray.length > 1 &&
-                      storeGroupsArray.map((sg) =>
-                        shippingCalculations[sg.storeId] ? (
-                          <div
-                            key={sg.storeId}
-                            className="flex justify-between text-xs text-gray-400 pl-3"
-                          >
-                            <span className="truncate flex-1">{sg.storeName}</span>
-                            <span className="flex-shrink-0 ml-2">
-                              {formatCurrency(shippingCalculations[sg.storeId].totalCost)}
-                            </span>
-                          </div>
-                        ) : null
-                      )}
+                    {quote.parcels.length > 1 &&
+                      quote.parcels.map((p) => (
+                        <div key={p.sellerId} className="flex justify-between text-xs text-gray-400 pl-3">
+                          <span className="truncate flex-1">{p.storeName}{p.delay?.label && p.deliverable ? ` · ${p.delay.label}` : ""}</span>
+                          <span className="flex-shrink-0 ml-2">{parcelFeeText(p, formatCurrency)}</span>
+                        </div>
+                      ))}
+                    {quote.quoteRequired ? (
+                      <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-2.5 py-2">Un article très volumineux est livré sur devis : notre équipe vous appelle pour fixer les frais (paiement à la livraison).</p>
+                    ) : null}
                   </div>
                 ) : (
                   <div className="flex justify-between text-sm text-gray-400">
                     <span>Livraison</span>
-                    <span className="text-xs">Sélectionnez une zone</span>
+                    <span className="text-xs">{quoteLoading && selectedZone ? "Calcul…" : "Choisissez votre zone"}</span>
                   </div>
                 )}
 
@@ -807,10 +780,10 @@ const PanierPage: React.FC = () => {
                 disabled={!canCheckout}
                 className="mt-5 w-full bg-[#30A08B] text-white py-3.5 rounded-xl font-bold text-base hover:bg-[#27866f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {!canCheckout && !selectedZone ? (
+                {!selectedZone ? (
                   <>
                     <MapPin size={16} />
-                    Choisir une zone
+                    Choisir ma zone
                   </>
                 ) : (
                   <>

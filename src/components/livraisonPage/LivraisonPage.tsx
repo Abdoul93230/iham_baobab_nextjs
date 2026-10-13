@@ -11,6 +11,8 @@ import {
   toE164,
   getPhonePlaceholder,
 } from "@/lib/phoneRules";
+import ZoneSelector from "@/components/panier/ZoneSelector";
+import { getZones, rememberZone, ZoneV3 } from "@/lib/shippingV3";
 
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 
@@ -27,7 +29,11 @@ const LivraisonPage = () => {
     region: "",
     quartier: "",
     description: "",
+    landmark: "",
   });
+  // Zone de livraison (liste officielle) et position facultative
+  const [zone, setZone] = useState<ZoneV3 | null>(null);
+  const [location, setLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
   // Indicatif du numéro de livraison (règle commune web/mobile)
   const [phoneCountry, setPhoneCountry] = useState(DEFAULT_PHONE_COUNTRY);
   const [loading, setLoading] = useState(true);
@@ -78,7 +84,13 @@ const LivraisonPage = () => {
             region: address.region || "",
             quartier: address.quartier || "",
             description: address.description || "",
+            landmark: address.landmark || "",
           });
+          if (address.location?.lat != null) setLocation(address.location);
+          if (address.zoneId) {
+            const z = (await getZones().catch(() => [] as ZoneV3[])).find((x) => x._id === String(address.zoneId));
+            if (z) setZone(z);
+          }
         }
         setLoading(false);
       } catch (err: any) {
@@ -120,11 +132,8 @@ const LivraisonPage = () => {
     if (!phoneCheck.isValid) {
       errors.push(phoneCheck.message);
     }
-    if (!addressData.region || addressData.region.length < 3) {
-      errors.push("La région doit contenir au moins 3 caractères");
-    }
-    if (!addressData.quartier || addressData.quartier.length < 2) {
-      errors.push("Le quartier doit contenir au moins 2 caractères");
+    if (!zone) {
+      errors.push("Choisissez votre quartier ou votre ville dans la liste");
     }
     return errors;
   };
@@ -162,10 +171,13 @@ const LivraisonPage = () => {
 
       await axios.post(`${BackendUrl}/createOrUpdateAddress`, {
         ...addressData,
+        zoneId: zone?._id,
+        ...(location ? { location } : {}),
         numero: toE164(phoneCountry, addressData.numero), // E.164 sans espace (+22787727501)
         clefUser: userId,
       });
 
+      if (zone) rememberZone(zone);
       setSubmitStatus({ loading: false, error: null, success: true });
       setTimeout(() => {
         setSubmitStatus((prev) => ({ ...prev, success: false }));
@@ -410,52 +422,40 @@ const LivraisonPage = () => {
                 </small>
               </div>
 
-              <div className="transform transition-all duration-300 hover:-translate-y-1">
-                <label
-                  className="block text-sm md:text-base text-[#B2905F] font-medium mb-1 sm:mb-2"
-                  htmlFor="region"
-                >
-                  Région <span className="text-red-500" aria-label="requis">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="region"
-                  name="region"
-                  value={addressData.region}
-                  onChange={handleAddressChange}
-                  required
-                  aria-required="true"
-                  aria-describedby="region-help"
-                  className="w-full px-3 sm:px-4 py-2 text-sm md:text-base rounded-lg border focus:ring-2 focus:ring-[#30A08B] focus:border-transparent transition-all duration-300"
-                  placeholder="Ex: Niamey, Tillabéri"
+              <div className="col-span-1 md:col-span-2">
+                <span className="block text-sm md:text-base text-[#B2905F] font-medium mb-1 sm:mb-2">
+                  Quartier ou ville <span className="text-red-500" aria-label="requis">*</span>
+                </span>
+                <ZoneSelector
+                  selectedZone={zone}
+                  onSelect={(z, meta) => {
+                    setZone(z);
+                    if (meta?.location) setLocation(meta.location);
+                    setSubmitStatus({ loading: false, error: null, success: false });
+                  }}
                 />
-                <small id="region-help" className="text-xs text-gray-500 mt-1 block">
-                  Région ou ville de livraison
+                <small className="text-xs text-gray-500 mt-1 block">
+                  {location ? "📍 Position enregistrée : le livreur vous trouvera plus facilement." : "Sert à calculer les frais et le délai de livraison."}
                 </small>
               </div>
 
-              <div className="transform transition-all duration-300 hover:-translate-y-1">
+              <div className="col-span-1 md:col-span-2 transform transition-all duration-300 hover:-translate-y-1">
                 <label
                   className="block text-sm md:text-base text-[#B2905F] font-medium mb-1 sm:mb-2"
-                  htmlFor="quartier"
+                  htmlFor="landmark"
                 >
-                  Quartier <span className="text-red-500" aria-label="requis">*</span>
+                  Point de repère
                 </label>
                 <input
                   type="text"
-                  id="quartier"
-                  name="quartier"
-                  value={addressData.quartier}
+                  id="landmark"
+                  name="landmark"
+                  maxLength={200}
+                  value={addressData.landmark}
                   onChange={handleAddressChange}
-                  required
-                  aria-required="true"
-                  aria-describedby="quartier-help"
                   className="w-full px-3 sm:px-4 py-2 text-sm md:text-base rounded-lg border focus:ring-2 focus:ring-[#30A08B] focus:border-transparent transition-all duration-300"
-                  placeholder="Ex: Plateau, Terminus"
+                  placeholder="Ex. derrière la pharmacie, portail bleu, près de la mosquée"
                 />
-                <small id="quartier-help" className="text-xs text-gray-500 mt-1 block">
-                  Quartier précis de livraison
-                </small>
               </div>
 
               <div className="col-span-1 md:col-span-2 transform transition-all duration-300 hover:-translate-y-1">
@@ -473,7 +473,7 @@ const LivraisonPage = () => {
                   className="w-full px-3 sm:px-4 py-2 text-sm md:text-base rounded-lg border focus:ring-2 focus:ring-[#30A08B] focus:border-transparent transition-all duration-300"
                   rows={3}
                   aria-describedby="description-help"
-                  placeholder="Points de repère, instructions spéciales..."
+                  placeholder="Instructions pour le livreur (horaires, étage…)"
                 ></textarea>
                 <small id="description-help" className="text-xs text-gray-500 mt-1 block">
                   Informations supplémentaires pour faciliter la livraison (optionnel)
