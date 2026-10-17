@@ -273,11 +273,26 @@ function Chat({ conversationId, initialContext, initialOnline, onBack }: {
         </div>
       ) : null}
 
+      {/* Aperçu de l'article joint au prochain message */}
       {context ? (
-        <div className="flex items-center gap-2 px-4 py-1.5 bg-[#F6F0E7] border-t border-gray-100 text-xs text-gray-600">
-          {context.kind === "order" ? <Receipt className="w-3.5 h-3.5 text-[#1F7A69]" /> : <Package className="w-3.5 h-3.5 text-[#1F7A69]" />}
-          <span className="flex-1 truncate">À propos de : <strong>{context.title}</strong></span>
-          <button onClick={() => setContext(null)} aria-label="Ne pas joindre"><X className="w-4 h-4" /></button>
+        <div className="px-4 pt-2 pb-1 bg-white border-t border-gray-100">
+          <p className="text-[11px] text-gray-500 mb-1.5">{context.kind === "order" ? "Commande jointe à votre message" : "Article joint à votre message"}</p>
+          <div className="flex items-center gap-3 p-2 rounded-xl bg-[#E8F5F2] border-l-4 border-[#30A08B]">
+            {context.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={context.image} alt="" className="w-14 h-14 rounded-lg object-cover" />
+            ) : (
+              <div className="w-14 h-14 rounded-lg bg-white flex items-center justify-center">
+                {context.kind === "order" ? <Receipt className="w-5 h-5 text-[#1F7A69]" /> : <Package className="w-5 h-5 text-[#1F7A69]" />}
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-900 line-clamp-2">{context.title}</p>
+              {context.subtitle ? <p className="text-xs text-gray-500 truncate">{context.subtitle}</p> : null}
+              <p className="text-sm font-bold text-[#1F7A69]">{fcfa(context.price)}</p>
+            </div>
+            <button onClick={() => setContext(null)} className="p-1.5 rounded-full bg-white hover:bg-gray-100" aria-label="Retirer l'article"><X className="w-4 h-4 text-gray-600" /></button>
+          </div>
         </div>
       ) : null}
 
