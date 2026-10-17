@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.ihambaobab.mobile",
+      "sha256_cert_fingerprints": [
+        "3C:EE:91:F6:92:EA:31:17:6D:EE:0B:5E:CF:9E:03:AB:DB:D6:65:09:2C:0F:FF:98:5B:8E:44:A2:35:74:69:FE"
+      ]
+    }
+  }
+]
