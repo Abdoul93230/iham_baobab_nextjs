@@ -19,6 +19,8 @@ export interface ChatMessage {
   from: "client" | "store" | "system";
   text: string;
   attachments: string[];
+  audio?: { url: string | null; durationMs: number } | null;
+  localUrl?: string;
   card: MessageCard | null;
   signature?: string;
   createdAt: string;
@@ -58,6 +60,12 @@ export const messagingApi = {
   read: (id: string) => axios.put(`${API}/api/messaging/conversations/${id}/read`, {}, auth()).catch(() => {}),
   archive: (id: string) => axios.delete(`${API}/api/messaging/conversations/${id}`, auth()),
   unread: () => axios.get(`${API}/api/messaging/unread`, auth()).then((r) => Number(r.data.count) || 0),
+  uploadAudio: (blob: Blob) => {
+    const ext = /mp4/.test(blob.type) ? "m4a" : /ogg/.test(blob.type) ? "ogg" : "webm";
+    const fd = new FormData();
+    fd.append("audio", blob, `vocal-${Date.now()}.${ext}`);
+    return axios.post(`${API}/api/messaging/upload-audio`, fd, { ...auth(), timeout: 90000 }).then((r) => r.data as { url: string; durationMs: number });
+  },
   upload: (file: File) => {
     const fd = new FormData();
     fd.append("image", file);

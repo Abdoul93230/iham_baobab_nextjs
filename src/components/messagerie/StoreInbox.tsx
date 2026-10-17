@@ -3,7 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Headphones, ImageIcon, Loader2, Package, Receipt, Send, ShieldCheck, Store, WifiOff, X } from "lucide-react";
+import { ArrowLeft, Headphones, ImageIcon, Loader2, Mic, Package, Receipt, Send, ShieldCheck, Store, WifiOff, X } from "lucide-react";
+import { RecordingBar, VoicePlayer, useVoiceRecorder } from "./Voice";
 import useAuth from "@/hooks/useAuth";
 import {
   ChatMessage, ConversationSummary, MessageCard, StoreInfo,
@@ -75,7 +76,7 @@ function Chat({ conversationId, initialContext, initialOnline, onBack }: {
   const [context, setContext] = useState<MessageCard | null>(initialContext);
   const [text, setText] = useState("");
   const [online, setOnline] = useState(initialOnline);
-  const [storeTyping, setStoreTyping] = useState(false);
+  const [storeTyping, setStoreTyping] = useState<false | "text" | "audio">(false);
   const [uploading, setUploading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -127,9 +128,9 @@ function Chat({ conversationId, initialContext, initialOnline, onBack }: {
       if (cid !== conversationId || by !== "store") return;
       setMessages((prev) => prev.map((m) => (m.from === "client" && !m.readAt && !m.pending ? { ...m, readAt: at } : m)));
     },
-    typing: ({ conversationId: cid, typing, from }: { conversationId: string; typing: boolean; from: string }) => {
+    typing: ({ conversationId: cid, typing, from, kind }: { conversationId: string; typing: boolean; from: string; kind?: string }) => {
       if (cid !== conversationId || from !== "store") return;
-      setStoreTyping(typing);
+      setStoreTyping(typing ? (kind === "audio" ? "audio" : "text") : false);
       clearTimeout(storeTypingTimer.current);
       if (typing) storeTypingTimer.current = setTimeout(() => setStoreTyping(false), 8000);
     },
@@ -150,7 +151,7 @@ function Chat({ conversationId, initialContext, initialOnline, onBack }: {
 
   const deliver = async (msg: ChatMessage) => {
     const body = {
-      text: msg.text, attachments: msg.attachments, clientTempId: msg.clientTempId,
+      text: msg.text, attachments: msg.attachments, audio: msg.audio?.url ? msg.audio : undefined, clientTempId: msg.clientTempId,
       productId: msg.card?.kind === "product" ? msg.card.id : undefined,
       orderId: msg.card?.kind === "order" ? msg.card.id : undefined,
     };
@@ -163,7 +164,7 @@ function Chat({ conversationId, initialContext, initialOnline, onBack }: {
       } catch {
         saved = await messagingApi.send(conversationId, body); // repli HTTP
       }
-      setMessages((prev) => prev.map((m) => (m.clientTempId === msg.clientTempId ? saved : m)));
+      setMessages((prev) => prev.map((m) => (m.clientTempId === msg.clientTempId ? { ...saved, localUrl: m.localUrl } : m)));
     } catch {
       setMessages((prev) => prev.map((m) => (m.clientTempId === msg.clientTempId ? { ...m, pending: false, failed: true } : m)));
     }
@@ -179,6 +180,39 @@ function Chat({ conversationId, initialContext, initialOnline, onBack }: {
     setContext(null);
     emit("typing:stop", { conversationId });
     deliver(msg);
+  };
+
+  // ── Vocal ──
+  const [voiceSending, setVoiceSending] = useState(false);
+  const recorder = useVoiceRecorder({
+    onStart: () => emit("typing:start", { conversationId, kind: "audio" }),
+    onStop: () => emit("typing:stop", { conversationId }),
+  });
+  const startVoice = async () => {
+    try { await recorder.start(); } catch { alert("Micro indisponible : autorisez l'accès au micro dans votre navigateur."); }
+  };
+  const sendVoice = async () => {
+    const rec = await recorder.stop();
+    if (!rec) return;
+    const id = tempId();
+    const localUrl = URL.createObjectURL(rec.blob);
+    const msg: ChatMessage = {
+      id, clientTempId: id, from: "client", text: "", attachments: [], card: context, localUrl,
+      audio: { url: null, durationMs: rec.durationMs }, createdAt: new Date().toISOString(), readAt: null, pending: true,
+    };
+    setMessages((prev) => [...prev, msg]);
+    setContext(null);
+    setVoiceSending(true);
+    try {
+      const up = await messagingApi.uploadAudio(rec.blob);
+      const audio = { url: up.url, durationMs: up.durationMs || rec.durationMs };
+      setMessages((prev) => prev.map((m) => (m.clientTempId === id ? { ...m, audio } : m)));
+      await deliver({ ...msg, audio });
+    } catch {
+      setMessages((prev) => prev.map((m) => (m.clientTempId === id ? { ...m, pending: false, failed: true } : m)));
+    } finally {
+      setVoiceSending(false);
+    }
   };
 
   const onType = (v: string) => {
@@ -228,7 +262,7 @@ function Chat({ conversationId, initialContext, initialOnline, onBack }: {
             <p className="font-semibold text-gray-900 truncate">{store?.name || "Boutique"}</p>
             <p className={`text-xs flex items-center gap-1.5 ${storeTyping ? "text-[#30A08B]" : "text-gray-500"}`}>
               {online || storeTyping ? <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> : null}
-              {storeTyping ? "écrit…" : online ? "En ligne" : "Vous répond ici dès que possible"}
+              {storeTyping === "audio" ? "enregistre un vocal…" : storeTyping ? "écrit…" : online ? "En ligne" : "Vous répond ici dès que possible"}
             </p>
           </div>
         </Link>
@@ -254,6 +288,7 @@ function Chat({ conversationId, initialContext, initialOnline, onBack }: {
                 // eslint-disable-next-line @next/next/no-img-element
                 <a key={u} href={u} target="_blank" rel="noreferrer"><img src={u} alt="" className="rounded-xl mb-1.5 max-h-64 object-cover" /></a>
               ))}
+              {r.m.audio?.url || r.m.localUrl ? <VoicePlayer url={(r.m.audio?.url || r.m.localUrl) as string} durationMs={r.m.audio?.durationMs} mine={r.m.from === "client"} /> : null}
               {r.m.text ? <p className="text-sm whitespace-pre-wrap break-words">{r.m.text}</p> : null}
               {r.m.from === "store" && r.m.signature ? <p className="text-[11px] text-gray-400 mt-1">— {r.m.signature}</p> : null}
               <p className={`text-[10px] mt-0.5 text-right ${r.m.from === "client" ? "text-white/75" : "text-gray-400"}`}>
@@ -263,7 +298,7 @@ function Chat({ conversationId, initialContext, initialOnline, onBack }: {
             </div>
           </div>
         ))}
-        {storeTyping ? <div className="flex my-1"><div className="bg-white border border-gray-100 rounded-2xl px-3 py-2 text-xs text-gray-500 italic">{store?.name} écrit…</div></div> : null}
+        {storeTyping ? <div className="flex my-1"><div className="bg-white border border-gray-100 rounded-2xl px-3 py-2 text-xs text-gray-500 italic">{store?.name} {storeTyping === "audio" ? "enregistre un vocal…" : "écrit…"}</div></div> : null}
         <div ref={bottomRef} />
       </div>
 
@@ -301,6 +336,9 @@ function Chat({ conversationId, initialContext, initialOnline, onBack }: {
           {uploading ? <Loader2 className="w-5 h-5 animate-spin text-gray-500" /> : <ImageIcon className="w-5 h-5 text-gray-500" />}
           <input type="file" accept="image/*" className="hidden" onChange={onFile} />
         </label>
+        {recorder.recording ? (
+          <RecordingBar elapsed={recorder.elapsed} level={recorder.level} onCancel={recorder.cancel} onSend={sendVoice} sending={voiceSending} />
+        ) : (
         <textarea
           value={text}
           onChange={(e) => onType(e.target.value)}
@@ -310,9 +348,16 @@ function Chat({ conversationId, initialContext, initialOnline, onBack }: {
           placeholder={`Écrire à ${store?.name || "la boutique"}…`}
           className="flex-1 resize-none text-sm rounded-2xl px-4 py-2.5 bg-[#FAFAF8] border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#30A08B]/30"
         />
-        <button onClick={() => send()} disabled={!text.trim()} className="p-2.5 rounded-full bg-[#30A08B] text-white disabled:opacity-40" aria-label="Envoyer">
-          <Send className="w-5 h-5" />
-        </button>
+        )}
+        {recorder.recording ? null : text.trim() ? (
+          <button onClick={() => send()} className="p-2.5 rounded-full bg-[#30A08B] text-white" aria-label="Envoyer">
+            <Send className="w-5 h-5" />
+          </button>
+        ) : (
+          <button onClick={startVoice} className="p-2.5 rounded-full bg-[#30A08B] text-white hover:bg-[#1F7A69]" aria-label="Enregistrer un message vocal" title="Message vocal">
+            <Mic className="w-5 h-5" />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -362,6 +407,7 @@ export default function StoreInbox() {
     "conversation:updated": (c: ConversationSummary) => setList((prev) => (prev ? [c.id === activeId ? { ...c, unread: 0 } : c, ...prev.filter((x) => x.id !== c.id)] : prev)),
     typing: ({ conversationId, typing: on, from }: { conversationId: string; typing: boolean; from: string }) => {
       if (from === "store") setTyping((t) => ({ ...t, [conversationId]: on }));
+      // (le libellé détaillé s'affiche dans la conversation ouverte)
     },
   });
 
