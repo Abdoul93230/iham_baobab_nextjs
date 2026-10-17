@@ -834,7 +834,7 @@ const ServicePage = () => {
                 info: "Démarrer une conversation",
                 desc: "Assistance en temps réel",
                 color: "from-purple-500 to-purple-600",
-                action: "/Messagerie"
+                action: "/Messagerie/support"
               },
             ].map((contact, index) => (
               <Link

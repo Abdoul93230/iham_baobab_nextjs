@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { connectMessaging, messagingApi, setUnread, useMessagingState } from "@/lib/messaging";
 import { useRouter } from "next/navigation";
 import {
   Menu, User, ChevronDown, ChevronRight,
@@ -43,6 +44,8 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [nbr, setNbr] = useState(0);
+  // Non-lus : support + boutiques (temps réel)
+  const { unread: storeUnread } = useMessagingState();
   const [user, setUser] = useState<any>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
 
@@ -76,6 +79,8 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
   // ── Likes + wallet ────────────────────────────────────────────────────────
   useEffect(() => {
     if (user?.id) {
+      connectMessaging();
+      messagingApi.unread().then(setUnread).catch(() => {});
       dispatch(fetchUserLikes(user.id));
       dispatch(fetchWallet(user.id));
     }
@@ -390,7 +395,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
               />
               <IconAction
                 icon={MessageCircle}
-                badge={nbr}
+                badge={nbr + storeUnread}
                 onClick={() => { triggerNavProgress(); router.push("/Messagerie"); }}
                 ariaLabel="Messages"
               />
@@ -526,7 +531,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
       {isMobileMenuOpen && (
         <HeaderMobile
           setIsMobileMenuOpen={setIsMobileMenuOpen}
-          nbr={nbr}
+          nbr={nbr + storeUnread}
           paniernbr={panierCount}
         />
       )}

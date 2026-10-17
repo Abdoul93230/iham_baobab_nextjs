@@ -14,6 +14,7 @@ import CountryPage from "./CountryPage";
 import DeliveryEstimate from "./DeliveryEstimate";
 import OriginBadge from "@/components/OriginBadge";
 import { sellerIdOf } from "@/lib/shippingV3";
+import { contactStoreHref } from "@/lib/messaging";
 import axios from "axios";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { useRouter } from "next/navigation";
@@ -587,6 +588,14 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
                 <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />
               </button>
             )}
+            {sellerIdOf(produit) ? (
+              <button
+                onClick={() => router.push(contactStoreHref({ sellerId: String(sellerIdOf(produit)), productId: produit._id }))}
+                className="flex items-center justify-center gap-2 py-3 rounded-2xl border border-[#30A08B] bg-[#E8F5F2] text-[#1F7A69] text-sm font-semibold hover:bg-[#d6eee8] transition-colors"
+              >
+                <MessageCircle size={18} /> Poser une question à la boutique
+              </button>
+            ) : null}
 
             {/* Quick actions */}
             <div className="flex gap-2">

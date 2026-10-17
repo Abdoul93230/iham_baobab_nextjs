@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { contactStoreHref } from "@/lib/messaging";
 import {
   ChevronLeft,
   ChevronRight,
@@ -437,7 +438,7 @@ const BoutiqueMain: React.FC<BoutiqueMainProps> = ({ sellerId, storeName }) => {
                 {isFollowing ? "✓ Suivi" : "+ Suivre"}
               </button>
               <button
-                onClick={() => router.push(`/ContactSeller/${sellerId}`)}
+                onClick={() => router.push(contactStoreHref({ sellerId }))}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold bg-white/15 text-white border border-white/30 hover:bg-white/25 transition-colors"
               >
                 <MessageCircle className="w-4 h-4" />

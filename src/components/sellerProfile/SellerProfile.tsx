@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { contactStoreHref } from "@/lib/messaging";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import Image from "next/image";
@@ -529,20 +531,13 @@ export default function SellerProfile({ sellerId }: SellerProfileProps) {
             Coordonnées
           </h2>
           <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <Mail className="text-[#30A08B]" />
-              <span>{seller.email}</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Phone className="text-[#30A08B]" />
-              <span>{seller.phone}</span>
-            </div>
-            {seller.businessPhone && (
-              <div className="flex items-center space-x-3">
-                <Phone className="text-[#30A08B]" />
-                <span>Tél. professionnel: {seller.businessPhone}</span>
-              </div>
-            )}
+            {/* La plateforme reste l'intermédiaire : pas de coordonnées directes du vendeur */}
+            <Link
+              href={contactStoreHref({ sellerId: String(seller._id) })}
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#30A08B] text-white text-sm font-semibold hover:bg-[#1F7A69] transition-colors"
+            >
+              <MessageCircle className="w-4 h-4" /> Écrire à la boutique
+            </Link>
             <div className="flex items-center space-x-3">
               <MapPin className="text-[#30A08B]" />
               <span>
@@ -617,12 +612,10 @@ export default function SellerProfile({ sellerId }: SellerProfileProps) {
                 <div className="flex items-center space-x-3">
                   <MessageCircle className="text-[#30A08B]" />
                   <a
-                    href={`https://wa.me/${seller.whatsapp}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={contactStoreHref({ sellerId: String(seller._id) })}
                     className="text-blue-500 hover:underline"
                   >
-                    WhatsApp
+                    Écrire à la boutique
                   </a>
                 </div>
               )}
@@ -978,25 +971,12 @@ export default function SellerProfile({ sellerId }: SellerProfileProps) {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center space-x-3">
-                  <Phone className="text-[#30A08B]" />
-                  <div>
-                    <span className="text-gray-800">
-                      {seller.businessPhone || seller.phone}
-                    </span>
-                    {seller.businessPhone && seller.phone && (
-                      <div className="text-sm text-gray-500">
-                        Alt: {seller.phone}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {seller.email && (
-                  <div className="flex items-center space-x-3">
-                    <Mail className="text-[#30A08B]" />
-                    <span className="text-gray-800">{seller.email}</span>
-                  </div>
-                )}
+                <Link
+                  href={contactStoreHref({ sellerId: String(seller._id) })}
+                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#30A08B] text-white text-sm font-semibold hover:bg-[#1F7A69] transition-colors"
+                >
+                  <MessageCircle className="w-4 h-4" /> Écrire à la boutique
+                </Link>
                 {seller.openingHours && (
                   <div className="flex items-center space-x-3">
                     <Clock className="text-[#30A08B]" />
@@ -1168,13 +1148,11 @@ export default function SellerProfile({ sellerId }: SellerProfileProps) {
                   )}
                   {seller.whatsapp && (
                     <a
-                      href={`https://wa.me/${seller.whatsapp}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      href={contactStoreHref({ sellerId: String(seller._id) })}
                       className="flex items-center space-x-2 text-green-600 hover:underline"
                     >
                       <MessageCircle size={16} />
-                      <span>WhatsApp</span>
+                      <span>Écrire à la boutique</span>
                     </a>
                   )}
                 </div>

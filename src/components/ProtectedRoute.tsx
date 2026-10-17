@@ -39,7 +39,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     // Si l'authentification est requise mais l'utilisateur n'est pas connecté
     if (requireAuth && !isAuthenticated) {
       console.log("🔒 Accès refusé - redirection vers:", redirectTo);
-      const currentPath = window.location.pathname;
+      // Le retour après connexion garde aussi les paramètres (ex. boutique à contacter)
+      const currentPath = window.location.pathname + window.location.search;
       const redirectUrl = `${redirectTo}?returnUrl=${encodeURIComponent(currentPath)}`;
       router.push(redirectUrl);
       return;
