@@ -95,8 +95,9 @@ export default function BecomeSellerPage() {
   ];
 
   const handleSellerPortal = () => {
-    // Redirection vers le portail des vendeurs
-    window.location.href = "https://habou227-seller.onrender.com";
+    // App vendeur Ihambaobab Pro (Play Store) — même destination que l'app mobile acheteur.
+    // L'ancien portail habou227-seller.onrender.com portait l'ancienne marque.
+    window.location.href = "https://play.google.com/store/apps/details?id=com.ihambaobab.seller";
   };
 
   if (!isClient) {
