@@ -11,7 +11,7 @@ import { AuthService } from "./auth";
 
 const API = process.env.NEXT_PUBLIC_Backend_Url || "";
 
-export interface StoreInfo { id: string; name: string; logo: string | null; active?: boolean }
+export interface StoreInfo { id: string; name: string; logo: string | null; active?: boolean; support?: boolean }
 export interface MessageCard { kind: "product" | "order"; id: string | null; title: string; image?: string | null; price?: number; subtitle?: string }
 export interface ChatMessage {
   id: string;

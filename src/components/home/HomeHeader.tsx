@@ -43,7 +43,6 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
-  const [nbr, setNbr] = useState(0);
   // Non-lus : support + boutiques (temps réel)
   const { unread: storeUnread } = useMessagingState();
   const [user, setUser] = useState<any>(null);
@@ -85,31 +84,6 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
       dispatch(fetchWallet(user.id));
     }
   }, [user?.id, dispatch]);
-
-  // ── Messages ───────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!user?.id || !BackendUrl) return;
-    axios
-      .get(`${BackendUrl}/getUserMessagesByClefUser/${user.id}`)
-      .then((res) =>
-        setNbr(res.data.filter((i: any) => !i.lusUser && i.provenance === false).length)
-      )
-      .catch(() => {});
-  }, [user?.id, BackendUrl]);
-
-  useEffect(() => {
-    if (!socket || !user?.id || !BackendUrl) return;
-    const refresh = () => {
-      axios
-        .get(`${BackendUrl}/getUserMessagesByClefUser/${user.id}`)
-        .then((res) =>
-          setNbr(res.data.filter((i: any) => !i.lusUser && i.provenance === false).length)
-        )
-        .catch(() => {});
-    };
-    socket.on("new_message_user", refresh);
-    return () => { socket.off("new_message_user", refresh); };
-  }, [socket, user?.id, BackendUrl]);
 
   // ── Click outside to close dropdowns ──────────────────────────────────────
   useEffect(() => {
@@ -395,7 +369,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
               />
               <IconAction
                 icon={MessageCircle}
-                badge={nbr + storeUnread}
+                badge={storeUnread}
                 onClick={() => { triggerNavProgress(); router.push("/Messagerie"); }}
                 ariaLabel="Messages"
               />
@@ -531,7 +505,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
       {isMobileMenuOpen && (
         <HeaderMobile
           setIsMobileMenuOpen={setIsMobileMenuOpen}
-          nbr={nbr + storeUnread}
+          nbr={storeUnread}
           paniernbr={panierCount}
         />
       )}

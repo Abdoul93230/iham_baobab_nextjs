@@ -34,6 +34,13 @@ const tempId = () => `w-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
 function StoreAvatar({ store, size = 44 }: { store: StoreInfo | null; size?: number }) {
   const name = store?.name || "Boutique";
+  if (store?.support) {
+    return (
+      <div style={{ width: size, height: size }} className="rounded-full bg-[#30A08B] flex items-center justify-center shrink-0">
+        <Headphones className="w-5 h-5 text-white" />
+      </div>
+    );
+  }
   return store?.logo ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img src={store.logo} alt={name} style={{ width: size, height: size }} className="rounded-full object-cover shrink-0" />
@@ -256,13 +263,13 @@ function Chat({ conversationId, initialContext, initialOnline, onBack }: {
     <div className="flex-1 flex flex-col min-h-0">
       <header className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100">
         <button onClick={onBack} className="md:hidden p-1.5 rounded-full hover:bg-gray-100" aria-label="Retour"><ArrowLeft className="w-5 h-5" /></button>
-        <Link href={store ? `/boutique/${encodeURIComponent(store.name)}` : "#"} className="flex items-center gap-3 min-w-0 flex-1">
+        <Link href={store && !store.support ? `/boutique/${encodeURIComponent(store.name)}` : "#"} onClick={(e) => { if (store?.support) e.preventDefault(); }} className="flex items-center gap-3 min-w-0 flex-1">
           <StoreAvatar store={store} size={40} />
           <div className="min-w-0">
             <p className="font-semibold text-gray-900 truncate">{store?.name || "Boutique"}</p>
             <p className={`text-xs flex items-center gap-1.5 ${storeTyping ? "text-[#30A08B]" : "text-gray-500"}`}>
               {online || storeTyping ? <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> : null}
-              {storeTyping === "audio" ? "enregistre un vocal…" : storeTyping ? "écrit…" : online ? "En ligne" : "Vous répond ici dès que possible"}
+              {storeTyping === "audio" ? "enregistre un vocal…" : storeTyping ? "écrit…" : online ? "En ligne" : store?.support ? "Commande, paiement, livraison : on vous aide" : "Vous répond ici dès que possible"}
             </p>
           </div>
         </Link>
@@ -345,7 +352,7 @@ function Chat({ conversationId, initialContext, initialOnline, onBack }: {
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
           rows={Math.min(4, Math.max(1, text.split("\n").length))}
           maxLength={2000}
-          placeholder={`Écrire à ${store?.name || "la boutique"}…`}
+          placeholder={store?.support ? "Écrire au support…" : `Écrire à ${store?.name || "la boutique"}…`}
           className="flex-1 resize-none text-sm rounded-2xl px-4 py-2.5 bg-[#FAFAF8] border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#30A08B]/30"
         />
         )}
@@ -399,7 +406,7 @@ export default function StoreInbox() {
         router.replace(`/Messagerie?c=${r.conversation.id}`);
         loadList();
       })
-      .catch((e) => setOpenError(e?.response?.data?.message || "Impossible de contacter la boutique."))
+      .catch((e) => setOpenError(e?.response?.data?.message || (seller === "support" ? "Impossible de joindre le support." : "Impossible de contacter la boutique.")))
       .finally(() => setOpening(false));
   }, [userId, seller]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -413,28 +420,45 @@ export default function StoreInbox() {
 
   useEffect(() => { if (activeId) setList((prev) => prev?.map((x) => (x.id === activeId ? { ...x, unread: 0 } : x)) || prev); }, [activeId]);
 
+  // Le support est épinglé en tête ; les boutiques en dessous
+  const supportConv = list?.find((c) => c.store?.support) || null;
+  const shops = list?.filter((c) => !c.store?.support) ?? null;
+
   return (
     <div className="flex-1 flex min-h-0 max-w-6xl w-full mx-auto md:my-4 bg-white md:rounded-2xl md:border md:border-gray-200 overflow-hidden" style={{ height: "calc(100dvh - 9rem)" }}>
       <aside className={`${activeId || seller ? "hidden md:flex" : "flex"} w-full md:w-80 lg:w-96 flex-col border-r border-gray-100`}>
         <div className="px-4 py-3 border-b border-gray-100"><h1 className="text-lg font-bold text-gray-900">Messages</h1></div>
         <div className="flex-1 overflow-y-auto">
-          <Link href="/Messagerie/support" className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 hover:bg-gray-50">
-            <div className="w-11 h-11 rounded-full bg-[#30A08B] flex items-center justify-center"><Headphones className="w-5 h-5 text-white" /></div>
-            <div className="min-w-0">
-              <p className="font-semibold text-gray-900">Support Ihambaobab</p>
-              <p className="text-xs text-gray-500 truncate">Commande, paiement, livraison : on vous aide</p>
+          <button
+            onClick={() => router.push(supportConv ? `/Messagerie?c=${supportConv.id}` : "/Messagerie?seller=support")}
+            className={`w-full text-left flex items-center gap-3 px-4 py-3 border-b border-gray-50 ${supportConv && supportConv.id === activeId ? "bg-[#E8F5F2]" : "hover:bg-gray-50"}`}
+          >
+            <div className="w-11 h-11 rounded-full bg-[#30A08B] flex items-center justify-center shrink-0"><Headphones className="w-5 h-5 text-white" /></div>
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between gap-2">
+                <p className={`text-sm text-gray-900 ${supportConv?.unread ? "font-bold" : "font-semibold"}`}>Support Ihambaobab</p>
+                {supportConv?.lastMessage?.at ? <span className={`text-[11px] shrink-0 ${supportConv.unread ? "text-[#30A08B]" : "text-gray-400"}`}>{when(supportConv.lastMessage.at)}</span> : null}
+              </div>
+              <div className="flex justify-between gap-2 items-center">
+                <p className={`text-xs truncate ${supportConv && typing[supportConv.id] ? "text-[#30A08B] italic" : supportConv?.unread ? "text-gray-800 font-medium" : "text-gray-500"}`}>
+                  {supportConv && typing[supportConv.id] ? "écrit…" : supportConv?.lastMessage?.text
+                    ? `${supportConv.lastMessage.from === "client" ? "Vous : " : ""}${supportConv.lastMessage.text}`
+                    : "Commande, paiement, livraison : on vous aide"}
+                </p>
+                {supportConv?.unread ? <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-[#30A08B] text-white text-[10px] font-bold flex items-center justify-center">{supportConv.unread}</span> : null}
+              </div>
             </div>
-          </Link>
-          {list?.length ? <p className="px-4 pt-4 pb-1 text-[10px] font-semibold tracking-widest text-gray-400">BOUTIQUES</p> : null}
-          {list === null ? (
+          </button>
+          {shops?.length ? <p className="px-4 pt-4 pb-1 text-[10px] font-semibold tracking-widest text-gray-400">BOUTIQUES</p> : null}
+          {shops === null ? (
             <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-gray-300" /></div>
-          ) : list.length === 0 ? (
+          ) : shops.length === 0 ? (
             <div className="text-center px-8 py-10">
               <Store className="w-8 h-8 text-gray-300 mx-auto mb-2" />
               <p className="font-semibold text-gray-800 text-sm">Une question sur un produit ?</p>
               <p className="text-xs text-gray-500 mt-1">Cliquez sur « Contacter la boutique » depuis une fiche produit : la discussion apparaîtra ici.</p>
             </div>
-          ) : list.map((c) => (
+          ) : shops.map((c) => (
             <button key={c.id} onClick={() => router.push(`/Messagerie?c=${c.id}`)} className={`w-full text-left flex items-center gap-3 px-4 py-3 border-b border-gray-50 ${c.id === activeId ? "bg-[#E8F5F2]" : "hover:bg-gray-50"}`}>
               <StoreAvatar store={c.store} />
               <div className="flex-1 min-w-0">
