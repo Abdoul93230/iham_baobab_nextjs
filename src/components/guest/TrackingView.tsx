@@ -6,6 +6,7 @@ import { Check, Loader2, MapPin, Package, Phone, Share2, Truck, XCircle } from "
 import { fetchTracking, shareTracking } from "@/lib/guestSession";
 import { formatCurrency } from "@/lib/utils";
 import { paymentLabel } from "@/lib/orderStatus";
+import OrderTracePanel from "@/components/orders/OrderTracePanel";
 
 const STEPS = [
   { key: "placed", label: "Commande passée", icon: Package },
@@ -144,6 +145,8 @@ export default function TrackingView({ reference, k }: { reference: string; k: s
       <p className="text-center text-xs text-gray-400">
         Une question ? <Link href="/contact" className="text-[#30A08B] font-medium">Contactez le support</Link> avec la référence de la commande.
       </p>
+      {/* Paiement, réductions et étapes, en clair (sans code de livraison : lien partageable) */}
+      {order.trace ? <OrderTracePanel trace={order.trace} /> : null}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import OrderTracePanel, { type OrderTrace } from "@/components/orders/OrderTracePanel";
 import {
   MapPin,
   Phone,
@@ -95,6 +96,7 @@ const CommandeSuivi: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [order, setOrder] = useState<Order | null>(null);
+  const [trace, setTrace] = useState<OrderTrace | null>(null);
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress | null>(null);
   const [promoCode, setPromoCode] = useState<PromoCode | null>(null);
   const [reorderLoading, setReorderLoading] = useState(false);
@@ -123,6 +125,7 @@ const CommandeSuivi: React.FC = () => {
           `${BackendUrl}/getCommandesById/${id}`
         );
         setOrder(orderResponse.data.commande);
+        setTrace(orderResponse.data.trace || null);
 
 
         if (orderResponse.data.commande?.livraisonDetails) {
@@ -292,6 +295,9 @@ const CommandeSuivi: React.FC = () => {
           Retour aux commandes
         </button>
 
+        {/* Paiement, réductions, code de livraison et étapes, en clair */}
+        {trace ? <div className="mb-4 max-w-2xl"><OrderTracePanel trace={trace} /></div> : null}
+
         {/* Affichage conditionnel des onglets selon le type de commande */}
         <div className="flex mb-4 border-b">
           <button
@@ -324,7 +330,8 @@ const CommandeSuivi: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-4 mb-4 md:mb-0">
               {/* Masquer tout paiement quand la livraison est terminée */}
               {!["livré", "livraison reçu", "Traité"].includes(order?.etatTraitement || "") && (
-                (order?.statusPayment === "échec" ||
+                // Annulée (ex. paiement non reçu) : on propose de recommander, pas de payer
+                order?.etatTraitement !== "annulé" && (order?.statusPayment === "échec" ||
                   (order?.statusPayment !== "recu" &&
                     order?.statusPayment !== "payé")) ? (
                   <OrderPaymentHandler
