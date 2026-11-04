@@ -17,6 +17,7 @@ const SECTIONS = [
       { label: "Qui sommes-nous", href: "/about" },
       { label: "Nos magasins", href: "/suppliers" },
       { label: "Devenir vendeur", href: "/become-seller" },
+      { label: "Espace livreur", href: "/livreur" },
       { label: "Partout au Niger", href: "/niger-presence" },
       { label: "Anniversaire", href: "/anniversary" },
     ],
