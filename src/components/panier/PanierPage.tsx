@@ -315,11 +315,15 @@ const PanierPage: React.FC = () => {
       }
       const orderAmount = calculerSousTotal();
       const productIds = articles.map((a: any) => a._id).filter(Boolean);
+      // Nouvel essai de paiement : l'utilisation enregistrée par cette commande ne compte pas
+      let orderReference: string | undefined;
+      try { orderReference = JSON.parse(localStorage.getItem("pendingOrder") || "null")?.transactionId || undefined; } catch {}
       const response = await axios.post(`${BackendUrl}/api/promocodes/validate`, {
         code: finalCode,
         orderAmount,
         userId,
         products: productIds,
+        ...(orderReference ? { orderReference } : {}),
       });
       if (!silent) setRond(false);
       if (response.data.valid) {

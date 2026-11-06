@@ -159,8 +159,11 @@ export const fetchRedeemPreview = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
+      // Nouvel essai de paiement : les points réservés par cette commande restent utilisables
+      let ref = "";
+      try { ref = JSON.parse(localStorage.getItem("pendingOrder") || "null")?.transactionId || ""; } catch {}
       const res = await fetch(
-        `${API}/api/gamification/redeem-preview?userId=${userId}&orderAmountFcfa=${orderAmountFcfa}`,
+        `${API}/api/gamification/redeem-preview?userId=${userId}&orderAmountFcfa=${orderAmountFcfa}${ref ? `&orderReference=${encodeURIComponent(ref)}` : ""}`,
         { headers: authHeaders() }
       );
       const data = await res.json();

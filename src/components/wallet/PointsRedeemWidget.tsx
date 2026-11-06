@@ -110,7 +110,7 @@ export default function PointsRedeemWidget({ orderAmountFcfa, onPointsChange, in
           <div>
             <p className="text-sm font-bold text-gray-800">Baobab Points</p>
             <p className="text-xs text-gray-500">
-              {wallet.balance} BP disponibles
+              {preview?.balance ?? wallet.balance} BP disponibles
               {pointsToUse > 0 && (
                 <span className="text-[#30A08B] font-semibold ml-1">
                   — {pointsToUse} BP utilisés (−{discountFcfa.toLocaleString("fr-FR")} FCFA)
