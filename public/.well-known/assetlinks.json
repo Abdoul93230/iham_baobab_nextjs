@@ -1,11 +1,17 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "com.ihambaobab.mobile",
       "sha256_cert_fingerprints": [
-        "3C:EE:91:F6:92:EA:31:17:6D:EE:0B:5E:CF:9E:03:AB:DB:D6:65:09:2C:0F:FF:98:5B:8E:44:A2:35:74:69:FE"
+        "3C:EE:91:F6:92:EA:31:17:6D:EE:0B:5E:CF:9E:03:AB:DB:D6:65:09:2C:0F:FF:98:5B:8E:44:A2:35:74:69:FE",
+        "16:5D:FA:4C:21:B6:5B:67:39:E4:00:CE:0B:69:63:15:E2:B1:9E:8C:4F:1C:39:E7:03:1D:AD:C3:04:51:85:E0",
+        "8E:5B:5E:90:4E:12:16:16:29:3B:AF:49:DD:65:E3:35:7D:9B:F8:A6:9C:BA:7B:A2:F5:AC:BB:A4:21:B5:46:64",
+        "EE:8E:A9:B7:4F:96:4A:76:98:DA:D4:5D:52:A0:F5:11:49:0E:73:22:7D:DA:FB:61:59:25:99:68:9F:EE:57:0E"
       ]
     }
   }
