@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { AuthService } from "@/lib/auth";
 import ProduitDetailMain from "@/components/ProduitDetail/ProduitDetailMain";
 import HomeHeader from "@/components/home/HomeHeader";
 import HomeFooter from "@/components/home/HomeFooter";
@@ -20,14 +21,29 @@ export default function ProduitDetailPageClient({ productId, serverData }: Produ
     window.scrollTo(0, 0);
   }, [productId]);
 
-  // Enregistre une vue — une seule fois par montage réel (guard contre StrictMode double-invoke)
+  // Enregistre la visite (une par personne et par jour côté serveur) — une seule fois par montage réel.
+  // Le serveur renvoie le nombre de personnes l'ayant vu sur 7 jours (affiché à partir de 10).
   const viewTracked = useRef(false);
+  const [weekViewers, setWeekViewers] = useState(0);
   useEffect(() => {
     if (!productId || viewTracked.current) return;
     viewTracked.current = true;
+    let visitor = "";
+    try {
+      visitor = localStorage.getItem("ihamVisitorId") || "";
+      if (!visitor) {
+        visitor = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+        localStorage.setItem("ihamVisitorId", visitor);
+      }
+    } catch { /* stockage indisponible : le serveur se rabat sur l'IP */ }
+    const token = AuthService.getToken();
     fetch(`${process.env.NEXT_PUBLIC_Backend_Url}/productView/${productId}`, {
       method: 'POST',
-    }).catch(() => {});
+      headers: { ...(visitor ? { 'x-visitor-id': visitor } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    })
+      .then((r) => r.json())
+      .then((d) => setWeekViewers(Number(d?.weekViewers) || 0))
+      .catch(() => {});
   }, [productId]);
 
   // Hydratation immédiate du store Redux avec les données serveur
@@ -82,6 +98,7 @@ export default function ProduitDetailPageClient({ productId, serverData }: Produ
       <ProduitDetailMain 
         productId={productId} 
         panierchg={handlePanierChange}
+        weekViewers={weekViewers}
         serverData={serverData}
       />
       <HomeFooter />

@@ -31,9 +31,13 @@ interface ProduitDetailMainProps {
   panierchg?: () => void;
   productId: string;
   serverData?: any;
+  weekViewers?: number;
 }
 
-function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMainProps) {
+/** « X personnes ont vu cet article cette semaine » : affiché à partir de 10 (en dessous, effet « boutique vide ») */
+const VIEWERS_MIN = 10;
+
+function ProduitDetailMain({ panierchg, productId, serverData, weekViewers = 0 }: ProduitDetailMainProps) {
   const router = useRouter();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
@@ -449,6 +453,9 @@ function ProduitDetailMain({ panierchg, productId, serverData }: ProduitDetailMa
                 ) : (
                   <span className="text-xs text-red-600 font-medium">Rupture de stock</span>
                 )}
+                {weekViewers >= VIEWERS_MIN ? (
+                  <p className="mt-1.5 text-xs text-gray-500">👀 {weekViewers} personnes ont vu cet article cette semaine</p>
+                ) : null}
               </div>
             </div>
 
