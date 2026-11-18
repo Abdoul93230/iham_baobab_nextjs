@@ -1002,14 +1002,14 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                 {Number(order.fraisLivraison) > 0 && (
                   <div className="flex justify-between items-center text-gray-600">
                     <span>Frais d'expédition</span>
-                    <span>+{formatPrice(order.fraisLivraison)}</span>
+                    <span>+{formatPrice(Number(order.fraisLivraison) || 0)}</span>
                   </div>
                 )}
 
                 {Number(order.reduction) > 0 && (
                   <div className="flex justify-between items-center text-green-600">
                     <span>Réduction appliquée{order.codePromo ? ` (${order.codePromo})` : ""}</span>
-                    <span>-{formatPrice(order.reduction)}</span>
+                    <span>-{formatPrice(Number(order.reduction) || 0)}</span>
                   </div>
                 )}
 
@@ -1017,7 +1017,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                   <div className="flex flex-col gap-0.5 bg-amber-50 border border-amber-100 px-3 py-2 rounded-lg">
                     <div className="flex justify-between items-center text-amber-700">
                       <span className="font-medium">🌿 Points Baobab utilisés</span>
-                      <span className="font-bold">-{formatPrice(order.pointsDiscount)}</span>
+                      <span className="font-bold">-{formatPrice(Number(order.pointsDiscount) || 0)}</span>
                     </div>
                     <span className="text-[10px] text-amber-500 font-semibold">
                       {order.pointsUsed || 0} pts déduits de votre solde
