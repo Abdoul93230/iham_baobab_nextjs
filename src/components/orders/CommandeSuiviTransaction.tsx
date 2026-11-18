@@ -40,6 +40,7 @@ const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 interface Order {
   _id: string;
   date: string;
+  updatedAt?: string;
   statusLivraison: string;
   statusPayment: string;
   etatTraitement: string;
