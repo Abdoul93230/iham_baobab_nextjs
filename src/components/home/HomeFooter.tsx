@@ -300,13 +300,13 @@ const HomeFooter: React.FC = () => {
                 +227 87727501
               </a>
               <a
-                href="mailto:contact@ihambaobab.com"
+                href="mailto:support@ihambaobab.com"
                 className="flex items-center gap-2.5 text-gray-400 hover:text-[#4bbda5] transition-colors"
               >
                 <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
                   <Mail size={13} />
                 </div>
-                contact@ihambaobab.com
+                support@ihambaobab.com
               </a>
               <div className="flex items-center gap-2.5 text-gray-400">
                 <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">

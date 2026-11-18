@@ -320,7 +320,7 @@ const ServicePage = () => {
         },
         {
           title: "Garanties et conformité",
-          content: "Garantie plateforme minimum 30 jours même si la boutique propose moins. Vérification de conformité pour les produits sensibles (alimentaire, cosmétique). Médiation automatique en cas de produit non-conforme.",
+          content: "Un article défectueux, cassé ou non conforme à l'annonce peut être signalé dans les 7 jours qui suivent la livraison. Ihambaobab vérifie avec la boutique et propose un échange ou un remboursement.",
           tags: ["garanties", "conformité", "vérification", "médiation", "protection"],
           category: "Produits",
           type: "Information",
@@ -337,8 +337,8 @@ const ServicePage = () => {
       articles: [
         {
           title: "Politique de retour unifiée",
-          content: "Retour possible 30 jours minimum sur tous les produits de toutes les boutiques. Si une boutique propose mieux, vous en bénéficiez. Retour gratuit en cas de défaut ou erreur vendeur. IhamBaobab gère tous les remboursements pour votre protection.",
-          tags: ["retour unifié", "30 jours", "remboursement", "protection", "gratuit"],
+          content: "Une seule règle pour toutes les boutiques : 7 jours après la livraison pour signaler un article défectueux, cassé ou non conforme à l'annonce. Écrivez au support depuis la commande, avec une photo. Un article conforme qui ne plaît plus n'est pas repris.",
+          tags: ["retour", "7 jours", "remboursement", "échange", "non conforme"],
           category: "Retours",
           type: "Information",
           lastUpdated: "2024-01-15",

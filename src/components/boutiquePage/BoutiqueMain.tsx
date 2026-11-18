@@ -419,9 +419,9 @@ const BoutiqueMain: React.FC<BoutiqueMainProps> = ({ sellerId, storeName }) => {
               <div className="text-center flex flex-col items-center">
                 <div className="flex items-center gap-1">
                   <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                  <p className="font-black text-xl">{socialStats.rating.toFixed(1)}</p>
+                  <p className="font-black text-xl">{socialStats.reviewsCount ? socialStats.rating.toFixed(1) : "—"}</p>
                 </div>
-                <p className="text-xs text-white/60">{socialStats.reviewsCount} avis</p>
+                <p className="text-xs text-white/60">{socialStats.reviewsCount ? `${socialStats.reviewsCount} avis` : "Pas encore d'avis"}</p>
               </div>
             </div>
 

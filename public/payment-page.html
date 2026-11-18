@@ -133,7 +133,7 @@
         data-environement="live"
         data-key="pk_f83a240bd0df4393b35a819925863e16"
         data-redirect-url="https://www.ihambaobab.com/commandesReference"
-        data-cancel-url="https://www.ihambaobab.com/error"
+        data-cancel-url="https://www.ihambaobab.com/Panier"
         data-callback-url="https://api.ihambaobab.com/payment_callback2"
         >
         Procéder au paiement
@@ -158,12 +158,33 @@
 
     // Configurer le bouton iPay
     const button = document.querySelector('.ipaymoney-button');
-    const amount = Number(paymentInfo.amount || 0);
+    let amount = Number(paymentInfo.amount || 0);
     const transactionId = paymentInfo.transactionId;
-    button.setAttribute('data-amount', amount);
-    button.setAttribute('data-transaction-id', paymentInfo.transactionId);
-    console.log({paymentInfo});
-    
+    const resultUrl = (status) =>
+      `${window.location.origin}/commandesReference?transactionId=${encodeURIComponent(transactionId)}&status=${encodeURIComponent(status)}&amount=${encodeURIComponent(amount)}`;
+    button.setAttribute('data-transaction-id', transactionId);
+
+    // Le montant vient de la commande enregistrée (calculé par le serveur), pas du navigateur.
+    // Si la commande est déjà payée, on ne fait pas payer une seconde fois.
+    const prepareCheckout = async () => {
+      try {
+        const r = await fetch(`${backendUrl}/getOrderPaymentStatus/${encodeURIComponent(transactionId)}`);
+        if (r.ok) {
+          const d = await r.json();
+          if (Number(d?.amount) > 0) amount = Math.round(Number(d.amount));
+          if (normalizePaymentStatus(d?.status) === 'succeeded') {
+            clearCheckoutLocalState();
+            window.location.href = resultUrl('succeeded');
+            return false;
+          }
+        }
+      } catch (e) { /* serveur injoignable : montant de la commande en cours */ }
+      button.setAttribute('data-amount', amount);
+      button.setAttribute('data-redirect-url', resultUrl('pending'));
+      // Abandon sur iPay : retour à la commande, rien n'est débité et le panier est conservé
+      button.setAttribute('data-cancel-url', resultUrl('cancelled'));
+      return true;
+    };
 
     // Ajouter un état de chargement lors du clic
     button.addEventListener('click', function() {
@@ -203,7 +224,8 @@
         window.onCloseIpayCheckout();
       }
 
-      if (status === 'succeeded' || status === 'failed') {
+      // Panier vidé seulement quand le paiement est confirmé : en cas d'échec, le client peut réessayer
+      if (status === 'succeeded') {
         clearCheckoutLocalState();
       }
 
@@ -336,7 +358,6 @@
           if (totalTime >= maxTime) {
             console.warn('⏱️ Max polling time exceeded (10 minutes)');
             if (pollTimer) clearTimeout(pollTimer);
-            clearCheckoutLocalState();
             window.location.href = `/commandesReference?transactionId=${encodeURIComponent(transactionId)}&status=pending&amount=${encodeURIComponent(amount)}`;
             return;
           }
@@ -360,24 +381,18 @@
       connectWebSocket();
     };
 
-    startOrderStatusPolling();
-
     // Nettoyer l'info temporaire immédiatement
     localStorage.removeItem('paymentInfo');
+
+    // Montant vérifié, puis ouverture automatique d'iPay et suivi du statut
+    prepareCheckout().then((ok) => {
+      if (!ok) return;
+      startOrderStatusPolling();
+      setTimeout(() => button.click(), 300);
+    });
   </script>
 
-<script>
-  // Attendre que le DOM soit entièrement chargé
-  document.addEventListener("DOMContentLoaded", function() {
-      // Sélectionner le bouton par son ID ou une autre méthode
-      var button = document.getElementById("checkout-button");
 
-      // Déclencher un clic automatique après un délai
-      setTimeout(() => {
-          button.click(); // Simule un clic sur le bouton
-      }, 500); // 1 seconde de délai avant le clic
-  });
-</script>
 
   
 </body>

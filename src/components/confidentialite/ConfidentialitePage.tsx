@@ -160,7 +160,7 @@ Cette politique explique comment nous collectons, utilisons, stockons et protég
 • S'opposer au profilage commercial
 • Retirer votre consentement à tout moment
 
-Pour exercer ces droits, contactez-nous à : **contact@ihambaobab.com**`,
+Pour exercer ces droits, contactez-nous à : **support@ihambaobab.com**`,
       color: "from-teal-500 to-teal-600"
     },
     {
@@ -256,7 +256,7 @@ Version : 2.1`,
       content: `Pour toute question concernant cette politique ou vos données personnelles :
 
 **Délégué à la Protection des Données (DPO) :**
-• E-mail : contact@ihambaobab.com
+• E-mail : support@ihambaobab.com
 • Téléphone : +227 87 72 75 01
 • Adresse : IhamBaobab SARL, Bobiel, Niamey, Niger
 
@@ -321,7 +321,7 @@ En cas de désaccord avec nos réponses, vous pouvez saisir l'autorité compéte
                 <li>• Accès et rectification de vos données</li>
                 <li>• Suppression et portabilité</li>
                 <li>• Opposition au marketing</li>
-                <li>• Contact : contact@ihambaobab.com</li>
+                <li>• Contact : support@ihambaobab.com</li>
               </ul>
             </div>
           </div>
@@ -393,11 +393,11 @@ En cas de désaccord avec nos réponses, vous pouvez saisir l'autorité compéte
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <a
-              href="mailto:contact@ihambaobab.com"
+              href="mailto:support@ihambaobab.com"
               className="inline-flex items-center px-6 py-3 bg-white text-[#30A08B] rounded-lg font-semibold hover:bg-gray-100 transition-colors gap-2"
             >
               <Mail className="w-5 h-5" />
-              contact@ihambaobab.com
+              support@ihambaobab.com
             </a>
             <a
               href="tel:+22787727501"

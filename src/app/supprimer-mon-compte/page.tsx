@@ -72,7 +72,7 @@ export default function SupprimerMonComptePage() {
               <h2 className="text-lg font-semibold text-gray-900 mb-2">Demande enregistrée</h2>
               <p className="text-gray-500 text-sm">{message}</p>
               <p className="text-gray-400 text-xs mt-4">
-                Pour toute question : <a href="mailto:ihambaobab@gmail.com" className="underline" style={{ color: "#30A08B" }}>ihambaobab@gmail.com</a>
+                Pour toute question : <a href="mailto:support@ihambaobab.com" className="underline" style={{ color: "#30A08B" }}>support@ihambaobab.com</a>
               </p>
             </div>
           ) : (
@@ -178,7 +178,7 @@ export default function SupprimerMonComptePage() {
 
                 <p className="text-center text-xs text-gray-400 mt-2">
                   Besoin d'aide ?{" "}
-                  <a href="mailto:ihambaobab@gmail.com" className="underline" style={{ color: "#30A08B" }}>
+                  <a href="mailto:support@ihambaobab.com" className="underline" style={{ color: "#30A08B" }}>
                     Contactez-nous
                   </a>
                 </p>

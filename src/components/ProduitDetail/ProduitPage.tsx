@@ -193,19 +193,21 @@ export const ProductCard: React.FC<{
           {product.name}
         </h3>
 
-        {/* Rating */}
-        <div className="flex items-center gap-1">
-          <div className="flex">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Star
-                key={i}
-                size={compact ? 9 : 11}
-                className={i <= (product.rating ?? 4) ? "text-yellow-400 fill-yellow-400" : "text-gray-200 fill-gray-200"}
-              />
-            ))}
+        {/* Note : affichée seulement si de vrais avis existent */}
+        {Number(product.rating) > 0 ? (
+          <div className="flex items-center gap-1">
+            <div className="flex">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Star
+                  key={i}
+                  size={compact ? 9 : 11}
+                  className={i <= Math.round(Number(product.rating)) ? "text-yellow-400 fill-yellow-400" : "text-gray-200 fill-gray-200"}
+                />
+              ))}
+            </div>
+            <span className="text-[10px] text-gray-400">({Number(product.rating).toFixed(1)})</span>
           </div>
-          <span className="text-[10px] text-gray-400">(4.0)</span>
-        </div>
+        ) : null}
 
         {/* Price */}
         <div className="flex items-baseline gap-1.5 mt-auto pt-1">

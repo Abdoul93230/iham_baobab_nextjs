@@ -283,7 +283,7 @@ function ProduitDetailMain({ panierchg, productId, serverData, weekViewers = 0 }
 
   const avgRating = Allcommente.length > 0
     ? (Allcommente.reduce((s: number, c: any) => s + (c.etoil || 0), 0) / Allcommente.length).toFixed(1)
-    : "4.8";
+    : null; // pas d'avis : on n'invente pas de note
 
   return (
     <div className="min-h-screen bg-[#f7f8fa] pb-24 md:pb-6">
@@ -403,19 +403,23 @@ function ProduitDetailMain({ panierchg, productId, serverData, weekViewers = 0 }
             <div>
               {discount > 0 && (
                 <span className="inline-flex items-center gap-1 bg-red-50 text-red-600 text-xs font-bold px-2.5 py-1 rounded-full mb-2">
-                  🔥 Offre limitée
+                  🔥 Promotion
                 </span>
               )}
               <h1 className="text-lg sm:text-xl font-bold text-gray-900 leading-snug">{produit.name}</h1>
               <div className="flex items-center gap-3 mt-1.5">
-                <div className="flex items-center gap-1">
-                  {[1,2,3,4,5].map((s) => (
-                    <Star key={s} size={13}
-                      className={parseFloat(avgRating) >= s ? "text-yellow-400 fill-yellow-400" : "text-gray-200 fill-gray-200"}
-                    />
-                  ))}
-                  <span className="text-xs text-gray-500 ml-1">{avgRating} ({Allcommente.length} avis)</span>
-                </div>
+                {avgRating ? (
+                  <div className="flex items-center gap-1">
+                    {[1,2,3,4,5].map((s) => (
+                      <Star key={s} size={13}
+                        className={parseFloat(avgRating) >= s ? "text-yellow-400 fill-yellow-400" : "text-gray-200 fill-gray-200"}
+                      />
+                    ))}
+                    <span className="text-xs text-gray-500 ml-1">{avgRating} ({Allcommente.length} avis)</span>
+                  </div>
+                ) : (
+                  <span className="text-xs text-gray-500">Pas encore d&apos;avis</span>
+                )}
                 {produit.Clefournisseur?.isvalid && (
                   <span className="flex items-center gap-0.5 text-[10px] text-green-600 font-medium">
                     <BadgeCheck size={12} /> Boutique vérifiée
@@ -437,7 +441,6 @@ function ProduitDetailMain({ panierchg, productId, serverData, weekViewers = 0 }
                   </>
                 )}
               </div>
-              <p className="text-xs text-gray-400 mt-1">Prix hors taxes · 2+ pièces: extra -5%</p>
 
               {/* Stock indicator */}
               <div className="mt-3">
@@ -555,9 +558,9 @@ function ProduitDetailMain({ panierchg, productId, serverData, weekViewers = 0 }
             {/* Trust badges */}
             <div className="grid grid-cols-3 gap-2">
               {[
-                { icon: Truck, label: "Livraison", sub: "Partout au Niger" },
-                { icon: ShieldCheck, label: "Paiement sécurisé", sub: "Mobile Money" },
-                { icon: RefreshCw, label: "Retour", sub: "Sous 7 jours" },
+                { icon: RefreshCw, label: "Retour sous 7 jours", sub: "Défectueux ou non conforme" },
+                { icon: ShieldCheck, label: "Remise par code", sub: "Le livreur valide avec votre code" },
+                { icon: Truck, label: "Rien n'est débité", sub: "si le paiement échoue" },
               ].map(({ icon: Icon, label, sub }) => (
                 <div key={label} className="bg-white rounded-xl p-3 flex flex-col items-center gap-1 border border-gray-100 text-center shadow-sm">
                   <Icon size={18} className="text-[#30A08B]" />

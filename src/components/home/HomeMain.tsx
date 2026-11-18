@@ -80,38 +80,8 @@ const TRUST = [
   { icon: Truck,       label: "Livraison rapide",   sub: "Partout au Niger" },
   { icon: ShieldCheck, label: "Paiement sécurisé",  sub: "Mobile Money & +" },
   { icon: RefreshCw,   label: "Retour facile",       sub: "Sous 7 jours" },
-  { icon: Headphones,  label: "Support 7j/7",        sub: "Toujours disponible" },
+  { icon: Headphones,  label: "Support local",       sub: "Une équipe au Niger" },
 ];
-
-// ─── Flash sale countdown ─────────────────────────────────────────────────────
-function FlashCountdown() {
-  const [time, setTime] = useState({ h: 5, m: 59, s: 59 });
-  useEffect(() => {
-    const id = setInterval(() => {
-      setTime((t) => {
-        let { h, m, s } = t;
-        s--;
-        if (s < 0) { s = 59; m--; }
-        if (m < 0) { m = 59; h--; }
-        if (h < 0) { h = 5; m = 59; s = 59; }
-        return { h, m, s };
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, []);
-  const fmt = (n: number) => String(n).padStart(2, "0");
-  return (
-    <div className="flex items-center gap-1 text-white">
-      <span className="text-xs opacity-80">Fin dans</span>
-      {[fmt(time.h), fmt(time.m), fmt(time.s)].map((v, i) => (
-        <React.Fragment key={i}>
-          <span className="bg-white/20 rounded px-1.5 py-0.5 text-sm font-mono font-bold tabular-nums">{v}</span>
-          {i < 2 && <span className="font-bold text-sm">:</span>}
-        </React.Fragment>
-      ))}
-    </div>
-  );
-}
 
 // ─── Infinite feed ────────────────────────────────────────────────────────────
 function InfiniteFeed() {
@@ -449,9 +419,9 @@ const HomeMain: React.FC<HomeMainProps> = () => {
             <div className="bg-gradient-to-r from-red-500 to-rose-500 px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Flame size={20} className="text-white animate-pulse" />
-                <span className="text-white font-black text-base sm:text-lg tracking-wide">FLASH DEALS</span>
+                <span className="text-white font-black text-base sm:text-lg tracking-wide">PROMOTIONS</span>
               </div>
-              <FlashCountdown />
+              <span className="text-white/90 text-xs">Prix réduits par les boutiques</span>
             </div>
             <div className="bg-white p-4">
               {isLoading ? (

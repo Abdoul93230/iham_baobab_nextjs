@@ -191,7 +191,7 @@ export default function NigerPresencePage() {
                 }
               ],
               "telephone": "+227 87 72 75 01",
-              "email": "ihambaobab@gmail.com"
+              "email": "support@ihambaobab.com"
             }),
           }}
         />
@@ -350,8 +350,8 @@ export default function NigerPresencePage() {
                 </div>
                 <div className="flex items-center justify-center">
                   <Mail className="w-5 h-5 mr-2" style={{ color: colors.teal }} />
-                  <a href="mailto:ihambaobab@gmail.com" className="hover:underline">
-                    ihambaobab@gmail.com
+                  <a href="mailto:support@ihambaobab.com" className="hover:underline">
+                    support@ihambaobab.com
                   </a>
                 </div>
               </div>

@@ -20,7 +20,7 @@ import HomeHeader from "@/components/home/HomeHeader";
 // Configuration SEO optimisée
 const contactPageSEOConfig = {
   title: "Contactez-Nous - IhamBaobab | Support Client et Informations",
-  description: "Contactez l'équipe IhamBaobab au Niger. Support client 7j/7, assistance technique, équipe commerciale. Téléphone: +227 87 72 75 01, Email: ihambaobab@gmail.com. Bureaux à Niamey, quartier Bobiel.",
+  description: "Contactez l'équipe IhamBaobab au Niger. Support client 7j/7, assistance technique, équipe commerciale. Téléphone: +227 87 72 75 01, Email: support@ihambaobab.com. Bureaux à Niamey, quartier Bobiel.",
   canonical: process.env.NEXT_PUBLIC_SITE_URL ? `${process.env.NEXT_PUBLIC_SITE_URL}/contact` : "/contact",
   openGraph: {
     title: "Contactez IhamBaobab - Support Client au Niger",
@@ -46,7 +46,7 @@ const contactPageSEOConfig = {
   additionalMetaTags: [
     {
       name: "keywords",
-      content: "contact IhamBaobab, support client Niger, assistance technique, équipe commerciale, Niamey, Bobiel, +227 87 72 75 01, ihambaobab@gmail.com, chat en ligne, service client",
+      content: "contact IhamBaobab, support client Niger, assistance technique, équipe commerciale, Niamey, Bobiel, +227 87 72 75 01, support@ihambaobab.com, chat en ligne, service client",
     },
     {
       name: "author",
@@ -105,7 +105,7 @@ const contactPageSEOConfig = {
 // Données de contact structurées
 const contactData = {
   phone: "+227 87 72 75 01",
-  email: "ihambaobab@gmail.com",
+  email: "support@ihambaobab.com",
   address: {
     street: "Bobiel, Pharmacie Goroual",
     city: "Niamey",

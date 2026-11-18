@@ -8,6 +8,8 @@ import useAuth from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import HomeHeader from "@/components/home/HomeHeader";
 import CommandeSuiviTransaction from "@/components/orders/CommandeSuiviTransaction";
+import GuestOrderSuccess from "@/components/guest/GuestOrderSuccess";
+import { trackingPath } from "@/lib/guestSession";
 
 // Configuration SEO statique
 const suiviCommandeTransactionSEOConfig = {
@@ -63,7 +65,7 @@ export default function CommandesTransaction() {
 
   useEffect(() => {
     if (!isClient) return;
-    if (status !== "succeeded" && status !== "failed") return;
+    if (status !== "succeeded") return; // échec ou abandon : le panier reste pour réessayer
 
     [
       "panier",
@@ -136,6 +138,52 @@ export default function CommandesTransaction() {
     );
   }
 
+  // Commande passée sans compte : on lui montre son suivi au lieu de lui demander de se connecter
+  let guestOrder: { reference: string; trackingToken: string } | null = null;
+  try {
+    const g = JSON.parse(localStorage.getItem("lastGuestOrder") || "null");
+    if (!user && g?.reference === transactionId && g?.trackingToken) guestOrder = g;
+  } catch { /* rien */ }
+
+  if (guestOrder) {
+    const paid = status === "succeeded";
+    const pending = status === "pending";
+    return (
+      <>
+        <NextSeo {...suiviCommandeTransactionSEOConfig} />
+        <HomeHeader />
+        <main className="min-h-[70vh] bg-gray-50 px-4 py-10">
+          <div className="max-w-md mx-auto space-y-4">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center">
+              <h1 className="text-xl font-bold text-gray-900">
+                {paid ? "Paiement confirmé" : pending ? "Paiement en cours de confirmation" : "Paiement non abouti"}
+              </h1>
+              <p className="text-sm text-gray-600 mt-2">
+                {paid
+                  ? "Merci ! La boutique prépare votre commande."
+                  : pending
+                  ? "iPay n'a pas encore confirmé. Votre commande se met à jour toute seule sur son lien de suivi."
+                  : "Rien n'a été débité. Votre panier est conservé : vous pouvez réessayer ou choisir le paiement à la livraison."}
+              </p>
+              <p className="text-xs text-gray-500 mt-3">Référence <span className="font-mono font-semibold text-gray-800">{guestOrder.reference}</span></p>
+              {!paid && !pending ? (
+                <button onClick={() => router.push("/Panier")} className="mt-4 w-full bg-[#30A08B] text-white font-semibold rounded-xl py-3 hover:opacity-90">
+                  Reprendre ma commande
+                </button>
+              ) : null}
+              {pending ? (
+                <button onClick={() => router.push(trackingPath(guestOrder!.reference, guestOrder!.trackingToken))} className="mt-4 w-full bg-[#30A08B] text-white font-semibold rounded-xl py-3 hover:opacity-90">
+                  Suivre ma commande
+                </button>
+              ) : null}
+            </div>
+            {paid ? <GuestOrderSuccess reference={guestOrder.reference} trackingToken={guestOrder.trackingToken} /> : null}
+          </div>
+        </main>
+      </>
+    );
+  }
+
   return (
     <ProtectedRoute requireAuth={true}>
       {/* SEO Configuration */}
@@ -193,7 +241,7 @@ export default function CommandesTransaction() {
         >
           <CommandeSuiviTransaction 
             transactionId={transactionId}
-            status={status}
+            status={status === "cancelled" ? "failed" : status}
             amount={amount ? parseFloat(amount) : undefined}
           />
         </main>

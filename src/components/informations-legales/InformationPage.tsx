@@ -49,7 +49,7 @@ const InformationPage = () => {
 **Contact de la plateforme :**
 • Adresse postale : Niamey, Niger
 • Téléphone : +227 87 72 75 01
-• Email général : contact@ihambaobab.com
+• Email général : support@ihambaobab.com
 • Support technique : support@ihambaobab.com
 • Site web : https://ihambaobab.com
 
@@ -129,7 +129,7 @@ Il est strictement interdit de :
 • Données de prévention fraude : 5 ans maximum
 
 **Vos droits :**
-Contactez contact@ihambaobab.com pour exercer vos droits d'accès, rectification, effacement, portabilité et opposition.
+Contactez support@ihambaobab.com pour exercer vos droits d'accès, rectification, effacement, portabilité et opposition.
 
 **Sécurité :**
 Chiffrement SSL/TLS, serveurs sécurisés, authentification multi-facteurs pour les transactions sensibles.`,
@@ -247,53 +247,24 @@ IhamBaobab est un intermédiaire technique qui facilite les transactions entre v
       id: "politique-retour",
       icon: RotateCcw,
       title: "6. Politique de Retour et Remboursement",
-      content: `Notre politique de retour s'adapte au fonctionnement de marketplace tout en protégeant acheteurs et vendeurs.
+      content: `Une seule politique de retour s'applique à toutes les boutiques d'Ihambaobab.
 
-**Principes généraux :**
-• Chaque boutique définit sa propre politique de retour
-• Délai minimum garanti : 14 jours (droit légal de rétractation)
-• IhamBaobab assure l'intermédiation en cas de litige
-• Remboursements toujours traités via la plateforme
+**Délai et motifs :**
+• **7 jours après la livraison** pour signaler un article
+• Motifs acceptés : article **défectueux**, **cassé** ou **non conforme à l'annonce**
+• Un article conforme qui ne convient plus n'est pas repris
 
-**Délais de retour par boutique :**
-• **Standard** : 14 jours minimum (délai légal)
-• **Étendu** : Certaines boutiques offrent jusqu'à 30 jours
-• **Personnalisé** : Produits sur-mesure selon conditions spécifiques
-• **Affiché** : Politique clairement indiquée sur chaque fiche produit
+**Procédure :**
+1. **Signalement** : depuis la commande, message au support Ihambaobab (la référence est jointe), avec une photo
+2. **Vérification** : Ihambaobab examine la demande avec la boutique
+3. **Solution** : échange de l'article ou remboursement
 
-**Procédure de retour centralisée :**
-1. **Demande** : Via votre espace client sur la plateforme
-2. **Évaluation** : IhamBaobab et la boutique examinent la demande
-3. **Autorisation** : Numéro de retour (RMA) généré si accepté
-4. **Expédition** : Étiquette de retour fournie selon les cas
-5. **Inspection** : Réception et vérification du produit
-6. **Remboursement** : Traitement via IhamBaobab sous 5-7 jours
+**Remboursement :**
+• Par le moyen de paiement utilisé, ou en Mobile Money pour un paiement à la livraison
+• Frais de retour pris en charge par la boutique quand l'article est défectueux ou non conforme
 
-**Conditions de retour :**
-• **État neuf** : Produit non utilisé, emballage d'origine
-• **Étiquettes** : Toutes les étiquettes et certificats conservés
-• **Accessoires** : Tous les accessoires et documentation inclus
-• **Preuve d'achat** : Facture IhamBaobab jointe
-
-**Modalités de remboursement :**
-• **Via IhamBaobab uniquement** : Même moyen de paiement utilisé
-• **Mobile Money** : 24-48h
-• **Carte bancaire** : 3-7 jours ouvrés
-• **Frais de retour** : Selon la politique de la boutique et le motif
-• **Erreur vendeur/défaut** : Frais pris en charge
-
-**Exceptions par catégorie :**
-• **Produits personnalisés** : Retour limité aux défauts
-• **Hygiène personnelle** : Produits d'hygiène et de beauté
-• **Périssables** : Produits alimentaires et à durée limitée
-• **Promotions spéciales** : Conditions particulières selon l'offre
-
-**Médiation IhamBaobab :**
-En cas de désaccord entre acheteur et vendeur :
-• Intervention de notre équipe de médiation
-• Analyse équitable du cas avec preuves
-• Décision finale si pas d'accord amiable
-• Protection de la réputation des bonnes boutiques`,
+**Paiement en ligne non abouti :**
+• Rien n'est débité ; le code promo et les Baobab Points réservés sont rendus si la commande n'est pas payée`,
       color: "from-cyan-500 to-cyan-600"
     },
     {
@@ -334,7 +305,7 @@ En utilisant IhamBaobab, les vendeurs accordent :
 • **Transparence** : Indiquer clairement l'origine et la nature des produits
 
 **Signalement de violations :**
-• **Contrefaçon** : Signalement via contact@ihambaobab.com
+• **Contrefaçon** : Signalement via support@ihambaobab.com
 • **Vol de contenu** : Procédure de réclamation DMCA
 • **Usurpation** : Protection des identités de marque
 • **Procédure** : Retrait rapide des contenus litigieux
@@ -508,7 +479,7 @@ Révision prévue : Trimestrielle ou selon évolutions réglementaires`,
     name: "IhamBaobab SARL",
     address: "Niamey, République du Niger",
     phone: "+227 87 72 75 01",
-    email: "contact@ihambaobab.com",
+    email: "support@ihambaobab.com",
     website: "https://ihambaobab.com",
     founded: "2024",
     model: "Marketplace généraliste",
@@ -783,11 +754,11 @@ Révision prévue : Trimestrielle ou selon évolutions réglementaires`,
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <a
-                href="mailto:contact@ihambaobab.com"
+                href="mailto:support@ihambaobab.com"
                 className="inline-flex items-center px-8 py-4 bg-white text-[#30A08B] rounded-2xl font-semibold hover:bg-gray-100 transition-all duration-300 gap-3 shadow-lg hover:shadow-xl"
               >
                 <Mail className="w-6 h-6" />
-                contact@ihambaobab.com
+                support@ihambaobab.com
               </a>
               <a
                 href="mailto:support@ihambaobab.com"

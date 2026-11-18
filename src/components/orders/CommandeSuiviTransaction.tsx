@@ -528,7 +528,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
               <div>
                 <h1 className="text-2xl font-bold text-gray-800">
                   {liveStatus === "succeeded" ? "Paiement Réussi !" :
-                    liveStatus === "failed" ? "Échec du Paiement" :
+                    liveStatus === "failed" ? "Paiement non abouti" :
                       "Paiement en Cours"}
                 </h1>
                 <p className="text-gray-600">
@@ -562,11 +562,14 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
               {liveStatus === "failed" && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <p className="text-red-800 font-medium">
-                    ❌ Le paiement a échoué
+                    Le paiement n&apos;a pas abouti
                   </p>
                   <p className="text-red-600 text-sm mt-1">
-                    Veuillez réessayer ou contacter le support
+                    Rien n&apos;a été débité. Votre panier est conservé, et votre code promo et vos points vous sont rendus si la commande n&apos;est pas payée.
                   </p>
+                  <a href="/Panier" className="inline-block mt-3 bg-[#30A08B] text-white text-sm font-semibold rounded-lg px-4 py-2 hover:opacity-90">
+                    Reprendre ma commande
+                  </a>
                 </div>
               )}
             </div>

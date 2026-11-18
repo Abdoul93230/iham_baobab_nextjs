@@ -920,6 +920,11 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP,
       }
       if (orderResult.commande?.reference && orderResult.commande?.trackingToken) {
         setCreatedOrder({ reference: orderResult.commande.reference, trackingToken: orderResult.commande.trackingToken, phoneConfirmation: orderResult.commande.phoneConfirmation });
+        if (!userId) {
+          try {
+            localStorage.setItem("lastGuestOrder", JSON.stringify({ reference: orderResult.commande.reference, trackingToken: orderResult.commande.trackingToken }));
+          } catch { /* stockage indisponible : le suivi reste accessible par « Retrouver ma commande » */ }
+        }
       }
 
       // 5. Traitement du paiement
@@ -975,7 +980,8 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP,
         "success"
       );
 
-      if (PaymentMethods.CASH_ON_DELIVERY.includes(selectedPayment) || PaymentMethods.ASSISTED_PAYMENT.includes(selectedPayment)) {
+      // Client connecté : ses commandes. Invité : il reste ici, sur l'écran de succès (lien de suivi + compte en un geste)
+      if (userId && (PaymentMethods.CASH_ON_DELIVERY.includes(selectedPayment) || PaymentMethods.ASSISTED_PAYMENT.includes(selectedPayment))) {
         router.push("/commandes");
       }
     } catch (error) {

@@ -6,8 +6,8 @@ import { Metadata } from "next";
 
 // Métadonnées pour la page des promotions
 export const metadata: Metadata = {
-  title: "🔥 Promotions Exceptionnelles - Jusqu'à 70% de réduction | IhamBaobab",
-  description: "Découvrez nos meilleures offres et promotions exceptionnelles ! Profitez de réductions allant jusqu'à 70% sur une large sélection de produits de qualité : électronique, mode, beauté, maison et plus encore. Livraison gratuite dès 50000 F.",
+  title: "Promotions | IhamBaobab",
+  description: "Les articles en promotion des boutiques Ihambaobab, au prix réel affiché. Livraison partout au Niger.",
   keywords: [
     "promotions",
     "réductions",
@@ -22,11 +22,10 @@ export const metadata: Metadata = {
     "électronique promotion",
     "mode promotion",
     "beauté promotion",
-    "jusqu'à 70%"
   ],
   openGraph: {
-    title: "🔥 Promotions Exceptionnelles - Jusqu'à 70% | IhamBaobab",
-    description: "Ne ratez pas nos promotions exceptionnelles ! Des réductions allant jusqu'à 70% sur des milliers de produits de qualité. Livraison gratuite dès 50000 F.",
+    title: "Promotions | IhamBaobab",
+    description: "Les articles en promotion des boutiques Ihambaobab, au prix réel affiché.",
     images: [
       {
         url: "/logo.png",
@@ -40,8 +39,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "🔥 Promotions Exceptionnelles - Jusqu'à 70% | IhamBaobab",
-    description: "Découvrez nos meilleures offres avec des réductions allant jusqu'à 70% ! Livraison gratuite dès 50000 F.",
+    title: "Promotions | IhamBaobab",
+    description: "Les articles en promotion des boutiques Ihambaobab, au prix réel affiché.",
     images: ["/logo.png"],
   },
   robots: {
@@ -77,7 +76,7 @@ export default function PromotionPage() {
             "@context": "https://schema.org",
             "@type": "WebPage",
             "name": "Promotions Exceptionnelles - IhamBaobab",
-            "description": "Découvrez nos meilleures offres et promotions exceptionnelles avec des réductions allant jusqu'à 70%",
+            "description": "Les articles en promotion des boutiques Ihambaobab",
             "url": "https://ihambaobab.com/promotion",
             "mainEntity": {
               "@type": "ItemList",
