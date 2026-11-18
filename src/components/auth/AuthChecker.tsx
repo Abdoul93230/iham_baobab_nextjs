@@ -65,4 +65,4 @@ export default function AuthChecker({ children }: AuthCheckerProps) {
   return <Suspense fallback={loader}>{children}</Suspense>;
 }
 
-const SERVER_RENDERED = /^\/(ProduitDetail|boutique|Categorie)\//;
+const SERVER_RENDERED = /^\/(ProduitDetail|boutique)\//;
