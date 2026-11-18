@@ -16,7 +16,7 @@ import {
 
 const AppPromo: React.FC = () => {
   const handleSignup = () => {
-    window.open("https://waitlist-3l32.onrender.com/", "_blank");
+    window.open("https://play.google.com/store/apps/details?id=com.ihambaobab.mobile&referrer=utm_source%3Dsite", "_blank");
   };
 
   const mainFeatures = [

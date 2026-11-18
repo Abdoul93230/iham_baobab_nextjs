@@ -1,50 +1,53 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
+import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useSelector } from "react-redux";
-import Image from "next/image";
-import { Search, SlidersHorizontal, X, ShoppingCart, Heart, ChevronDown } from "lucide-react";
+import { Search, X, ShoppingCart, ChevronDown, Loader2 } from "lucide-react";
 import HomeHeader from "@/components/home/HomeHeader";
 import HomeFooter from "@/components/home/HomeFooter";
-import { triggerNavProgress } from "@/components/NavigationProgress";
+import { track } from "@/lib/analytics";
 
+const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
+const PAGE_SIZE = 24;
+type Sort = "relevance" | "price_asc" | "price_desc" | "newest";
+
+/** Recherche dans tout le catalogue (côté serveur), triée par pertinence par défaut */
 function SearchResults() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const query = searchParams.get("q") || "";
+  const query = (searchParams.get("q") || "").trim();
 
-  const allProducts = useSelector((state: any) => state.products.data || []);
+  const [sortBy, setSortBy] = useState<Sort>("relevance");
+  const [items, setItems] = useState<any[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
-  const [sortBy, setSortBy] = useState<"pertinence" | "prix_asc" | "prix_desc" | "nouveau">("pertinence");
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  useEffect(() => {
+    if (query.length < 2) { setItems([]); setTotal(0); return; }
+    let alive = true;
+    setLoading(true);
+    setError(false);
+    const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE), sort: sortBy });
+    fetch(`${BackendUrl}/searchProductByName/${encodeURIComponent(query)}?${params}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((d) => {
+        if (!alive) return;
+        const list = Array.isArray(d?.data) ? d.data : [];
+        setItems((prev) => (page === 1 ? list : [...prev, ...list.filter((p: any) => !prev.some((x) => x._id === p._id))]));
+        setTotal(Number(d?.total) || list.length);
+        setPages(Number(d?.pages) || 1);
+        if (page === 1) track("search", {});
+      })
+      .catch(() => alive && setError(true))
+      .finally(() => alive && setLoading(false));
+    return () => { alive = false; };
+  }, [query, sortBy, page]);
 
-  const results = allProducts
-    .filter((p: any) => {
-      if (!p) return false;
-      const q = query.toLowerCase();
-      return (
-        p.name?.toLowerCase().includes(q) ||
-        p.description?.toLowerCase().includes(q) ||
-        p.category?.toLowerCase().includes(q)
-      );
-    })
-    .filter((p: any) =>
-      selectedCategory === "all" || p.category === selectedCategory
-    )
-    .sort((a: any, b: any) => {
-      if (sortBy === "prix_asc") return (a.prix || 0) - (b.prix || 0);
-      if (sortBy === "prix_desc") return (b.prix || 0) - (a.prix || 0);
-      if (sortBy === "nouveau") return new Date(b.createdAt || "").getTime() - new Date(a.createdAt || "").getTime();
-      return 0;
-    });
-
-  const categories = ["all", ...Array.from(new Set(
-    allProducts.filter((p: any) => p?.category).map((p: any) => p.category)
-  ))] as string[];
-
-  const price = (p: any) => p.prixPromo && p.prixPromo < p.prix ? p.prixPromo : p.prix;
+  const price = (p: any) => (p.prixPromo && p.prixPromo < p.prix ? p.prixPromo : p.prix);
   const hasPromo = (p: any) => !!(p.prixPromo && p.prixPromo < p.prix);
 
   return (
@@ -52,116 +55,98 @@ function SearchResults() {
       <HomeHeader />
 
       <main className="max-w-7xl mx-auto px-3 sm:px-5 py-4">
-
-        {/* Résumé de la recherche */}
         {query && (
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
             <p className="text-sm text-gray-500">
-              <span className="font-semibold text-gray-800">{results.length}</span> résultat{results.length !== 1 ? "s" : ""} pour
+              <span className="font-semibold text-gray-800">{loading && page === 1 ? "…" : total}</span> résultat{total !== 1 ? "s" : ""} pour
             </p>
             <span className="flex items-center gap-1 bg-[#30A08B]/10 text-[#30A08B] font-semibold text-sm px-3 py-0.5 rounded-full">
-              "{query}"
-              <button onClick={() => router.push("/Search")} className="ml-1 hover:text-[#268070]">
+              &quot;{query}&quot;
+              <button onClick={() => router.push("/Search")} className="ml-1 hover:text-[#268070]" aria-label="Effacer la recherche">
                 <X size={12} />
               </button>
             </span>
           </div>
         )}
 
-        {/* Filters + Sort bar */}
-        <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 scrollbar-hide">
-          {/* Sort */}
-          <div className="relative flex-shrink-0">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="appearance-none bg-white border border-gray-200 text-sm text-gray-700 rounded-full pl-3 pr-7 py-1.5 focus:outline-none focus:border-[#30A08B] cursor-pointer"
-            >
-              <option value="pertinence">Pertinence</option>
-              <option value="prix_asc">Prix croissant</option>
-              <option value="prix_desc">Prix décroissant</option>
-              <option value="nouveau">Nouveauté</option>
-            </select>
-            <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-          </div>
-
-          {/* Category pills */}
-          {categories.slice(0, 6).map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`flex-shrink-0 text-xs font-medium px-3 py-1.5 rounded-full border transition-all ${
-                selectedCategory === cat
-                  ? "bg-[#30A08B] text-white border-[#30A08B]"
-                  : "bg-white text-gray-600 border-gray-200 hover:border-[#30A08B] hover:text-[#30A08B]"
-              }`}
-            >
-              {cat === "all" ? "Tout" : cat}
-            </button>
-          ))}
-        </div>
-
-        {/* Results grid */}
-        {results.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-            {results.map((product: any) => (
-              <div
-                key={product._id}
-                onClick={() => { triggerNavProgress(); router.push(`/ProduitDetail/${product._id}`); }}
-                className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer group"
+        {query.length >= 2 && (
+          <div className="flex items-center gap-2 mb-4">
+            <div className="relative flex-shrink-0">
+              <select
+                value={sortBy}
+                onChange={(e) => { setPage(1); setSortBy(e.target.value as Sort); }}
+                className="appearance-none bg-white border border-gray-200 text-sm text-gray-700 rounded-full pl-3 pr-7 py-1.5 focus:outline-none focus:border-[#30A08B] cursor-pointer"
+                aria-label="Trier les résultats"
               >
-                {/* Image */}
-                <div className="relative aspect-square overflow-hidden bg-gray-100">
-                  {product.image1 ? (
-                    <img
-                      src={product.image1}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300">
-                      <ShoppingCart size={32} />
-                    </div>
-                  )}
-                  {hasPromo(product) && (
-                    <span className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                      Promo
-                    </span>
-                  )}
-                </div>
+                <option value="relevance">Pertinence</option>
+                <option value="price_asc">Prix croissant</option>
+                <option value="price_desc">Prix décroissant</option>
+                <option value="newest">Nouveautés</option>
+              </select>
+              <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            </div>
+          </div>
+        )}
 
-                {/* Info */}
-                <div className="p-2.5">
-                  <p className="text-xs text-gray-500 truncate mb-0.5">{product.category}</p>
-                  <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 leading-tight mb-1.5">
-                    {product.name}
-                  </h3>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-sm font-bold text-[#30A08B]">
-                      {price(product)?.toLocaleString()} F
-                    </span>
+        {items.length > 0 ? (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+              {items.map((product: any) => (
+                <Link
+                  key={product._id}
+                  href={`/ProduitDetail/${product._id}`}
+                  className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all group block"
+                >
+                  <div className="relative aspect-square overflow-hidden bg-gray-100">
+                    {product.image1 ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={product.image1} alt={product.name} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingCart size={32} /></div>
+                    )}
                     {hasPromo(product) && (
-                      <span className="text-xs text-gray-400 line-through">
-                        {product.prix?.toLocaleString()} F
-                      </span>
+                      <span className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">Promo</span>
                     )}
                   </div>
-                </div>
+                  <div className="p-2.5">
+                    {product.Clefournisseur?.storeName ? <p className="text-xs text-gray-500 truncate mb-0.5">{product.Clefournisseur.storeName}</p> : null}
+                    <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 leading-tight mb-1.5">{product.name}</h3>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-sm font-bold text-[#30A08B]">{Number(price(product) || 0).toLocaleString("fr-FR")} F</span>
+                      {hasPromo(product) && <span className="text-xs text-gray-400 line-through">{Number(product.prix).toLocaleString("fr-FR")} F</span>}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            {page < pages && (
+              <div className="flex justify-center mt-6">
+                <button
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={loading}
+                  className="bg-white border border-gray-200 rounded-full px-6 py-2 text-sm font-semibold text-gray-700 hover:border-[#30A08B] hover:text-[#30A08B] disabled:opacity-50 flex items-center gap-2"
+                >
+                  {loading ? <Loader2 size={14} className="animate-spin" /> : null} Voir plus de résultats
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
+        ) : loading ? (
+          <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#30A08B]" size={28} /></div>
         ) : (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
               <Search size={28} className="text-gray-300" />
             </div>
             <h2 className="text-lg font-semibold text-gray-700 mb-1">
-              {query ? `Aucun résultat pour "${query}"` : "Faites une recherche"}
+              {error ? "La recherche n'a pas répondu" : query.length >= 2 ? `Aucun résultat pour "${query}"` : "Faites une recherche"}
             </h2>
             <p className="text-sm text-gray-400 max-w-xs">
-              {query
+              {error
+                ? "Vérifiez votre connexion puis réessayez."
+                : query.length >= 2
                 ? "Essayez un autre mot-clé ou vérifiez l'orthographe."
-                : "Tapez un mot-clé dans la barre de recherche ci-dessus."}
+                : "Tapez au moins deux lettres dans la barre de recherche ci-dessus."}
             </p>
           </div>
         )}
@@ -172,6 +157,12 @@ function SearchResults() {
   );
 }
 
+/** Nouvelle recherche : composant remis à zéro (1re page, tri par pertinence) */
+function KeyedResults() {
+  const q = useSearchParams().get("q") || "";
+  return <SearchResults key={q} />;
+}
+
 export default function SearchPage() {
   return (
     <Suspense fallback={
@@ -179,7 +170,7 @@ export default function SearchPage() {
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#30A08B]" />
       </div>
     }>
-      <SearchResults />
+      <KeyedResults />
     </Suspense>
   );
 }

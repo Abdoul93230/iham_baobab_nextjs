@@ -22,6 +22,7 @@ import PointsRedeemWidget from "@/components/wallet/PointsRedeemWidget";
 import ZoneSelector from "./ZoneSelector";
 import GuestOtpModal from "@/components/guest/GuestOtpModal";
 import GuestOrderSuccess from "@/components/guest/GuestOrderSuccess";
+import { track } from "@/lib/analytics";
 import { ensureGuestSession, getGuestSession, OFFLINE_PAYMENTS } from "@/lib/guestSession";
 import { CartQuote, getZones, quoteCart, rememberZone, zoneLabel, ZoneV3 } from "@/lib/shippingV3";
 
@@ -107,6 +108,7 @@ interface OrderConfirmationProps {
 }
 
 const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP, guest = false }) => {
+  useEffect(() => { track("begin_checkout"); }, []);
   const router = useRouter();
   const [selectedPayment, setSelectedPayment] = useState("");
   const [message, setMessage] = useState("");
@@ -928,7 +930,9 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ acces, initialBP,
       }
 
       // 5. Traitement du paiement
-      if (!(PaymentMethods.CASH_ON_DELIVERY.includes(selectedPayment) || PaymentMethods.ASSISTED_PAYMENT.includes(selectedPayment))) {
+      const offline = PaymentMethods.CASH_ON_DELIVERY.includes(selectedPayment) || PaymentMethods.ASSISTED_PAYMENT.includes(selectedPayment);
+      track(offline ? "purchase" : "payment_start", { orderRef: transactionId, value: finalOrderTotal });
+      if (!offline) {
         const paymentStatus = await OrderManager.processPayment(
           selectedPayment,
           transactionId,

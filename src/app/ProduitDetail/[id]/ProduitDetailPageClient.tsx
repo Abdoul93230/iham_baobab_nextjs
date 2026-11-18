@@ -8,6 +8,7 @@ import HomeFooter from "@/components/home/HomeFooter";
 import { ServerPageData } from "./serverData";
 import { useAppDispatch } from "@/redux/hooks";
 import { setProducts } from "@/redux/productsSlice";
+import { track } from "@/lib/analytics";
 
 interface ProduitDetailPageClientProps {
   productId: string;
@@ -28,6 +29,7 @@ export default function ProduitDetailPageClient({ productId, serverData }: Produ
   useEffect(() => {
     if (!productId || viewTracked.current) return;
     viewTracked.current = true;
+    track("product_view", { productId });
     let visitor = "";
     try {
       visitor = localStorage.getItem("ihamVisitorId") || "";

@@ -7,6 +7,7 @@ import AuthChecker from "@/components/auth/AuthChecker";
 import DataLoader from "@/components/DataLoader";
 import NavigationProgress from "@/components/NavigationProgress";
 import ReferralCapture from "@/components/ReferralCapture";
+import OpenInAppBanner from "@/components/OpenInAppBanner";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL!),
@@ -69,6 +70,7 @@ export default function RootLayout({
         <ReduxProvider>
           <NavigationProgress />
           <ReferralCapture />
+          <OpenInAppBanner />
           <AuthChecker>
             <DataLoader>
               {children}

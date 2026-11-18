@@ -190,7 +190,8 @@ export const ProductCard: React.FC<{
           "font-semibold text-gray-800 line-clamp-2 leading-tight",
           compact ? "text-xs" : "text-sm"
         )}>
-          {product.name}
+          {/* Vrai lien (Google, ouverture dans un nouvel onglet) ; le clic simple passe par la carte */}
+          <a href={`/ProduitDetail/${product._id}`} onClick={(e) => e.preventDefault()}>{product.name}</a>
         </h3>
 
         {/* Note : affichée seulement si de vrais avis existent */}

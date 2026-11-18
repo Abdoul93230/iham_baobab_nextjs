@@ -1,4 +1,5 @@
 import axios from "axios";
+import { cache } from "react";
 
 const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
 
@@ -67,73 +68,45 @@ export interface ServerPageData {
   allProducts: ProductData[];
 }
 
-// Fonction pour récupérer toutes les données nécessaires côté serveur
-export async function getServerPageData(productId: string): Promise<ServerPageData> {
+const EMPTY: ServerPageData = { product: null, comments: [], category: null, type: null, similarProducts: [], allProducts: [] };
+const pick = (r: PromiseSettledResult<any>) => (r.status === "fulfilled" ? r.value?.data?.data : null);
+
+/**
+ * Données de la fiche produit, côté serveur. Le produit est chargé directement par son identifiant
+ * (avant : on cherchait dans la 1re page du catalogue, donc la plupart des articles étaient « introuvables »).
+ * Mis en cache pour la requête : la page et ses métadonnées ne font qu'un seul appel.
+ */
+export const getServerPageData = cache(async (productId: string): Promise<ServerPageData> => {
   try {
-    if (!BackendUrl) {
-      throw new Error("Backend URL not configured");
-    }
+    if (!BackendUrl) throw new Error("Backend URL not configured");
+    if (!/^[a-f0-9]{24}$/i.test(productId)) return EMPTY;
 
-    // Récupération parallèle des données
-    const [
-      productsResponse,
-      typesResponse,
-      categoriesResponse,
-      commentsResponse
-    ] = await Promise.allSettled([
-      axios.get(`${BackendUrl}/ProductsClients`),
-      axios.get(`${BackendUrl}/getAllType`),
-      axios.get(`${BackendUrl}/getAllCategories`),
-      axios.get(`${BackendUrl}/getAllCommenteProduitById/${productId}`)
+    const [productRes, typesRes, categoriesRes, commentsRes] = await Promise.allSettled([
+      axios.get(`${BackendUrl}/ProductClient/${productId}`, { timeout: 8000 }),
+      axios.get(`${BackendUrl}/getAllType`, { timeout: 8000 }),
+      axios.get(`${BackendUrl}/getAllCategories`, { timeout: 8000 }),
+      axios.get(`${BackendUrl}/getAllCommenteProduitById/${productId}`, { timeout: 8000 }),
     ]);
+    const product: ProductData | null = pick(productRes) || null;
+    if (!product || (product.isPublished && product.isPublished !== "Published")) return EMPTY;
 
-    // Extraction des données avec gestion d'erreurs
-    const products = productsResponse.status === 'fulfilled' ? productsResponse.value.data.data : [];
-    const types = typesResponse.status === 'fulfilled' ? typesResponse.value.data.data : [];
-    const categories = categoriesResponse.status === 'fulfilled' ? categoriesResponse.value.data.data : [];
-    const comments = commentsResponse.status === 'fulfilled' ? commentsResponse.value.data.data : [];
+    const types: TypeData[] = pick(typesRes) || [];
+    const categories: CategoryData[] = pick(categoriesRes) || [];
+    const comments: CommentData[] = pick(commentsRes) || [];
+    const type = types.find((t) => t._id === product.ClefType) || null;
+    const category = type ? categories.find((c) => c._id === type.clefCategories) || null : null;
 
-    // Trouver le produit spécifique
-    const product = products.find((p: ProductData) => p._id === productId) || null;
+    // Articles du même type, et quelques autres : deux petites listes au lieu du catalogue entier
+    const [similarRes, othersRes] = await Promise.allSettled([
+      product.ClefType ? axios.get(`${BackendUrl}/searchProductByType/${product.ClefType}`, { params: { limit: 13 }, timeout: 8000 }) : Promise.reject(),
+      axios.get(`${BackendUrl}/ProductsClients`, { params: { limit: 12 }, timeout: 8000 }),
+    ]);
+    const similarProducts: ProductData[] = (pick(similarRes) || []).filter((p: ProductData) => p._id !== productId).slice(0, 12);
+    const allProducts: ProductData[] = (pick(othersRes) || []).filter((p: ProductData) => p._id !== productId);
 
-    if (!product) {
-      return {
-        product: null,
-        comments: [],
-        category: null,
-        type: null,
-        similarProducts: [],
-        allProducts: products
-      };
-    }
-
-    // Trouver le type et la catégorie
-    const type = types.find((t: TypeData) => t._id === product.ClefType) || null;
-    const category = type ? categories.find((c: CategoryData) => c._id === type.clefCategories) : null;
-
-    // Produits similaires (même type)
-    const similarProducts = products
-      .filter((p: ProductData) => p.ClefType === product.ClefType && p._id !== productId)
-      .slice(0, 12);
-
-    return {
-      product,
-      comments,
-      category,
-      type,
-      similarProducts,
-      allProducts: products.slice(0, 12) // Échantillon pour "autres produits"
-    };
-
+    return { product, comments, category, type, similarProducts, allProducts };
   } catch (error) {
-    console.error('Error fetching server data:', error);
-    return {
-      product: null,
-      comments: [],
-      category: null,
-      type: null,
-      similarProducts: [],
-      allProducts: []
-    };
+    console.error("Error fetching server data:", error);
+    return EMPTY;
   }
-}
+});

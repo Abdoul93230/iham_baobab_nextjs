@@ -10,6 +10,7 @@ import HomeHeader from "@/components/home/HomeHeader";
 import CommandeSuiviTransaction from "@/components/orders/CommandeSuiviTransaction";
 import GuestOrderSuccess from "@/components/guest/GuestOrderSuccess";
 import { trackingPath } from "@/lib/guestSession";
+import { track } from "@/lib/analytics";
 
 // Configuration SEO statique
 const suiviCommandeTransactionSEOConfig = {
@@ -66,6 +67,14 @@ export default function CommandesTransaction() {
   useEffect(() => {
     if (!isClient) return;
     if (status !== "succeeded") return; // échec ou abandon : le panier reste pour réessayer
+    // Achat payé en ligne : mesuré une seule fois par référence
+    try {
+      const k = `ihamTracked:${transactionId}`;
+      if (transactionId && !sessionStorage.getItem(k)) {
+        sessionStorage.setItem(k, "1");
+        track("purchase", { orderRef: transactionId, value: Number(amount) || undefined });
+      }
+    } catch { /* rien */ }
 
     [
       "panier",

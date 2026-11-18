@@ -25,6 +25,7 @@ import QRCodeGenerator from "@/components/QRCodeGenerator";
 import { fetchUserLikes, toggleLike } from "@/redux/likesSlice";
 import { setProducts, Variant } from "@/redux/productsSlice";
 import { cn } from "@/lib/utils";
+import { track } from "@/lib/analytics";
 import Image from "next/image";
 
 interface ProduitDetailMainProps {
@@ -84,8 +85,11 @@ function ProduitDetailMain({ panierchg, productId, serverData, weekViewers = 0 }
   const DATA_Categories = useAppSelector((state) => state.products.categories);
   const likedProducts = useAppSelector((state) => state.likes.likedProducts);
 
-  const [immediateProducts, setImmediateProducts] = useState<any[]>([]);
-  const [immediateProduct, setImmediateProduct] = useState<any>(null);
+  const [immediateProducts, setImmediateProducts] = useState<any[]>(() =>
+    serverData ? [...(serverData.product ? [serverData.product] : []), ...(serverData.similarProducts || []), ...(serverData.allProducts || [])] : []);
+  const [immediateProduct, setImmediateProduct] = useState<any>(() => serverData?.product || null);
+  const [mounted, setMounted] = useState(false); // éléments propres au navigateur, affichés après le rendu serveur
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -101,8 +105,8 @@ function ProduitDetailMain({ panierchg, productId, serverData, weekViewers = 0 }
       if (serverData.product) setImmediateProduct(serverData.product);
       const all = [
         ...(serverData.product ? [serverData.product] : []),
-        ...serverData.similarProducts,
-        ...serverData.allProducts,
+        ...(serverData.similarProducts || []),
+        ...(serverData.allProducts || []),
       ];
       setImmediateProducts(all);
     }
@@ -230,6 +234,7 @@ function ProduitDetailMain({ panierchg, productId, serverData, weekViewers = 0 }
       updated = [...existing, buildCartItem()];
     }
     localStorage.setItem("panier", JSON.stringify(updated));
+    track("add_to_cart", { productId: produit?._id, value: Number(activePrice || 0) * Number(quantity || 1) });
     showAlert("success", redirect ? "Redirection vers le panier…" : `${quantity} article(s) ajouté(s) au panier !`);
     panierchg?.();
     if (redirect) setTimeout(() => router.push("/Panier"), 600);
@@ -432,11 +437,11 @@ function ProduitDetailMain({ panierchg, productId, serverData, weekViewers = 0 }
             <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
               <div className="flex items-baseline gap-2.5 flex-wrap">
                 <span className="text-2xl sm:text-3xl font-black text-[#B17236]">
-                  {activePrice.toLocaleString()} F
+                  {activePrice.toLocaleString("fr-FR")} F
                 </span>
                 {discount > 0 && (
                   <>
-                    <span className="text-base text-gray-400 line-through">{originalPrice.toLocaleString()} F</span>
+                    <span className="text-base text-gray-400 line-through">{originalPrice.toLocaleString("fr-FR")} F</span>
                     <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">-{discount}%</span>
                   </>
                 )}
@@ -626,12 +631,12 @@ function ProduitDetailMain({ panierchg, productId, serverData, weekViewers = 0 }
             </div>
 
             {/* QR Code / Flyer */}
-            {produit && typeof window !== "undefined" && (
+            {produit && mounted && (
               <div className="mt-3">
                 <QRCodeGenerator
                   url={window.location.href}
                   title={produit.name || "Produit"}
-                  description={`${(produit.prixPromo || produit.prix || 0).toLocaleString()} F CFA`}
+                  description={`${(produit.prixPromo || produit.prix || 0).toLocaleString("fr-FR")} F CFA`}
                 />
               </div>
             )}
