@@ -668,8 +668,8 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
             </div>
           </div>
 
-          {/* Alerte pour paiements échoués */}
-          {liveStatus === "failed" && (
+          {/* Alerte pour paiements échoués : déjà expliqué dans le bandeau du haut */}
+          {false && liveStatus === "failed" && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
               <div className="flex items-center gap-3">
                 <XCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
@@ -710,7 +710,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                   </p>
                   <div className="mt-2 text-sm text-green-600">
                     <p><strong>Référence de commande :</strong> {order?.reference}</p>
-                    {order?.prix && <p><strong>Montant payé :</strong> {formatPrice(order.prix)}</p>}
+                    {Number(order?.prix) > 0 && <p><strong>Montant payé :</strong> {formatPrice(order.prix)}</p>}
                   </div>
                 </div>
               </div>
@@ -832,7 +832,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                             liveStatus}
                       </p>
                     </div>
-                    {order?.prix && (
+                    {Number(order?.prix) > 0 && (
                       <div>
                         <p className="font-medium">Montant de la transaction</p>
                         <p className="text-gray-600 font-semibold">{formatPrice(order.prix)}</p>
@@ -914,7 +914,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                     )}
                     <div className="mt-4 p-3 bg-white rounded border border-red-200">
                       <p className="text-red-800 text-sm font-medium">
-                        💡 Astuce : Vous pouvez {orderType === "failed" ? "réessayer le paiement" : "relancer cette commande"} en cliquant sur le bouton correspondant ci-dessus.
+                        💡 {orderType === "failed" ? "Réessayez avec « Payer maintenant » en haut de la page, ou choisissez le paiement à la livraison depuis votre panier." : "Vous pouvez relancer cette commande avec le bouton en haut de la page."}
                       </p>
                     </div>
                   </div>
@@ -951,7 +951,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                       Référence {order?.reference} - {liveStatus === "succeeded" ? "Réussi" : liveStatus === "failed" ? "Échoué" : "En cours"}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {new Date().toLocaleString("fr-FR")}
+                      {new Date(order.updatedAt || order.date).toLocaleString("fr-FR")}
                     </p>
                   </div>
                 </div>
@@ -998,21 +998,21 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                   <span className="font-medium">{formatPrice(order.prixTotal || (order.prix + (order.reduction || 0) + (order.pointsDiscount || 0) - (order.fraisLivraison || 0)))}</span>
                 </div>
 
-                {order.fraisLivraison && order.fraisLivraison > 0 && (
+                {Number(order.fraisLivraison) > 0 && (
                   <div className="flex justify-between items-center text-gray-600">
                     <span>Frais d'expédition</span>
                     <span>+{formatPrice(order.fraisLivraison)}</span>
                   </div>
                 )}
 
-                {order.reduction && order.reduction > 0 && (
+                {Number(order.reduction) > 0 && (
                   <div className="flex justify-between items-center text-green-600">
                     <span>Réduction appliquée{order.codePromo ? ` (${order.codePromo})` : ""}</span>
                     <span>-{formatPrice(order.reduction)}</span>
                   </div>
                 )}
 
-                {order.pointsDiscount && order.pointsDiscount > 0 && (
+                {Number(order.pointsDiscount) > 0 && (
                   <div className="flex flex-col gap-0.5 bg-amber-50 border border-amber-100 px-3 py-2 rounded-lg">
                     <div className="flex justify-between items-center text-amber-700">
                       <span className="font-medium">🌿 Points Baobab utilisés</span>
@@ -1026,7 +1026,7 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
 
                 <div className="border-t pt-3">
                   <div className="flex justify-between items-center font-bold text-lg">
-                    <span>Total à payer</span>
+                    <span>{liveStatus === "succeeded" || order.statusPayment === "payé" ? "Total payé" : "Total à payer"}</span>
                     <span>{formatPrice(order.prix)}</span>
                   </div>
                 </div>
@@ -1037,14 +1037,14 @@ const CommandeSuiviTransaction: React.FC<CommandeSuiviTransactionProps> = ({
                       liveStatus === "succeeded"
                         ? "Payé en ligne"
                           : liveStatus === "failed"
-                          ? "Paiement échoué"
+                          ? "Paiement en ligne (non abouti)"
                           : order.statusPayment === "payé par téléphone"
                             ? "Paiement assisté"
                             : order.statusPayment
                     }
                   </p>
                   <p>Référence commande : {order.reference}</p>
-                  <p>Montant payé : {order?.prix ? formatPrice(order.prix) : "N/A"}</p>
+                  {liveStatus === "succeeded" || order.statusPayment === "payé" ? <p>Montant payé : {formatPrice(order.prix)}</p> : null}
                 </div>
               </div>
             </div>

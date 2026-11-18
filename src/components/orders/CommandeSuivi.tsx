@@ -567,7 +567,7 @@ const CommandeSuivi: React.FC = () => {
                     )}
                     <div className="mt-4 p-3 bg-white rounded border border-red-200">
                       <p className="text-red-800 text-sm font-medium">
-                        💡 Astuce : Vous pouvez réessayer le paiement en cliquant sur "Faire le paiement" ci-dessus.
+                        💡 Astuce : Vous pouvez réessayer le paiement en cliquant sur « Payer maintenant » ci-dessus.
                       </p>
                     </div>
                   </div>
