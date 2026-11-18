@@ -9,9 +9,16 @@ interface OrderedItemsProps {
   totalPrice: number;
 }
 
-/** Valeurs d'un article tel qu'enregistré dans la commande (anciens et nouveaux formats) */
-const qtyOf = (a: any) => Math.max(1, Number(a?.quantity ?? a?.quantite) || 1);
+/** Ligne nbrProduits correspondant à l'article (même position, sinon même produit) : quantité et variante */
+const lineOf = (order: any, a: any, i: number) => {
+  const lines: any[] = Array.isArray(order?.nbrProduits) ? order.nbrProduits : [];
+  const same = (l: any) => l && String(l.produit) === String(a?._id);
+  return same(lines[i]) ? lines[i] : lines.find(same) || null;
+};
+const qtyOf = (a: any, line: any) => Math.max(1, Number(a?.quantite ?? a?.quantity ?? line?.quantite) || 1);
 const unitPriceOf = (a: any) => {
+  const snapshot = Number(a?.prixSnapshot);
+  if (snapshot > 0) return snapshot; // prix facturé, promo comprise
   const promo = Number(a?.prixPromo);
   const prix = Number(a?.prix);
   const price = Number(a?.price);
@@ -20,8 +27,8 @@ const unitPriceOf = (a: any) => {
   return prix > 0 ? prix : 0;
 };
 const imageOf = (a: any) => a?.colorImage || a?.imageUrl || a?.image1 || a?.image2 || "";
-const variantOf = (a: any) =>
-  [a?.color || a?.colors?.[0], a?.taille || a?.sizes?.[0]].filter(Boolean).join(" · ");
+const variantOf = (a: any, line: any) =>
+  [a?.color || a?.colors?.[0] || line?.couleurs?.[0], a?.taille || a?.sizes?.[0] || line?.tailles?.[0]].filter(Boolean).join(" · ");
 
 /**
  * Articles d'une commande : ce qui a été commandé, au prix enregistré, et la livraison réellement
@@ -46,9 +53,10 @@ const OrderedItems: React.FC<OrderedItemsProps> = ({ items: order, totalPrice })
       ) : (
         <div className="bg-white rounded-lg shadow-sm divide-y">
           {articles.map((a, i) => {
-            const qty = qtyOf(a);
+            const line = lineOf(order, a, i);
+            const qty = qtyOf(a, line);
             const unit = unitPriceOf(a);
-            const variant = variantOf(a);
+            const variant = variantOf(a, line);
             const img = imageOf(a);
             return (
               <div key={`${a?._id || i}-${i}`} className="flex items-center gap-4 p-4">
