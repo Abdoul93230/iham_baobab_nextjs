@@ -71,6 +71,15 @@ const QuickAuth: React.FC<QuickAuthProps> = ({ initialMode = "auto" }) => {
 
   const countryRef = useRef<HTMLDivElement | null>(null);
 
+  // Arrivé par un lien de parrainage : code prérempli (modifiable)
+  useEffect(() => {
+    try {
+      const c = searchParams.get("ref") || localStorage.getItem("ihamPendingRef");
+      if (c) setRefCode(c.toUpperCase());
+    } catch { /* rien */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {

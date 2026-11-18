@@ -6,6 +6,7 @@ import "react-toastify/dist/ReactToastify.css";
 import AuthChecker from "@/components/auth/AuthChecker";
 import DataLoader from "@/components/DataLoader";
 import NavigationProgress from "@/components/NavigationProgress";
+import ReferralCapture from "@/components/ReferralCapture";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL!),
@@ -67,6 +68,7 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <ReduxProvider>
           <NavigationProgress />
+          <ReferralCapture />
           <AuthChecker>
             <DataLoader>
               {children}
