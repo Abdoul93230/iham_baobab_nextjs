@@ -1,155 +1,117 @@
 "use client";
 
-import React from "react";
-import {
-  Smartphone,
-  Star,
-  Gift,
-  Zap,
-  Bell,
-  Clock,
-  Shield,
-  Heart,
-  TrendingUp,
-  Award,
-} from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Smartphone, Leaf, Gift, Users, CalendarCheck, Bell, Truck, Download } from "lucide-react";
 
+const BackendUrl = process.env.NEXT_PUBLIC_Backend_Url;
+const PLAY_STORE = "https://play.google.com/store/apps/details?id=com.ihambaobab.mobile&referrer=utm_source%3Dsite";
+
+/** Règles réelles des Baobab Points : lues sur le serveur, valeurs par défaut identiques à sa configuration */
+type Rules = { perThousand: number; fcfaPerPoint: number; maxPercent: number; firstOrder: number; referral: number; checkin: number };
+const DEFAULT_RULES: Rules = { perThousand: 2, fcfaPerPoint: 20, maxPercent: 30, firstOrder: 50, referral: 25, checkin: 1 };
+
+/**
+ * Bloc « Application Ihambaobab » de la fiche produit. Uniquement ce qui existe vraiment :
+ * l'app est disponible, les Baobab Points suivent les règles du serveur. Aucune offre inventée.
+ */
 const AppPromo: React.FC = () => {
-  const handleSignup = () => {
-    window.open("https://play.google.com/store/apps/details?id=com.ihambaobab.mobile&referrer=utm_source%3Dsite", "_blank");
-  };
+  const [rules, setRules] = useState<Rules>(DEFAULT_RULES);
+  const [enabled, setEnabled] = useState(true);
 
-  const mainFeatures = [
-    {
-      icon: <Star className="w-5 h-5" />,
-      title: "Programme Fidélité Premium",
-      description: "1 XOF dépensé = 1 point • -10% dès 100 points",
+  useEffect(() => {
+    fetch(`${BackendUrl}/api/gamification/config/public`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((c) => {
+        if (!c) return;
+        setEnabled(c.enabled !== false);
+        const m = c.modules || {};
+        setRules({
+          perThousand: Number(m.POINTS_PURCHASE?.ratePerThousand) || 0,
+          fcfaPerPoint: Number(c.redemption?.pointsToFcfaRate) || DEFAULT_RULES.fcfaPerPoint,
+          maxPercent: Number(c.redemption?.maxPercentPerOrder) || DEFAULT_RULES.maxPercent,
+          firstOrder: Number(m.FIRST_ORDER_BONUS?.points) || 0,
+          referral: Number(m.REFERRAL?.pointsParrain) || 0,
+          checkin: Number(m.DAILY_CHECKIN?.pointsPerDay) || 0,
+        });
+      })
+      .catch(() => { /* règles par défaut */ });
+  }, []);
+
+  const points = [
+    rules.perThousand > 0 && {
+      icon: <Leaf className="w-5 h-5" />,
+      title: "Des points à chaque achat",
+      description: `${rules.perThousand} Baobab Points pour 1 000 F d'achat, crédités à la livraison. 1 point = ${rules.fcfaPerPoint} F de réduction, jusqu'à ${rules.maxPercent} % d'une commande.`,
     },
-    {
-      icon: <Shield className="w-5 h-5" />,
-      title: "Statuts VIP",
-      description: "Bronze, Argent, Or avec avantages croissants",
-    },
-    {
+    rules.firstOrder > 0 && {
       icon: <Gift className="w-5 h-5" />,
-      title: "Bonus Exclusifs",
-      description: "Cadeaux surprise et offres personnalisées",
+      title: "Bonus de 1re commande",
+      description: `+${rules.firstOrder} Baobab Points quand votre première commande est livrée.`,
     },
-  ];
+    rules.referral > 0 && {
+      icon: <Users className="w-5 h-5" />,
+      title: "Parrainage",
+      description: `+${rules.referral} Baobab Points pour chaque ami qui reçoit sa première commande avec votre lien.`,
+    },
+  ].filter(Boolean) as Array<{ icon: React.ReactNode; title: string; description: string }>;
 
-  const additionalBenefits = [
-    {
-      icon: <Bell className="w-4 h-4" />,
-      text: "Notifications de promotions",
-    },
-    {
-      icon: <Clock className="w-4 h-4" />,
-      text: "Livraison express prioritaire",
-    },
-    {
-      icon: <Heart className="w-4 h-4" />,
-      text: "Cadeaux d'anniversaire",
-    },
-    {
-      icon: <TrendingUp className="w-4 h-4" />,
-      text: "Points doublés événements",
-    },
-    {
-      icon: <Award className="w-4 h-4" />,
-      text: "Accès ventes privées",
-    },
-    {
-      icon: <Zap className="w-4 h-4" />,
-      text: "Support prioritaire",
-    },
+  const benefits = [
+    { icon: <Truck className="w-4 h-4" />, text: "Suivi de commande étape par étape" },
+    { icon: <Bell className="w-4 h-4" />, text: "Notification à chaque étape" },
+    ...(rules.checkin > 0 ? [{ icon: <CalendarCheck className="w-4 h-4" />, text: `+${rules.checkin} point par jour en pointant` }] : []),
   ];
 
   return (
     <div className="bg-gray-100">
       <div className="w-full bg-gradient-to-br from-emerald-600 to-teal-700 rounded-xl overflow-hidden shadow-lg border border-emerald-500/20">
         <div className="p-6">
-          {/* Header avec animation */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between gap-3 mb-6">
             <div>
               <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                <Smartphone className="w-6 h-6 animate-pulse" />
-                ihambaobab Mobile
+                <Smartphone className="w-6 h-6" />
+                Application Ihambaobab
               </h2>
               <p className="text-emerald-100 text-sm mt-1 font-medium">
-                L&apos;expérience shopping africaine réinventée 🌟
+                Commandez, suivez vos colis et gagnez des Baobab Points
               </p>
             </div>
-            <div className="bg-emerald-500/30 backdrop-blur-sm rounded-lg px-3 py-1">
-              <span className="text-white text-xs font-semibold">
-                BIENTÔT DISPONIBLE
-              </span>
+            <div className="bg-emerald-500/30 backdrop-blur-sm rounded-lg px-3 py-1 flex-shrink-0">
+              <span className="text-white text-xs font-semibold">DISPONIBLE SUR ANDROID</span>
             </div>
           </div>
 
-          {/* Main Features avec hover effects */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            {mainFeatures.map((feature, index) => (
-              <div
-                key={index}
-                className="bg-emerald-500/20 backdrop-blur-sm rounded-lg p-4 hover:bg-emerald-500/30 transition-all duration-300 border border-emerald-400/20"
-              >
-                <div className="flex items-center mb-2">
-                  <span className="text-white mr-2">{feature.icon}</span>
-                  <h3 className="text-sm font-semibold text-white">
-                    {feature.title}
-                  </h3>
-                </div>
-                <p className="text-emerald-100 text-xs">
-                  {feature.description}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* Additional Benefits Grid */}
-          <div className="bg-emerald-500/20 rounded-lg p-4 mb-4 border border-emerald-400/20">
-            <h4 className="text-white text-sm font-semibold mb-3">
-              Avantages Membres ✨
-            </h4>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {additionalBenefits.map((benefit, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 text-white text-xs"
-                >
-                  <span className="p-1 bg-emerald-500/30 rounded">
-                    {benefit.icon}
-                  </span>
-                  {benefit.text}
+          {enabled && points.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              {points.map((p) => (
+                <div key={p.title} className="bg-emerald-500/20 backdrop-blur-sm rounded-lg p-4 border border-emerald-400/20">
+                  <div className="flex items-center mb-2">
+                    <span className="text-white mr-2">{p.icon}</span>
+                    <h3 className="text-sm font-semibold text-white">{p.title}</h3>
+                  </div>
+                  <p className="text-emerald-100 text-xs leading-relaxed">{p.description}</p>
                 </div>
               ))}
             </div>
-          </div>
+          )}
 
-          {/* Offre et CTA avec design amélioré */}
-          <div className="flex flex-col md:flex-row items-center justify-between bg-emerald-500/20 rounded-lg p-4 border border-emerald-400/20">
-            <div className="flex-1">
-              <div className="text-white mb-2 md:mb-0">
-                <span className="bg-emerald-500/30 px-2 py-1 rounded text-xs font-bold">
-                  OFFRE DE LANCEMENT
-                </span>
-              </div>
-              <div className="text-white text-sm mt-2">
-                <span className="font-bold text-white">200 points bonus</span>
-                <span className="mx-2">+</span>
-                <span className="font-bold text-white">3 mois</span> de
-                livraison gratuite
-              </div>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-emerald-500/20 rounded-lg p-4 border border-emerald-400/20">
+            <div className="flex flex-wrap gap-x-5 gap-y-2">
+              {benefits.map((b) => (
+                <div key={b.text} className="flex items-center gap-2 text-white text-xs">
+                  <span className="p-1 bg-emerald-500/30 rounded">{b.icon}</span>
+                  {b.text}
+                </div>
+              ))}
             </div>
-            <div className="mt-4 md:mt-0">
-              <button
-                onClick={handleSignup}
-                className="inline-flex items-center px-6 py-2.5 bg-white text-emerald-700 font-semibold rounded-lg hover:bg-emerald-50 transition-all duration-300 text-sm group shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-              >
-                Rejoindre la Liste d&apos;Attente
-                <Zap className="ml-2 w-4 h-4 group-hover:rotate-12 transition-transform" />
-              </button>
-            </div>
+            <a
+              href={PLAY_STORE}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center px-6 py-2.5 bg-white text-emerald-700 font-semibold rounded-lg hover:bg-emerald-50 transition-all text-sm shadow-lg flex-shrink-0"
+            >
+              <Download className="mr-2 w-4 h-4" />
+              Télécharger l&apos;application
+            </a>
           </div>
         </div>
       </div>

@@ -187,7 +187,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ chg }) => {
               <Phone size={11} /> +227 87727501
             </span>
             <span className="flex items-center gap-1.5 text-[#4bbda5]">
-              <Truck size={11} /> Livraison gratuite dès 30&nbsp;000F
+              <Truck size={11} /> Livraison partout au Niger
             </span>
           </div>
           <div className="flex items-center gap-5 text-gray-400">

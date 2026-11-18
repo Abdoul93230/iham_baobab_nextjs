@@ -18,7 +18,6 @@ export const metadata: Metadata = {
     "IhamBaobab",
     "e-commerce",
     "shopping en ligne",
-    "livraison gratuite",
     "électronique promotion",
     "mode promotion",
     "beauté promotion",

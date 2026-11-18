@@ -7,7 +7,7 @@ import { Metadata } from "next";
 // Métadonnées optimisées pour le SEO
 export const metadata: Metadata = {
   title: "✨ Nouveaux Produits - Dernières Tendances & Nouveautés | IhamBaobab",
-  description: "Découvrez nos tout nouveaux produits ! Les dernières tendances en mode, électronique, beauté et accessoires. Restez à la pointe avec nos nouveautés exclusives. Livraison gratuite dès 50000 F.",
+  description: "Découvrez nos tout nouveaux produits ! Les dernières tendances en mode, électronique, beauté et accessoires. Restez à la pointe avec nos nouveautés exclusives. Livraison partout au Niger.",
   keywords: [
     "nouveaux produits",
     "nouveautés",
@@ -21,7 +21,6 @@ export const metadata: Metadata = {
     "beauté nouveauté",
     "accessoires tendance",
     "shopping en ligne",
-    "livraison gratuite",
     "produits exclusifs",
     "derniers arrivages"
   ],
