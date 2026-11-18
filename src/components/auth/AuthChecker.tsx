@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { checkAuth, loadUser, selectIsAuthenticated } from "@/redux/userSlice";
 import { AuthService } from "@/lib/auth";
@@ -11,6 +12,8 @@ interface AuthCheckerProps {
 
 export default function AuthChecker({ children }: AuthCheckerProps) {
   const dispatch = useAppDispatch();
+  const pathname = usePathname() || "";
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -41,23 +44,25 @@ export default function AuthChecker({ children }: AuthCheckerProps) {
     };
 
     initializeAuth();
+    setMounted(true);
   }, [dispatch]);
 
-  // Les pages s'affichent tout de suite, y compris pour Google : la session se vérifie en arrière-plan
-  // (les pages réservées attendent la leur via ProtectedRoute). Filet de sécurité : si une page ne peut
-  // pas être rendue côté serveur, React affiche ce chargement puis la rend dans le navigateur.
-  return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-2"></div>
-            <p className="text-sm text-gray-600">Chargement…</p>
-          </div>
-        </div>
-      }
-    >
-      {children}
-    </Suspense>
+  const loader = (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-2"></div>
+        <p className="text-sm text-gray-600">Chargement…</p>
+      </div>
+    </div>
   );
+
+  // Fiches produit et boutiques : rendues côté serveur (contenu visible par Google, affichage
+  // immédiat). Ces pages sont générées à la demande ; si l'une ne peut pas l'être, Suspense la rend
+  // dans le navigateur. Les autres pages restent rendues dans le navigateur, comme avant : plusieurs
+  // utilisent encore next-seo / next/head, qui plantent quand la page est générée à l'avance.
+  const serverRendered = SERVER_RENDERED.test(pathname);
+  if (!serverRendered && !mounted) return loader;
+  return <Suspense fallback={loader}>{children}</Suspense>;
 }
+
+const SERVER_RENDERED = /^\/(ProduitDetail|boutique|Categorie)\//;
