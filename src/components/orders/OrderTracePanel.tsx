@@ -10,6 +10,16 @@ export interface OrderTrace {
   deliveryCode?: string | null;
   cancel: { reason: string | null; label: string; by: string; note: string; at: string | null; restored?: { stock?: boolean; promo?: boolean; points?: boolean } | null } | null;
   history: { at: string; type: string; label: string; note: string }[];
+  points?: { status: "pending" | "credited" | "revoked"; estimate?: number; earned?: number; firstOrder?: number; revoked?: number } | null;
+}
+
+/** Baobab Points de la commande, en une phrase */
+function pointsText(p: OrderTrace["points"]): string | null {
+  if (!p) return null;
+  if (p.status === "pending") return `+${p.estimate || 0} Baobab Points crédités à la livraison`;
+  const total = (Number(p.earned) || 0) + (Number(p.firstOrder) || 0);
+  if (p.status === "revoked") return `${total} Baobab Points retirés : commande annulée`;
+  return `+${total} Baobab Points crédités${Number(p.firstOrder) > 0 ? ` (dont ${p.firstOrder} de bonus 1re commande)` : ""}`;
 }
 
 const fcfa = (n: number) => `${Math.round(n || 0).toLocaleString("fr-FR")} F`;
@@ -46,6 +56,7 @@ export default function OrderTracePanel({ trace, onPay }: { trace: OrderTrace; o
   const expired = cancel?.reason === "paiement_non_abouti";
   const mm = Math.floor(left / 60000);
   const ss = Math.floor((left % 60000) / 1000);
+  const pts = pointsText(trace.points);
 
   return (
     <div className="space-y-3">
@@ -118,6 +129,13 @@ export default function OrderTracePanel({ trace, onPay }: { trace: OrderTrace; o
           </div>
         </dl>
       </div>
+
+      {/* ── Baobab Points de la commande ── */}
+      {pts ? (
+        <div className="rounded-2xl border border-[#B17236]/30 bg-[#B17236]/5 p-3 flex items-center gap-2 text-sm font-medium text-[#B17236]">
+          <span aria-hidden>🌿</span> {pts}
+        </div>
+      ) : null}
 
       {/* ── Étapes ── */}
       {history.length ? (
