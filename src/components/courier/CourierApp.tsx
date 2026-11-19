@@ -168,14 +168,18 @@ function Work({ token, me, onLogout, onExpired }: { token: string; me: Courier; 
   };
 
   const pending = order?.stores.filter((s) => !s.pickedUp) || [];
+  // Plusieurs boutiques : le livreur choisit celle où il se trouve (sinon la seule restante)
+  const [storeId, setStoreId] = useState<string | null>(null);
+  const [notice, setNotice] = useState("");
+  const current = pending.find((s) => s.storeId === storeId) || (pending.length === 1 ? pending[0] : null);
   const step: "pickup" | "deliver" | "done" = !order ? "pickup" : order.delivered ? "done" : pending.length ? "pickup" : "deliver";
 
   const confirm = async () => {
     if (!order) return;
     if (step === "pickup") {
-      const r = await call<{ message: string; order: OrderSummary }>("/pickup", { reference: order.reference, code });
+      const r = await call<{ message: string; order: OrderSummary }>("/pickup", { reference: order.reference, code, storeId: current?.storeId });
       if (r) {
-        setOrder(r.order); setCode("");
+        setOrder(r.order); setCode(""); setStoreId(null); setNotice(r.message || "");
         if (!r.order.stores.some((s) => !s.pickedUp)) setDone({ title: "Colis récupéré", text: `Tous les colis de la commande ${r.order.reference} sont avec vous. Direction le client.` });
       }
     } else {
@@ -184,7 +188,7 @@ function Work({ token, me, onLogout, onExpired }: { token: string; me: Courier; 
     }
   };
 
-  const reset = () => { setOrder(null); setReference(""); setCode(""); setError(""); setDone(null); };
+  const reset = () => { setOrder(null); setReference(""); setCode(""); setError(""); setDone(null); setStoreId(null); setNotice(""); };
 
   // ── Écran de succès ──
   if (done) {
@@ -257,11 +261,13 @@ function Work({ token, me, onLogout, onExpired }: { token: string; me: Courier; 
           {/* Étapes */}
           <ol className="mt-4 space-y-2">
             {order.stores.map((s) => (
-              <li key={s.storeId} className={`rounded-2xl p-4 flex items-center gap-3 ${s.pickedUp ? "bg-emerald-50" : "bg-white"}`}>
+              <li key={s.storeId}
+                onClick={() => { if (!s.pickedUp && pending.length > 1) { setStoreId(s.storeId); setCode(""); setError(""); } }}
+                className={`rounded-2xl p-4 flex items-center gap-3 ${s.pickedUp ? "bg-emerald-50" : current?.storeId === s.storeId && pending.length > 1 ? "bg-white ring-2 ring-[#30A08B]" : "bg-white"} ${!s.pickedUp && pending.length > 1 ? "cursor-pointer" : ""}`}>
                 <div className={`w-9 h-9 rounded-full flex items-center justify-center ${s.pickedUp ? "bg-emerald-500 text-white" : "bg-gray-100 text-gray-500"}`}>{s.pickedUp ? <Check className="w-5 h-5" /> : <Store className="w-4 h-4" />}</div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{s.storeName || "Boutique"}</p>
-                  <p className="text-xs text-gray-500">{s.pickedUp ? "Colis récupéré" : "Colis à récupérer"}</p>
+                  <p className="text-xs text-gray-500">{s.pickedUp ? "Colis récupéré" : pending.length > 1 ? (current?.storeId === s.storeId ? "Vous êtes ici : saisissez son code" : "Touchez pour saisir son code") : "Colis à récupérer"}</p>
                 </div>
               </li>
             ))}
@@ -271,11 +277,17 @@ function Work({ token, me, onLogout, onExpired }: { token: string; me: Courier; 
             </li>
           </ol>
 
-          {step !== "done" ? (
+          {notice ? <p className="mt-4 rounded-xl bg-emerald-50 text-emerald-800 text-sm font-medium px-3 py-2">✓ {notice}</p> : null}
+
+          {step === "pickup" && !current ? (
+            <p className="mt-6 rounded-2xl bg-amber-50 text-amber-900 text-sm px-4 py-3">
+              Cette commande vient de {pending.length} boutiques : chacune a son propre code. Touchez la boutique où vous êtes, puis saisissez son code.
+            </p>
+          ) : step !== "done" ? (
             <div className="mt-6">
-              <p className="font-semibold text-lg">{step === "pickup" ? `Code de ${pending.length > 1 ? "la boutique" : pending[0]?.storeName || "la boutique"}` : "Code du client"}</p>
+              <p className="font-semibold text-lg">{step === "pickup" ? `Code de ${current?.storeName || "la boutique"}` : "Code du client"}</p>
               <p className="text-sm text-gray-500 mb-4">
-                {step === "pickup" ? "La boutique voit ce code dans sa commande. Demandez-le en prenant le colis." : "Le client voit ce code dans sa commande. Demandez-le en lui remettant le colis."}
+                {step === "pickup" ? "La boutique voit ce code (4 chiffres) dans le détail de sa commande, sur l'app vendeur ou le portail. Demandez-le en prenant le colis." : "Le client voit ce code dans sa commande. Demandez-le en lui remettant le colis."}
               </p>
               <CodeInput value={code} onChange={setCode} autoFocus />
               {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
